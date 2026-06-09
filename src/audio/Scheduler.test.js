@@ -168,6 +168,70 @@ describe('Scheduler timing math', () => {
     expect(s._bars).toBe(2)
   })
 
+  it('count-in plays N bars of clicks before the pattern, then enters the pattern', () => {
+    const s = new Scheduler()
+    s.subdivision = 'quarter'
+    s.timeSignature = { beats: 4, unit: 4 }
+    s.pattern = createEmptyExercise({ timeSignature: { beats: 4, unit: 4 }, subdivision: 'quarter' })
+    s.countIn = { enabled: true, bars: 1, mode: 'loop' }
+    s._recompute()
+    expect(s._countInLen()).toBe(4) // 1 bar × 4 beats
+    s.start()
+    expect(s._phase).toBe('countin')
+    // advance through the 4 count-in clicks
+    for (let i = 0; i < 4; i++) s._advanceCountIn()
+    expect(s._phase).toBe('pattern')
+    expect(s.currentStep).toBe(0)
+  })
+
+  it('count-in feel sets the click plan (quarter / eighth / sixteenth / countoff)', () => {
+    const s = new Scheduler()
+    s.timeSignature = { beats: 4, unit: 4 }
+    s.pattern = createEmptyExercise({ timeSignature: { beats: 4, unit: 4 }, subdivision: 'quarter' })
+    s.bpm = 120 // beat = 0.5s
+    const lenFor = (feel) => { s.countIn = { enabled: true, bars: 1, mode: 'loop', feel }; s._recompute(); return s._countInLen() }
+    expect(lenFor('quarter')).toBe(4)
+    expect(lenFor('eighth')).toBe(8)
+    expect(lenFor('sixteenth')).toBe(16)
+    expect(lenFor('countoff')).toBe(6) // "1 2 1-2-3-4" = 2 quarters + 4 eighths
+    // countoff plan: first two are quarters (0.5s), last four eighths (0.25s)
+    const plan = s._countInPlan
+    expect(plan[0]).toEqual({ dur: 0.5, accent: true })
+    expect(plan[2].dur).toBeCloseTo(0.25)
+  })
+
+  it('count-in "phrase" mode re-enters count-in after each full pass', () => {
+    const s = new Scheduler()
+    s.subdivision = 'quarter'
+    s.timeSignature = { beats: 2, unit: 4 } // 2 steps
+    s.pattern = createEmptyExercise({ timeSignature: { beats: 2, unit: 4 }, subdivision: 'quarter' })
+    s.countIn = { enabled: true, bars: 1, mode: 'phrase' }
+    s._recompute()
+    s._phase = 'pattern'
+    s.currentStep = 0
+    s.isPlaying = true
+    s._advance() // step 0 -> 1
+    expect(s._phase).toBe('pattern')
+    s._advance() // step 1 -> wrap; phrase mode -> back to count-in
+    expect(s._phase).toBe('countin')
+    expect(s._countInStep).toBe(0)
+  })
+
+  it('count-in "loop" mode keeps looping the pattern without re-counting', () => {
+    const s = new Scheduler()
+    s.subdivision = 'quarter'
+    s.timeSignature = { beats: 2, unit: 4 }
+    s.pattern = createEmptyExercise({ timeSignature: { beats: 2, unit: 4 }, subdivision: 'quarter' })
+    s.countIn = { enabled: true, bars: 1, mode: 'loop' }
+    s._recompute()
+    s._phase = 'pattern'
+    s.currentStep = 1
+    s.isPlaying = true
+    s._advance() // wrap; loop mode -> stay in pattern
+    expect(s._phase).toBe('pattern')
+    expect(s.currentStep).toBe(0)
+  })
+
   it('wraps currentStep at the bar boundary on advance', () => {
     const s = new Scheduler()
     s.timeSignature = { beats: 4, unit: 4 }

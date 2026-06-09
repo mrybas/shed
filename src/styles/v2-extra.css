@@ -119,3 +119,23 @@
   font-size: 0.62rem; font-weight: 700; color: var(--accent);
   text-transform: uppercase; letter-spacing: .03em; padding-bottom: 2px;
 }
+
+/* ---- Editor symbol legend ---- */
+.cell-legend {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px;
+  margin-top: var(--s-4); padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--border-soft); border-radius: var(--r-md);
+  background: var(--surface-1);
+}
+.cell-legend .cl-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-3); }
+.cell-legend .cl-item { display: inline-flex; align-items: center; gap: 7px; font-size: var(--fs-sm); color: var(--text-2); }
+.cell-legend .cl-sw {
+  width: 22px; height: 22px; flex: none; cursor: default; position: relative;
+  display: grid; place-items: center; font-size: 11px;
+}
+.cell-legend .cl-sw.cell:hover { border-color: var(--border-soft); }
+.cell-legend .cl-rl {
+  min-width: 22px; height: 22px; padding: 0 5px; flex: none; display: grid; place-items: center;
+  border-radius: var(--r-sm); background: var(--surface-2); border: 1px solid var(--border-soft);
+  font-family: var(--num-font); font-weight: 700; font-size: 11px; color: var(--accent);
+}

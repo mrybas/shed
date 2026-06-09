@@ -17,6 +17,7 @@ export function useScheduler(initial = {}) {
   const [currentStep, setCurrentStep] = useState(-1)
   const [liveBpm, setLiveBpm] = useState(sched.baseBpm)
   const [gapMuted, setGapMuted] = useState(false)
+  const [countingIn, setCountingIn] = useState(false)
   const rafRef = useRef(null)
 
   const loop = useCallback(() => {
@@ -28,6 +29,8 @@ export function useScheduler(initial = {}) {
     setLiveBpm((prev) => (prev !== b ? b : prev))
     const m = s.metronomeMuted()
     setGapMuted((prev) => (prev !== m ? m : prev))
+    const ci = s.inCountIn()
+    setCountingIn((prev) => (prev !== ci ? ci : prev))
     rafRef.current = requestAnimationFrame(loop)
   }, [])
 
@@ -44,6 +47,7 @@ export function useScheduler(initial = {}) {
     setCurrentStep(-1)
     setLiveBpm(sched.baseBpm)
     setGapMuted(false)
+    setCountingIn(false)
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
   }, [sched])
 
@@ -64,6 +68,7 @@ export function useScheduler(initial = {}) {
     sched.bpm = sched.rampedBpm()
   }, [sched])
   const setGapTrainer = useCallback((v) => { sched.gapTrainer = { ...sched.gapTrainer, ...v } }, [sched])
+  const setCountIn = useCallback((v) => { sched.countIn = { ...sched.countIn, ...v } }, [sched])
   const setTimeSignature = useCallback((v) => { sched.timeSignature = v }, [sched])
   const setSubdivision = useCallback((v) => { sched.subdivision = v }, [sched])
   const setPattern = useCallback((v) => { sched.pattern = v }, [sched])
@@ -78,12 +83,14 @@ export function useScheduler(initial = {}) {
     currentStep,
     liveBpm,
     gapMuted,
+    countingIn,
     start,
     stop,
     toggle,
     setBpm,
     setTempoRamp,
     setGapTrainer,
+    setCountIn,
     setTimeSignature,
     setSubdivision,
     setPattern,

@@ -52,7 +52,7 @@ function CompactSub({ value, onChange }) {
 
 export default function PlayerBar({
   t, mode, title, sourceLabel, cat, bpm, setBpm, sig, sub, setSub, showSub,
-  soundSubs, onToggleSoundSubs, step, playing, onToggle, gapMuted, barView,
+  soundSubs, onToggleSoundSubs, step, playing, onToggle, gapMuted, countingIn, barView,
 }) {
   const bars = barView ? barView.bars : 1
   const curBar = barView ? barView.barIndex + 1 : 0
@@ -66,6 +66,7 @@ export default function PlayerBar({
         <div className="pb-now">
           <div className="pb-title-row">
             <span className="pb-eyebrow">{mode === 'metronome' ? t('metronome') : t('nowPlaying')}</span>
+            {countingIn && <span className="pb-muted-pill">{t('countingInTag')}</span>}
             {gapMuted && <span className="pb-muted-pill">{t('gapMutedTag')}</span>}
             {cat && <span className="pb-cat" style={{ background: cat }} />}
           </div>

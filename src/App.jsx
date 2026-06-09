@@ -15,7 +15,7 @@ import {
   loadLibrary, saveToLibrary, deleteFromLibrary, genId, barLayout,
 } from './model/exercise.js'
 
-const APP_VERSION = 'v3.2' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v3.4' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const TW_DEFAULT = { theme: 'dark', accent: 'coral', density: 'regular' }
@@ -59,6 +59,7 @@ export default function App() {
     metroWith: true, accentOne: true, soundSubs: false,
     tempoRamp: { enabled: false, everyBars: 4, stepBpm: 5, maxBpm: 0 },
     gapTrainer: { enabled: false, onBars: 2, offBars: 2 },
+    countIn: { enabled: false, bars: 1, mode: 'loop' },
   })
   const [vols, setVols] = useState({ ex: 100, metro: 120 })
 
@@ -102,10 +103,12 @@ export default function App() {
       sched.setMetronomeVolume(metro.vol / 100)
       sched.setTempoRamp({ enabled: false })
       sched.setGapTrainer({ enabled: false })
+      sched.setCountIn({ enabled: false })
     } else if (item) {
       sched.setPattern(item)
       sched.setTempoRamp(options.tempoRamp)
       sched.setGapTrainer(options.gapTrainer)
+      sched.setCountIn(options.countIn)
       sched.setBpm(item.bpm)
       sched.setTimeSignature(item.timeSignature)
       sched.setSubdivision(item.subdivision)
@@ -280,7 +283,7 @@ export default function App() {
         setSub={(s) => setMetro((m) => ({ ...m, sub: s }))} showSub={mode === 'metronome'}
         soundSubs={mode === 'metronome' ? metro.soundSubs : options.soundSubs}
         onToggleSoundSubs={(v) => mode === 'metronome' ? setMetro((m) => ({ ...m, soundSubs: v })) : setOptions((o) => ({ ...o, soundSubs: v }))}
-        step={step} playing={playing} onToggle={sched.toggle} gapMuted={sched.gapMuted} barView={barView} />
+        step={step} playing={playing} onToggle={sched.toggle} gapMuted={sched.gapMuted} countingIn={sched.countingIn} barView={barView} />
 
       <nav className="bottomnav">
         <button className={'bn-link' + (nav === 'metronome' ? ' is-active' : '')} onClick={() => setNav('metronome')}>

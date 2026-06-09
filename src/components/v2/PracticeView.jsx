@@ -213,6 +213,43 @@ export default function PracticeView({
         })()}
 
         <hr className="divider" style={{ margin: 'var(--s-5) 0' }} />
+        {(() => {
+          const ci = options.countIn || { enabled: false, bars: 1, mode: 'loop' }
+          const setCI = (patch) => setOptions((o) => ({ ...o, countIn: { ...ci, ...patch } }))
+          return (
+            <div className="ramp-block">
+              <Switch checked={ci.enabled} onChange={(v) => setCI({ enabled: v })} label={t('countIn')} icon="metro" />
+              <div className="muted-line" style={{ margin: '6px 0 0' }}>{t('countInHint')}</div>
+              {ci.enabled && (
+                <>
+                  <div className="ramp-fields" style={{ marginTop: 'var(--s-3)', alignItems: 'center' }}>
+                    <label className="ramp-field">
+                      <span className="ramp-cap">{t('countIn')}</span>
+                      <NumberStepper value={ci.bars} min={1} max={4} onChange={(v) => setCI({ bars: v })} />
+                      <span className="ramp-cap">{t('barsUnit')}</span>
+                    </label>
+                    <Segmented
+                      options={[{ value: 'loop', label: t('countInModeLoop') }, { value: 'phrase', label: t('countInModePhrase') }]}
+                      value={ci.mode} onChange={(v) => setCI({ mode: v })} />
+                  </div>
+                  <div className="ramp-fields" style={{ marginTop: 'var(--s-2)', alignItems: 'center' }}>
+                    <span className="ramp-cap">{t('countInFeel')}</span>
+                    <Segmented
+                      options={[
+                        { value: 'quarter', label: '1 2 3 4' },
+                        { value: 'countoff', label: '1 2 1·2·3·4' },
+                        { value: 'eighth', label: t('feelEighth') },
+                        { value: 'sixteenth', label: t('feelSixteenth') },
+                      ]}
+                      value={ci.feel || 'quarter'} onChange={(v) => setCI({ feel: v })} />
+                  </div>
+                </>
+              )}
+            </div>
+          )
+        })()}
+
+        <hr className="divider" style={{ margin: 'var(--s-5) 0' }} />
         <span className="field-label">{t('volumes')}</span>
         <div className="vol-pair" style={{ marginTop: 'var(--s-2)' }}>
           <div>
@@ -314,6 +351,15 @@ export default function PracticeView({
           </div>
         </div>
       )}
+
+      <div className="cell-legend">
+        <span className="cl-title">{t('legendTitle')}</span>
+        <span className="cl-item"><span className="cl-sw cell on" />{t('legendHit')}</span>
+        <span className="cl-item"><span className="cl-sw cell accent" />{t('legendAccent')}</span>
+        <span className="cl-item"><span className="cl-sw cell flam">f</span>{t('legendFlam')}</span>
+        <span className="cl-item"><span className="cl-sw cell roll">z</span>{t('legendRoll')}</span>
+        <span className="cl-item"><span className="cl-rl">R / L</span>{t('legendSticking')}</span>
+      </div>
     </div>
   )
 }

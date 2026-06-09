@@ -16,6 +16,15 @@ export class Scheduler {
     // Gap trainer: play the metronome for `onBars`, then mute it for `offBars`,
     // repeating — so you have to hold the tempo through the silent stretch.
     this.gapTrainer = { enabled: false, onBars: 2, offBars: 2 }
+    // Count-in: `bars` of metronome clicks before the exercise. mode 'loop' =
+    // count in once then loop; mode 'phrase' = count in before every pass.
+    // feel = the click rhythm: 'quarter' (1 2 3 4), 'countoff' (1 2 1-2-3-4),
+    // 'eighth' (all 8ths), 'sixteenth' (all 16ths).
+    this.countIn = { enabled: false, bars: 1, mode: 'loop', feel: 'quarter' }
+    this._countInPlan = [] // [{ dur, accent }] built per run
+    this._phase = 'pattern' // 'countin' | 'pattern'
+    this._countInStep = 0
+    this._countInBeats = 4 // beats per count-in bar (first bar of the pattern)
     this._bars = 0 // bars completed since playback started
     this.timeSignature = { beats: 4, unit: 4 }
     this.subdivision = 'quarter'
@@ -60,6 +69,37 @@ export class Scheduler {
     this._isBeat = isBeat
     this._isBarStart = isBarStart
     this._total = divisor.length || 1
+    this._countInBeats = bars[0]?.beatSubs.length || this.timeSignature.beats
+    this._countInPlan = this._buildCountInPlan()
+  }
+
+  // Build the count-in click plan: an array of { dur, accent } per click. The
+  // "feel" sets the rhythm; durations use the current (constant) tempo.
+  _buildCountInPlan() {
+    if (!this.countIn || !this.countIn.enabled || !this.countIn.bars) return []
+    const beats0 = this._countInBeats || this.timeSignature.beats
+    const beat = 60.0 / this.bpm
+    const feel = this.countIn.feel || 'quarter'
+    const plan = []
+    for (let b = 0; b < this.countIn.bars; b++) {
+      if (feel === 'eighth') {
+        for (let i = 0; i < beats0 * 2; i++) plan.push({ dur: beat / 2, accent: i === 0 })
+      } else if (feel === 'sixteenth') {
+        for (let i = 0; i < beats0 * 4; i++) plan.push({ dur: beat / 4, accent: i === 0 })
+      } else if (feel === 'countoff') {
+        // "1 2 1-2-3-4": first half of the bar in quarters, second half in eighths.
+        const half = Math.ceil(beats0 / 2)
+        for (let i = 0; i < half; i++) plan.push({ dur: beat, accent: i === 0 })
+        for (let i = half; i < beats0; i++) { plan.push({ dur: beat / 2, accent: false }); plan.push({ dur: beat / 2, accent: false }) }
+      } else {
+        for (let i = 0; i < beats0; i++) plan.push({ dur: beat, accent: i === 0 })
+      }
+    }
+    return plan
+  }
+
+  _countInLen() {
+    return (this._countInPlan && this._countInPlan.length) || 0
   }
 
   _totalSteps() {
@@ -103,6 +143,8 @@ export class Scheduler {
     this.currentStep = 0
     this._bars = 0
     this.bpm = this.baseBpm // start each run from the base tempo
+    this._countInStep = 0
+    this._phase = this._countInLen() > 0 ? 'countin' : 'pattern'
     this.nextNoteTime = ctx.currentTime + 0.12
     this.notesInQueue = []
     this._tick()
@@ -118,16 +160,44 @@ export class Scheduler {
     this.currentStep = 0
     this._bars = 0
     this.bpm = this.baseBpm
+    this._phase = 'pattern'
+    this._countInStep = 0
   }
 
   _tick = () => {
     const ctx = getAudioContext()
     this._recompute() // cheap; picks up live edits to pattern / subdivision
     while (this.nextNoteTime < ctx.currentTime + this.scheduleAheadSec) {
-      this._scheduleStep(this.currentStep, this.nextNoteTime)
-      this._advance()
+      if (this._phase === 'countin') {
+        this._scheduleCountIn(this._countInStep, this.nextNoteTime)
+        this._advanceCountIn()
+      } else {
+        this._scheduleStep(this.currentStep, this.nextNoteTime)
+        this._advance()
+      }
     }
     this.timerId = setTimeout(this._tick, this.lookaheadMs)
+  }
+
+  // A count-in click (one per beat); accents the first beat of each count-in bar.
+  // Pushes step -1 so the visual playhead stays idle during the count-in.
+  _scheduleCountIn(i, time) {
+    const ctx = getAudioContext()
+    const master = getMaster()
+    const slot = this._countInPlan[i]
+    const kind = slot && slot.accent && this.accentFirst ? 'accent' : 'normal'
+    click(ctx, time, master, kind, this.metronomeVolume)
+    this.notesInQueue.push({ step: -1, time })
+  }
+
+  _advanceCountIn() {
+    const slot = this._countInPlan[this._countInStep]
+    this.nextNoteTime += (slot && slot.dur) || (60.0 / this.bpm)
+    this._countInStep += 1
+    if (this._countInStep >= this._countInLen()) {
+      this._phase = 'pattern'
+      this.currentStep = 0
+    }
   }
 
   _advance() {
@@ -141,7 +211,20 @@ export class Scheduler {
       this._bars += 1
       this.bpm = this.rampedBpm()
     }
+    // "Count-in each pass" mode: at the end of a full pass, count in again
+    // before replaying the phrase.
+    if (next === 0 && this.countIn && this.countIn.enabled && this.countIn.mode === 'phrase' && this._countInLen() > 0) {
+      this._phase = 'countin'
+      this._countInStep = 0
+      this.currentStep = 0
+      return
+    }
     this.currentStep = next
+  }
+
+  // Whether playback is currently in the count-in lead-in.
+  inCountIn() {
+    return this.isPlaying && this._phase === 'countin'
   }
 
   _scheduleStep(step, time) {
