@@ -32,5 +32,5 @@ npm run build      # production build to dist/
 ## Deploy
 
 Pushing to `main` builds and deploys to GitHub Pages via
-`.github/workflows/deploy.yml`. The site is served under the `/shed/` base path
-(configured in `vite.config.js`).
+`.github/workflows/deploy.yml`. The site is served from the custom domain
+**https://shed.beardlabs.cc/** (see `CNAME`), so the Vite base is `/`.

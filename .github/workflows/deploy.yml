@@ -27,6 +27,8 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      # Carry the custom-domain CNAME into the published artifact.
+      - run: cp CNAME dist/CNAME
       - uses: actions/configure-pages@v5
         with:
           enablement: true

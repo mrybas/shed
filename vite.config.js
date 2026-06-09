@@ -1,10 +1,9 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
-export default defineConfig(({ command }) => ({
-  // GitHub Pages serves this project site under /shed/. Apply that base only to
-  // the production build; keep dev (and tests) at root.
-  base: command === 'build' ? '/shed/' : '/',
+export default defineConfig(() => ({
+  // Served from the custom domain root (shed.beardlabs.cc), so the base is '/'.
+  base: '/',
   plugins: [react()],
   server: {
     // Disable browser caching in dev so Safari (which caches ES modules
