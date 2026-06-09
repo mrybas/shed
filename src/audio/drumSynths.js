@@ -1,0 +1,129 @@
+// Synthesized drum voices using Web Audio. Each function schedules a one-shot
+// sound at absolute `time` (seconds, in the AudioContext clock) into `destination`.
+import { getNoiseBuffer } from './AudioEngine.js'
+
+function noiseSource(ctx) {
+  const src = ctx.createBufferSource()
+  src.buffer = getNoiseBuffer()
+  return src
+}
+
+// Kick: sine with a fast downward pitch sweep + amplitude envelope.
+export function kick(ctx, time, destination, { gain = 1 } = {}) {
+  const osc = ctx.createOscillator()
+  const amp = ctx.createGain()
+  osc.type = 'sine'
+  osc.frequency.setValueAtTime(120, time)
+  osc.frequency.exponentialRampToValueAtTime(45, time + 0.12)
+  amp.gain.setValueAtTime(gain, time)
+  amp.gain.exponentialRampToValueAtTime(0.0001, time + 0.32)
+  osc.connect(amp).connect(destination)
+  osc.start(time)
+  osc.stop(time + 0.35)
+}
+
+// Snare: filtered noise body + a short tonal "crack".
+export function snare(ctx, time, destination, { gain = 1 } = {}) {
+  const src = noiseSource(ctx)
+  const bp = ctx.createBiquadFilter()
+  bp.type = 'bandpass'
+  bp.frequency.value = 1800
+  bp.Q.value = 0.8
+  const amp = ctx.createGain()
+  amp.gain.setValueAtTime(gain, time)
+  amp.gain.exponentialRampToValueAtTime(0.0001, time + 0.2)
+  src.connect(bp).connect(amp).connect(destination)
+  src.start(time)
+  src.stop(time + 0.25)
+
+  const osc = ctx.createOscillator()
+  const oamp = ctx.createGain()
+  osc.type = 'triangle'
+  osc.frequency.setValueAtTime(180, time)
+  oamp.gain.setValueAtTime(gain * 0.5, time)
+  oamp.gain.exponentialRampToValueAtTime(0.0001, time + 0.12)
+  osc.connect(oamp).connect(destination)
+  osc.start(time)
+  osc.stop(time + 0.14)
+}
+
+function hihat(ctx, time, destination, gain, decay) {
+  const src = noiseSource(ctx)
+  const hp = ctx.createBiquadFilter()
+  hp.type = 'highpass'
+  hp.frequency.value = 7000
+  const amp = ctx.createGain()
+  amp.gain.setValueAtTime(gain * 0.7, time)
+  amp.gain.exponentialRampToValueAtTime(0.0001, time + decay)
+  src.connect(hp).connect(amp).connect(destination)
+  src.start(time)
+  src.stop(time + decay + 0.02)
+}
+
+export function hihatClosed(ctx, time, destination, { gain = 1 } = {}) {
+  hihat(ctx, time, destination, gain, 0.05)
+}
+
+export function hihatOpen(ctx, time, destination, { gain = 1 } = {}) {
+  hihat(ctx, time, destination, gain, 0.4)
+}
+
+// Metallic voice: a cluster of inharmonic square oscillators + noise sheen.
+function cymbal(ctx, time, destination, gain, decay, baseFreq, ratios) {
+  const out = ctx.createGain()
+  out.gain.setValueAtTime(gain * 0.5, time)
+  out.gain.exponentialRampToValueAtTime(0.0001, time + decay)
+  const hp = ctx.createBiquadFilter()
+  hp.type = 'highpass'
+  hp.frequency.value = baseFreq
+  out.connect(hp).connect(destination)
+
+  ratios.forEach((r) => {
+    const osc = ctx.createOscillator()
+    osc.type = 'square'
+    osc.frequency.value = baseFreq * r
+    osc.connect(out)
+    osc.start(time)
+    osc.stop(time + decay + 0.02)
+  })
+
+  const src = noiseSource(ctx)
+  const namp = ctx.createGain()
+  namp.gain.setValueAtTime(gain * 0.25, time)
+  namp.gain.exponentialRampToValueAtTime(0.0001, time + decay)
+  src.connect(namp).connect(hp)
+  src.start(time)
+  src.stop(time + decay + 0.02)
+}
+
+const METAL_RATIOS = [1, 1.34, 1.81, 2.27, 2.67, 3.12]
+
+export function ride(ctx, time, destination, { gain = 1 } = {}) {
+  cymbal(ctx, time, destination, gain, 0.45, 3200, METAL_RATIOS)
+}
+
+export function crash(ctx, time, destination, { gain = 1 } = {}) {
+  cymbal(ctx, time, destination, gain, 1.4, 1800, METAL_RATIOS)
+}
+
+// A roll = a rapid series of snare strokes over `durationSec`.
+// open = double-stroke style (alternating louder/softer); closed = denser buzz.
+export function snareRoll(ctx, startTime, durationSec, type, destination, gain = 1) {
+  const rate = type === 'closed' ? 28 : 13 // strokes per second
+  const n = Math.max(2, Math.round(durationSec * rate))
+  const dt = durationSec / n
+  for (let i = 0; i < n; i++) {
+    const t = startTime + i * dt
+    const g = gain * (type === 'closed' ? 0.5 : (i % 2 === 0 ? 0.85 : 0.6))
+    snare(ctx, t, destination, { gain: g })
+  }
+}
+
+export const DRUM_VOICES = {
+  kick,
+  snare,
+  hihatClosed,
+  hihatOpen,
+  ride,
+  crash,
+}

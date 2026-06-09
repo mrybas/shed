@@ -1,0 +1,80 @@
+/* Small additions on top of the v2 design system. */
+.side-foot-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); }
+.app-version { font-size: 11px; color: var(--text-3); letter-spacing: .04em; }
+.accent-picker { display: flex; gap: var(--s-2); margin-bottom: var(--s-3); }
+.accent-dot {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 2px solid transparent; cursor: pointer; padding: 0;
+  transition: border-color var(--dur) var(--ease);
+}
+.accent-dot.is-active { border-color: var(--text); }
+
+/* VexFlow notation component (these rules used to live in the old styles.css). */
+.notation { position: relative; }
+.notation-inner { position: relative; }
+.vf-host { position: relative; z-index: 1; }
+.vf-host svg { display: block; }
+.note-playhead {
+  position: absolute;
+  background: color-mix(in oklab, var(--accent) 26%, transparent);
+  border-left: 2px solid var(--accent);
+  border-radius: 4px;
+  z-index: 2;            /* above the notes, translucent so they show through */
+  pointer-events: none;
+  /* No transition: the band must jump exactly with the step (like the grid).
+     A CSS transition makes it lag the audio by up to its duration at fast tempo. */
+}
+/* Keep our VexFlow notation sitting on the light "paper" surface from the design. */
+.notation-wrap .notation-inner { background: transparent; border: 0; }
+
+/* Per-beat "feel" picker above the grid (choose subdivision per beat). */
+.beat-feel { display: flex; flex-wrap: wrap; gap: var(--s-3); margin-bottom: var(--s-3); }
+.beat-feel-item { display: flex; align-items: center; gap: 6px; }
+.beat-feel-label { font-size: var(--fs-xs); color: var(--text-3); font-weight: 700; }
+.beat-feel .notepick .seg-item { width: 30px; height: 30px; }
+.beat-feel .notepick .note-icon { height: 18px; }
+
+/* Roll cell in the grid (distinct from on/accent). */
+.seq .cell.roll {
+  background: oklch(0.66 0.14 280); border-color: transparent; color: var(--on-accent);
+  display: grid; place-items: center;
+  font-family: var(--num-font); font-weight: 700; font-size: 12px;
+}
+
+/* Green "now playing" highlight in the grid (distinct from the coral hits). */
+:root { --play-green: oklch(0.77 0.16 153); }
+.seq .cell.play-col { box-shadow: 0 0 0 2px var(--play-green); }
+.seq-ruler .tick.play { color: var(--play-green); }
+
+/* Centre the content column instead of hugging the left edge on wide screens. */
+.main { margin-inline: auto; }
+.pb-inner { margin-inline: auto; width: 100%; }
+
+/* Player-bar "sound subdivisions" toggle */
+.pb-subtoggle {
+  flex: none; height: 40px; min-width: 44px; padding: 0 8px;
+  display: grid; place-items: center; cursor: pointer;
+  border-radius: var(--r-md); border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--text-3);
+  transition: all var(--dur) var(--ease);
+}
+.pb-subtoggle svg { width: 22px; height: 26px; }
+.pb-subtoggle:hover { color: var(--text); border-color: var(--border-strong); }
+.pb-subtoggle.is-active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+@media (max-width: 900px) { .pb-subtoggle { display: none; } }
+
+/* Speed trainer (tempo ramp) controls */
+.ramp-block .ramp-fields {
+  display: flex; flex-wrap: wrap; gap: var(--s-3) var(--s-5);
+}
+.ramp-field { display: inline-flex; align-items: center; gap: 8px; }
+.ramp-field .ramp-cap { color: var(--text-3); font-size: 0.85rem; white-space: nowrap; }
+.ramp-field .stepper { width: 96px; }
+
+/* Gap-trainer "metronome muted" pill in the player bar */
+.pb-muted-pill {
+  font-size: 0.66rem; font-weight: 700; letter-spacing: 0.02em;
+  padding: 2px 7px; border-radius: 999px;
+  background: oklch(0.7 0.16 38 / 0.16); color: var(--accent);
+  text-transform: uppercase; white-space: nowrap;
+}

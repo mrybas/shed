@@ -1,0 +1,20 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+
+# test artifacts
+test-results/
+playwright-report/
+playwright/.cache/
+
+# copyrighted reference material — never publish
+*.pdf
+design/
+
+# misc
+.DS_Store
+*.local
+.env
+.env.*

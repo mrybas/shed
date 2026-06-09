@@ -1,0 +1,157 @@
+/* ===========================================================================
+   DRUMS — Design System tokens
+   Semantic roles, theming (dark/light), density, accent, type.
+   Set on <html>:  data-theme, data-density, data-accent, style="--ui-font: …"
+   =========================================================================== */
+
+:root {
+  /* ---- Type ---------------------------------------------------------- */
+  --ui-font: "Space Grotesk", system-ui, sans-serif;
+  --num-font: "Space Mono", ui-monospace, monospace;
+
+  /* type scale (rem-ish, px for clarity) */
+  --fs-display: 2rem;     /* page title            */
+  --fs-h2: 1.0625rem;     /* section / card title  */
+  --fs-base: 0.9375rem;   /* body / control label  */
+  --fs-sm: 0.8125rem;     /* secondary             */
+  --fs-xs: 0.6875rem;     /* eyebrow / caption     */
+
+  /* ---- Spacing scale (4-based) -------------------------------------- */
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+  --s-5: 20px; --s-6: 24px; --s-7: 32px; --s-8: 40px; --s-9: 48px;
+
+  /* ---- Radius (density overrides below) ----------------------------- */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+  --r-pill: 999px;
+
+  /* ---- Control sizing ----------------------------------------------- */
+  --h-control: 42px;          /* unified height for buttons/inputs/segments */
+  --h-control-sm: 34px;
+  --pad-x: 16px;              /* control horizontal padding */
+  --gap: 16px;               /* default group gap */
+
+  /* ---- Shadow ------------------------------------------------------- */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.18);
+  --shadow-md: 0 6px 20px -8px rgba(0,0,0,.45);
+  --shadow-pop: 0 18px 50px -16px rgba(0,0,0,.55);
+  --focus-ring: 0 0 0 3px var(--accent-soft);
+
+  --dur: 150ms;
+  --ease: cubic-bezier(.2,.7,.3,1);
+}
+
+/* ====================== DENSITY ====================================== */
+:root[data-density="roomy"] {
+  --h-control: 48px; --h-control-sm: 38px;
+  --pad-x: 18px; --gap: 20px;
+  --r-md: 14px; --r-lg: 18px; --r-xl: 26px;
+  --fs-display: 2.25rem;
+}
+:root[data-density="compact"] {
+  --h-control: 36px; --h-control-sm: 30px;
+  --pad-x: 13px; --gap: 12px;
+  --r-sm: 7px; --r-md: 9px; --r-lg: 12px; --r-xl: 16px;
+  --fs-display: 1.75rem;
+}
+
+/* ====================== DARK THEME (default) ======================== */
+:root, :root[data-theme="dark"] {
+  --bg:            oklch(0.17 0.012 255);
+  --bg-grad-a:     oklch(0.185 0.014 262);
+  --bg-grad-b:     oklch(0.155 0.012 250);
+  --surface-1:     oklch(0.215 0.013 256);
+  --surface-2:     oklch(0.255 0.014 257);
+  --surface-3:     oklch(0.30 0.015 258);
+  --surface-inset: oklch(0.145 0.011 252);
+
+  --border:        oklch(0.32 0.014 258);
+  --border-soft:   oklch(0.27 0.012 256);
+  --border-strong: oklch(0.42 0.016 258);
+
+  --text:          oklch(0.97 0.004 255);
+  --text-2:        oklch(0.78 0.012 256);
+  --text-3:        oklch(0.62 0.014 256);
+
+  --track:         oklch(0.30 0.013 256);
+
+  --notation-paper: #fbfbf9;
+  --notation-ink:   #14140f;
+
+  color-scheme: dark;
+}
+
+/* ====================== LIGHT THEME ================================= */
+:root[data-theme="light"] {
+  --bg:            oklch(0.975 0.004 250);
+  --bg-grad-a:     oklch(0.99 0.004 245);
+  --bg-grad-b:     oklch(0.955 0.006 255);
+  --surface-1:     oklch(1 0 0);
+  --surface-2:     oklch(0.975 0.004 252);
+  --surface-3:     oklch(0.945 0.006 255);
+  --surface-inset: oklch(0.955 0.005 252);
+
+  --border:        oklch(0.89 0.006 255);
+  --border-soft:   oklch(0.925 0.005 255);
+  --border-strong: oklch(0.82 0.01 255);
+
+  --text:          oklch(0.24 0.012 258);
+  --text-2:        oklch(0.45 0.013 258);
+  --text-3:        oklch(0.58 0.012 258);
+
+  --track:         oklch(0.9 0.006 255);
+
+  --notation-paper: #ffffff;
+  --notation-ink:   #14140f;
+
+  --shadow-sm: 0 1px 2px rgba(20,22,28,.07);
+  --shadow-md: 0 8px 24px -10px rgba(20,22,28,.18);
+  --shadow-pop: 0 18px 50px -14px rgba(20,22,28,.22);
+  color-scheme: light;
+}
+
+/* ====================== ACCENTS ===================================== */
+/* One accent hue drives every "primary action" + "on/selected" state.
+   on-accent = text/icon color that sits on the accent fill. */
+:root[data-accent="coral"] {
+  --accent:        oklch(0.70 0.155 38);
+  --accent-strong: oklch(0.64 0.165 36);
+  --accent-press:  oklch(0.58 0.16 35);
+  --accent-soft:   oklch(0.70 0.155 38 / 0.18);
+  --accent-tint:   oklch(0.70 0.155 38 / 0.12);
+  --on-accent:     oklch(0.18 0.03 40);
+}
+:root[data-accent="teal"] {
+  --accent:        oklch(0.74 0.115 178);
+  --accent-strong: oklch(0.68 0.12 180);
+  --accent-press:  oklch(0.62 0.12 182);
+  --accent-soft:   oklch(0.74 0.115 178 / 0.20);
+  --accent-tint:   oklch(0.74 0.115 178 / 0.13);
+  --on-accent:     oklch(0.20 0.03 190);
+}
+:root[data-accent="indigo"] {
+  --accent:        oklch(0.62 0.16 274);
+  --accent-strong: oklch(0.57 0.17 274);
+  --accent-press:  oklch(0.51 0.17 274);
+  --accent-soft:   oklch(0.62 0.16 274 / 0.22);
+  --accent-tint:   oklch(0.62 0.16 274 / 0.14);
+  --on-accent:     oklch(0.99 0.01 274);
+}
+:root[data-accent="amber"] {
+  --accent:        oklch(0.78 0.14 78);
+  --accent-strong: oklch(0.72 0.145 72);
+  --accent-press:  oklch(0.66 0.14 68);
+  --accent-soft:   oklch(0.78 0.14 78 / 0.20);
+  --accent-tint:   oklch(0.78 0.14 78 / 0.13);
+  --on-accent:     oklch(0.22 0.04 70);
+}
+
+/* status colors (theme-stable enough) */
+:root {
+  --success:     oklch(0.72 0.13 158);
+  --success-fg:  oklch(0.18 0.03 158);
+  --danger:      oklch(0.64 0.18 22);
+  --danger-soft: oklch(0.64 0.18 22 / 0.14);
+}
