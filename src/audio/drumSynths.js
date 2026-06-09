@@ -106,6 +106,38 @@ export function crash(ctx, time, destination, { gain = 1 } = {}) {
   cymbal(ctx, time, destination, gain, 1.4, 1800, METAL_RATIOS)
 }
 
+// Tom: a pitched membrane — sine/triangle with a downward pitch sweep and a
+// short body of filtered noise for attack. `freq` sets the pitch (high→floor).
+function tom(ctx, time, destination, gain, freq) {
+  const osc = ctx.createOscillator()
+  const amp = ctx.createGain()
+  osc.type = 'sine'
+  osc.frequency.setValueAtTime(freq * 1.35, time)
+  osc.frequency.exponentialRampToValueAtTime(freq, time + 0.12)
+  amp.gain.setValueAtTime(gain, time)
+  amp.gain.exponentialRampToValueAtTime(0.0001, time + 0.4)
+  osc.connect(amp).connect(destination)
+  osc.start(time)
+  osc.stop(time + 0.42)
+
+  // A touch of noise on the attack for a more "struck" character.
+  const src = noiseSource(ctx)
+  const bp = ctx.createBiquadFilter()
+  bp.type = 'bandpass'
+  bp.frequency.value = freq * 2
+  bp.Q.value = 0.7
+  const namp = ctx.createGain()
+  namp.gain.setValueAtTime(gain * 0.25, time)
+  namp.gain.exponentialRampToValueAtTime(0.0001, time + 0.06)
+  src.connect(bp).connect(namp).connect(destination)
+  src.start(time)
+  src.stop(time + 0.08)
+}
+
+export function tom1(ctx, time, destination, { gain = 1 } = {}) { tom(ctx, time, destination, gain, 190) }
+export function tom2(ctx, time, destination, { gain = 1 } = {}) { tom(ctx, time, destination, gain, 140) }
+export function floorTom(ctx, time, destination, { gain = 1 } = {}) { tom(ctx, time, destination, gain, 95) }
+
 // A roll = a rapid series of snare strokes over `durationSec`.
 // open = double-stroke style (alternating louder/softer); closed = denser buzz.
 export function snareRoll(ctx, startTime, durationSec, type, destination, gain = 1) {
@@ -126,4 +158,7 @@ export const DRUM_VOICES = {
   hihatOpen,
   ride,
   crash,
+  tom1,
+  tom2,
+  floorTom,
 }

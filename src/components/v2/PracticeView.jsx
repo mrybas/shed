@@ -3,12 +3,13 @@ import { Slider, NumberStepper, NotePicker, Segmented, Switch, Button, Icon } fr
 import NotationView from '../NotationView.jsx'
 import { TIME_SIGS } from './util.js'
 import { CAT, catOf, sigOf } from '../../data/catalogV2.js'
-import { INSTRUMENTS, resizeExercise, setBeatSub, beatRanges } from '../../model/exercise.js'
+import { INSTRUMENTS, resizeExercise, setBeatSub, barLayout, addBar, removeBar, setBarTimeSignature } from '../../model/exercise.js'
 import { sigToTimeSignature } from './util.js'
 
 const INSTR_COLORS = {
   crash: 'oklch(0.72 0.13 320)', ride: 'oklch(0.74 0.12 250)', hihatOpen: 'oklch(0.78 0.13 95)',
-  hihatClosed: 'oklch(0.74 0.12 175)', snare: 'oklch(0.7 0.16 38)', kick: 'oklch(0.6 0.04 260)',
+  hihatClosed: 'oklch(0.74 0.12 175)', tom1: 'oklch(0.72 0.13 60)', tom2: 'oklch(0.68 0.13 45)',
+  snare: 'oklch(0.7 0.16 38)', floorTom: 'oklch(0.6 0.12 25)', kick: 'oklch(0.6 0.04 260)',
 }
 
 export default function PracticeView({
@@ -20,9 +21,12 @@ export default function PracticeView({
   useEffect(() => { setView(editable ? 'grid' : 'notes') }, [item.id, editable])
 
   const per = item.rows[INSTRUMENTS[0]].length
-  const ranges = beatRanges(item)
-  const beatStartSet = new Set(ranges.map((r) => r.start))
-  const beatOfStart = new Map(ranges.map((r) => [r.start, r.beat]))
+  const layout = barLayout(item)
+  const beats = layout.bars.flatMap((b) => b.beats)
+  const beatStartSet = new Set(beats.map((b) => b.start))
+  const beatNumOfStart = new Map(beats.map((b) => [b.start, b.beatInBar + 1]))
+  const barStartSet = new Set(layout.bars.map((b) => b.startStep))
+  const barNumOfStart = new Map(layout.bars.map((b) => [b.startStep, b.bar + 1]))
   const cat = CAT(catOf(item))
   const sig = sigOf(item)
 
@@ -30,18 +34,22 @@ export default function PracticeView({
   const setSig = (s) => setItem((p) => resizeExercise(p, sigToTimeSignature(s), p.subdivision))
   const setSub = (s) => setItem((p) => resizeExercise(p, p.timeSignature, s))
   const setOneBeatSub = (b, s) => setItem((p) => setBeatSub(p, b, s))
+  const addBarBtn = () => setItem((p) => addBar(p))
+  const delBar = (i) => setItem((p) => removeBar(p, i))
+  const setBarTS = (i, s) => setItem((p) => setBarTimeSignature(p, i, sigToTimeSignature(s)))
 
   // Roll type currently authored (open/closed); also restamps existing rolls.
   const hasClosed = INSTRUMENTS.some((k) => item.rows[k].some((c) => c.roll === 'closed'))
   const rollType = hasClosed ? 'closed' : 'open'
 
-  // off -> on -> accent -> roll -> off
+  // off -> on -> accent -> flam -> roll -> off
   const cycleCell = (k, i) => setItem((prev) => {
     const rows = { ...prev.rows, [k]: prev.rows[k].map((c, idx) => {
       if (idx !== i) return c
       if (!c.on) return { on: true, accent: false, roll: 0 }
-      if (!c.accent && !c.roll) return { on: true, accent: true, roll: 0 }
-      if (c.accent) return { on: true, accent: false, roll: rollType }
+      if (!c.accent && !c.flam && !c.roll) return { on: true, accent: true, roll: 0 }
+      if (c.accent) return { on: true, accent: false, roll: 0, flam: true }
+      if (c.flam) return { on: true, accent: false, roll: rollType }
       return { on: false, accent: false, roll: 0 }
     }) }
     return { ...prev, rows }
@@ -245,18 +253,39 @@ export default function PracticeView({
       ) : (
         <div className="seq" ref={playAreaRef}>
           {editable && (
-            <div className="beat-feel">
-              {ranges.map((r) => (
-                <div className="beat-feel-item" key={r.beat}>
-                  <span className="beat-feel-label num">{r.beat + 1}</span>
-                  <NotePicker value={r.sub} onChange={(s) => setOneBeatSub(r.beat, s)} />
+            <div className="bar-strip">
+              {layout.bars.map((bar) => (
+                <div className="bar-block" key={bar.bar}>
+                  <div className="bar-block-head">
+                    <span className="bar-tag num">{t('bar')} {bar.bar + 1}</span>
+                    <select className="select bar-ts" value={`${bar.ts.beats}/${bar.ts.unit}`} onChange={(e) => setBarTS(bar.bar, e.target.value)}>
+                      {TIME_SIGS.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                    {layout.bars.length > 1 && (
+                      <button className="bar-del" onClick={() => delBar(bar.bar)} aria-label={t('removeBar')} title={t('removeBar')}>
+                        <Icon name="trash" className="ic-xs" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="beat-feel">
+                    {bar.beats.map((bt) => (
+                      <div className="beat-feel-item" key={bt.globalBeat}>
+                        <span className="beat-feel-label num">{bt.beatInBar + 1}</span>
+                        <NotePicker value={bt.sub} onChange={(s) => setOneBeatSub(bt.globalBeat, s)} />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
+              <button className="bar-add" onClick={addBarBtn}><Icon name="plus" className="ic" />{t('addBar')}</button>
             </div>
           )}
           <div className="seq-ruler"><div />
             <div className="ticks">{Array.from({ length: per }).map((_, i) => (
-              <div key={i} className={'tick' + (beatStartSet.has(i) ? ' beat' : '') + (localPlay === i ? ' play' : '')}>{beatStartSet.has(i) ? beatOfStart.get(i) + 1 : '·'}</div>
+              <div key={i} className={'tick' + (beatStartSet.has(i) ? ' beat' : '') + (barStartSet.has(i) ? ' bar-start' : '') + (localPlay === i ? ' play' : '')}>
+                {barStartSet.has(i) ? <span className="tick-bar num">{t('bar')} {barNumOfStart.get(i)}</span> : null}
+                {beatStartSet.has(i) ? beatNumOfStart.get(i) : '·'}
+              </div>
             ))}</div>
           </div>
           <div className="seq-grid">
@@ -266,8 +295,8 @@ export default function PracticeView({
                 <div className="seq-cells">
                   {item.rows[k].map((cell, i) => (
                     <button key={i} disabled={!editable} aria-label={t(k) + ' ' + (i + 1)}
-                      className={['cell', cell.roll ? 'roll' : cell.accent ? 'accent' : cell.on ? 'on' : '', beatStartSet.has(i) ? 'beat-start' : '', localPlay === i ? 'play-col' : '', !editable ? 'ro' : ''].join(' ')}
-                      onClick={() => editable && cycleCell(k, i)}>{cell.roll ? 'z' : ''}</button>
+                      className={['cell', cell.roll ? 'roll' : cell.flam ? 'flam' : cell.accent ? 'accent' : cell.on ? 'on' : '', beatStartSet.has(i) ? 'beat-start' : '', barStartSet.has(i) ? 'bar-start' : '', localPlay === i ? 'play-col' : '', !editable ? 'ro' : ''].join(' ')}
+                      onClick={() => editable && cycleCell(k, i)}>{cell.roll ? 'z' : cell.flam ? 'f' : ''}</button>
                   ))}
                 </div>
               </div>
@@ -277,7 +306,7 @@ export default function PracticeView({
               <div className="seq-cells">
                 {item.sticking.map((s, i) => (
                   <button key={i} disabled={!editable}
-                    className={['cell', 'stick', s, beatStartSet.has(i) ? 'beat-start' : '', localPlay === i ? 'play-col' : '', !editable ? 'ro' : ''].join(' ')}
+                    className={['cell', 'stick', s, beatStartSet.has(i) ? 'beat-start' : '', barStartSet.has(i) ? 'bar-start' : '', localPlay === i ? 'play-col' : '', !editable ? 'ro' : ''].join(' ')}
                     onClick={() => editable && cycleStick(i)}>{s}</button>
                 ))}
               </div>

@@ -4,7 +4,7 @@
 import { getAudioContext, getMaster } from './AudioEngine.js'
 import { DRUM_VOICES, snareRoll } from './drumSynths.js'
 import { click } from './click.js'
-import { stepsPerBeat as spbOf, totalSteps as totalStepsOf, INSTRUMENTS } from '../model/exercise.js'
+import { stepsPerBeat as spbOf, totalSteps as totalStepsOf, INSTRUMENTS, getBars } from '../model/exercise.js'
 
 export class Scheduler {
   constructor() {
@@ -35,22 +35,30 @@ export class Scheduler {
     this.notesInQueue = [] // {step, time} for visualization
   }
 
-  // Build the per-step layout: each step's divisor (steps-per-beat of its beat)
-  // and whether it starts a beat. Uses the pattern's per-beat subdivisions when
-  // present, otherwise a uniform subdivision (metronome / legacy exercises).
+  // Build the per-step layout across all bars: each step's divisor
+  // (steps-per-beat of its beat), whether it starts a beat, and whether it
+  // starts a bar. Uses the pattern's bars (multi-bar aware) when present,
+  // otherwise a single uniform bar (metronome / legacy).
   _recompute() {
-    const beats = this.timeSignature.beats
-    const subs = this.pattern && Array.isArray(this.pattern.beatSubs) && this.pattern.beatSubs.length === beats
-      ? this.pattern.beatSubs
-      : Array.from({ length: beats }, () => this.subdivision)
+    const bars = this.pattern
+      ? getBars(this.pattern)
+      : [{ ts: this.timeSignature, beatSubs: Array.from({ length: this.timeSignature.beats }, () => this.subdivision) }]
     const divisor = []
     const isBeat = []
-    subs.forEach((sub) => {
-      const spb = spbOf(sub)
-      for (let s = 0; s < spb; s++) { divisor.push(spb); isBeat.push(s === 0) }
+    const isBarStart = []
+    bars.forEach((bar) => {
+      bar.beatSubs.forEach((sub, beatInBar) => {
+        const spb = spbOf(sub)
+        for (let s = 0; s < spb; s++) {
+          divisor.push(spb)
+          isBeat.push(s === 0)
+          isBarStart.push(s === 0 && beatInBar === 0)
+        }
+      })
     })
     this._divisor = divisor
     this._isBeat = isBeat
+    this._isBarStart = isBarStart
     this._total = divisor.length || 1
   }
 
@@ -125,8 +133,11 @@ export class Scheduler {
   _advance() {
     this.nextNoteTime += this._secondsPerStepAt(this.currentStep)
     const next = (this.currentStep + 1) % this._totalSteps()
-    // On each bar boundary, recompute the (possibly ramped) tempo for the next bar.
-    if (next === 0) {
+    // Count musical bars (each bar-start), not just full-phrase wraps, so the
+    // speed/gap trainers step per bar in multi-bar exercises. Step 0 is always a
+    // bar start, so single-bar exercises behave exactly as before.
+    const startsBar = this._isBarStart ? !!this._isBarStart[next] : next === 0
+    if (startsBar) {
       this._bars += 1
       this.bpm = this.rampedBpm()
     }
@@ -137,7 +148,7 @@ export class Scheduler {
     const ctx = getAudioContext()
     const master = getMaster()
     const isBeat = this._isBeat ? !!this._isBeat[step] : (step % spbOf(this.subdivision) === 0)
-    const isDownbeat = step === 0
+    const isDownbeat = this._isBarStart ? !!this._isBarStart[step] : step === 0
 
     // Metronome click. Beat clicks need the metronome enabled; subdivision
     // clicks are independent (so "sound subdivisions" works even with the beat
@@ -163,7 +174,11 @@ export class Scheduler {
             snareRoll(ctx, time, this._rollDuration(step), cell.roll, master, gain)
           } else {
             const voice = DRUM_VOICES[inst]
-            if (voice) voice(ctx, time, master, { gain })
+            if (voice) {
+              // Flam: a soft grace stroke a hair (~28 ms) before the main hit.
+              if (cell.flam) voice(ctx, time - 0.028, master, { gain: gain * 0.5 })
+              voice(ctx, time, master, { gain })
+            }
           }
         }
       })

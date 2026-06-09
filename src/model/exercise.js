@@ -6,7 +6,10 @@ export const INSTRUMENTS = [
   'ride',
   'hihatOpen',
   'hihatClosed',
+  'tom1',
+  'tom2',
   'snare',
+  'floorTom',
   'kick',
 ]
 
@@ -49,8 +52,159 @@ export function beatRanges(ex) {
   return ranges
 }
 
+// ---- Bars (multi-bar exercises) ----
+// Single-bar exercises keep their flat `timeSignature` + `beatSubs` (and have no
+// `bars` field). Multi-bar exercises carry `ex.bars = [{ ts, beatSubs }, ...]`
+// as the source of truth, with `rows`/`sticking` flat across all bars. `getBars`
+// hides the difference: everything downstream reads bars through it.
+function normalizeBarSpec(b, fallbackSub = 'sixteenth') {
+  const ts = b?.ts && b.ts.beats ? { beats: b.ts.beats, unit: b.ts.unit || 4 } : { beats: 4, unit: 4 }
+  const seed = (Array.isArray(b?.beatSubs) && b.beatSubs[0]) || fallbackSub
+  const beatSubs = Array.isArray(b?.beatSubs) && b.beatSubs.length === ts.beats
+    ? b.beatSubs.slice()
+    : Array.from({ length: ts.beats }, (_, i) => b?.beatSubs?.[i] || seed)
+  return { ts, beatSubs }
+}
+
+export function getBars(ex) {
+  if (Array.isArray(ex.bars) && ex.bars.length) {
+    return ex.bars.map((b) => normalizeBarSpec(b, ex.subdivision))
+  }
+  return [{ ts: ex.timeSignature, beatSubs: getBeatSubs(ex) }]
+}
+
+export function barCount(ex) {
+  return getBars(ex).length
+}
+
+// Positional layout across all bars: per-bar step ranges + per-beat ranges with
+// global indices. The one function the engine/notation/editor use to place steps.
+export function barLayout(ex) {
+  const bars = getBars(ex)
+  let step = 0
+  let globalBeat = 0
+  const layoutBars = bars.map((b, bar) => {
+    const startStep = step
+    const beats = b.beatSubs.map((sub, beatInBar) => {
+      const len = stepsPerBeat(sub)
+      const entry = { bar, beatInBar, globalBeat, start: step, len, sub }
+      step += len
+      globalBeat += 1
+      return entry
+    })
+    return { bar, ts: b.ts, beatSubs: b.beatSubs, startStep, stepCount: step - startStep, beats }
+  })
+  return { bars: layoutBars, totalSteps: step }
+}
+
 export function exerciseTotalSteps(ex) {
-  return getBeatSubs(ex).reduce((n, sub) => n + stepsPerBeat(sub), 0)
+  return barLayout(ex).totalSteps
+}
+
+// Write a bars array back onto an exercise, keeping legacy fields in sync with
+// bar 0. Single-bar collapses to the flat shape (no `bars`) for back-compat.
+function withBars(ex, bars) {
+  const norm = bars.map((b) => normalizeBarSpec(b, ex.subdivision))
+  const base = {
+    ...ex,
+    timeSignature: norm[0].ts,
+    beatSubs: norm[0].beatSubs,
+    subdivision: norm[0].beatSubs[0],
+  }
+  if (norm.length > 1) base.bars = norm
+  else delete base.bars
+  return base
+}
+
+// Copy cells/sticking from an old bar's step range into a new one, matching by
+// beat index and position-within-beat (the same rule as single-bar rebuild).
+function rebuildBarRange(ex, oldRange, oldSpec, newSpec) {
+  const { ranges: newR, total: newCount } = rangesFor(newSpec.ts, newSpec.beatSubs)
+  const { ranges: oldR } = rangesFor(oldSpec.ts, oldSpec.beatSubs)
+  const rows = {}
+  INSTRUMENTS.forEach((key) => {
+    const row = ex.rows[key] || []
+    const before = row.slice(0, oldRange.start)
+    const after = row.slice(oldRange.start + oldRange.count)
+    const mid = makeRow(newCount)
+    newR.forEach((nr, b) => {
+      const or = oldR[b]
+      if (!or) return
+      const copy = Math.min(or.len, nr.len)
+      for (let i = 0; i < copy; i++) {
+        const c = row[oldRange.start + or.start + i]
+        if (c) mid[nr.start + i] = copyCell(c)
+      }
+    })
+    rows[key] = [...before, ...mid, ...after]
+  })
+  const sBefore = ex.sticking.slice(0, oldRange.start)
+  const sAfter = ex.sticking.slice(oldRange.start + oldRange.count)
+  const sMid = Array.from({ length: newCount }, () => '')
+  newR.forEach((nr, b) => {
+    const or = oldR[b]
+    if (!or) return
+    const copy = Math.min(or.len, nr.len)
+    for (let i = 0; i < copy; i++) sMid[nr.start + i] = ex.sticking[oldRange.start + or.start + i] || ''
+  })
+  return { rows, sticking: [...sBefore, ...sMid, ...sAfter] }
+}
+
+// Replace bar `i`'s meter/subdivisions, preserving its cells by position and
+// leaving every other bar untouched.
+function replaceBar(ex, i, newSpec) {
+  const layout = barLayout(ex)
+  const bars = getBars(ex)
+  const lb = layout.bars[i]
+  if (!lb) return ex
+  const spec = normalizeBarSpec(newSpec, ex.subdivision)
+  const { rows, sticking } = rebuildBarRange(
+    ex,
+    { start: lb.startStep, count: lb.stepCount },
+    { ts: lb.ts, beatSubs: lb.beatSubs },
+    spec,
+  )
+  const next = bars.slice()
+  next[i] = spec
+  return { ...withBars({ ...ex, rows, sticking }, next) }
+}
+
+// Append a bar (defaults to the last bar's meter), with empty cells.
+export function addBar(ex, opts = {}) {
+  const bars = getBars(ex)
+  const last = bars[bars.length - 1]
+  const spec = normalizeBarSpec(opts.bar || { ts: last.ts, beatSubs: last.beatSubs.map(() => last.beatSubs[0]) }, ex.subdivision)
+  const addCount = spec.beatSubs.reduce((t, s) => t + stepsPerBeat(s), 0)
+  const rows = {}
+  INSTRUMENTS.forEach((key) => { rows[key] = [...(ex.rows[key] || []), ...makeRow(addCount)] })
+  const sticking = [...ex.sticking, ...Array.from({ length: addCount }, () => '')]
+  return withBars({ ...ex, rows, sticking }, [...bars, spec])
+}
+
+// Remove bar `i` (its step range is spliced out). Keeps at least one bar.
+export function removeBar(ex, i) {
+  const layout = barLayout(ex)
+  if (layout.bars.length <= 1) return ex
+  const lb = layout.bars[i]
+  if (!lb) return ex
+  const rows = {}
+  INSTRUMENTS.forEach((key) => {
+    const row = ex.rows[key] || []
+    rows[key] = [...row.slice(0, lb.startStep), ...row.slice(lb.startStep + lb.stepCount)]
+  })
+  const sticking = [...ex.sticking.slice(0, lb.startStep), ...ex.sticking.slice(lb.startStep + lb.stepCount)]
+  const bars = getBars(ex).filter((_, idx) => idx !== i)
+  return withBars({ ...ex, rows, sticking }, bars)
+}
+
+// Change one bar's time signature (preserves overlapping beats/cells).
+export function setBarTimeSignature(ex, i, ts) {
+  const bars = getBars(ex)
+  const cur = bars[i]
+  if (!cur) return ex
+  const seed = cur.beatSubs[0] || 'sixteenth'
+  const beatSubs = Array.from({ length: ts.beats }, (_, k) => cur.beatSubs[k] || seed)
+  return replaceBar(ex, i, { ts: { beats: ts.beats, unit: ts.unit || 4 }, beatSubs })
 }
 
 function makeCell() {
@@ -59,6 +213,15 @@ function makeCell() {
 
 function makeRow(n) {
   return Array.from({ length: n }, makeCell)
+}
+
+// Normalize a cell, preserving the optional `flam` flag only when set (so empty
+// cells keep their minimal { on, accent, roll } shape).
+function copyCell(c) {
+  if (!c) return { on: false, accent: false, roll: 0 }
+  const nc = { on: !!c.on, accent: !!c.accent, roll: c.roll || 0 }
+  if (c.flam) nc.flam = true
+  return nc
 }
 
 let counter = 0
@@ -72,21 +235,26 @@ function genId() {
 export function createEmptyExercise(opts = {}) {
   const timeSignature = opts.timeSignature || { beats: 4, unit: 4 }
   const subdivision = opts.subdivision || 'sixteenth'
+  const barsSpec = Array.isArray(opts.bars) && opts.bars.length
+    ? opts.bars.map((b) => normalizeBarSpec(b, subdivision))
+    : null
   const beatSubs = opts.beatSubs || Array.from({ length: timeSignature.beats }, () => subdivision)
-  const n = beatSubs.reduce((t, s) => t + stepsPerBeat(s), 0)
+  const n = barsSpec
+    ? barsSpec.reduce((t, b) => t + b.beatSubs.reduce((s, sub) => s + stepsPerBeat(sub), 0), 0)
+    : beatSubs.reduce((t, s) => t + stepsPerBeat(s), 0)
   const rows = {}
   INSTRUMENTS.forEach((key) => {
     rows[key] = makeRow(n)
   })
-  return {
+  const ex = {
     version: 1,
     app: 'drums',
     id: opts.id || genId(),
     name: opts.name || 'New exercise',
     bpm: opts.bpm || 90,
-    timeSignature,
-    subdivision,
-    beatSubs,
+    timeSignature: barsSpec ? barsSpec[0].ts : timeSignature,
+    subdivision: barsSpec ? barsSpec[0].beatSubs[0] : subdivision,
+    beatSubs: barsSpec ? barsSpec[0].beatSubs : beatSubs,
     instruments: [...INSTRUMENTS],
     rows,
     sticking: Array.from({ length: n }, () => ''),
@@ -97,6 +265,8 @@ export function createEmptyExercise(opts = {}) {
     page: opts.page ?? null,
     tags: opts.tags || [],
   }
+  if (barsSpec && barsSpec.length > 1) ex.bars = barsSpec
+  return ex
 }
 
 // Classify a sticking string by its longest run of the same hand:
@@ -138,7 +308,7 @@ function rebuild(ex, timeSignature, beatSubs) {
       const copy = Math.min(or.len, nr.len)
       for (let i = 0; i < copy; i++) {
         const c = oldRow[or.start + i]
-        if (c) row[nr.start + i] = { on: !!c.on, accent: !!c.accent, roll: c.roll || 0 }
+        if (c) row[nr.start + i] = copyCell(c)
       }
     })
     rows[key] = row
@@ -153,14 +323,31 @@ function rebuild(ex, timeSignature, beatSubs) {
   return { ...ex, timeSignature, beatSubs, subdivision: beatSubs[0], rows, sticking }
 }
 
-// Change the time signature and apply one uniform subdivision to all beats.
+// Change the time signature and apply one uniform subdivision to all beats. For
+// multi-bar exercises this applies to every bar (the "all bars" control).
 export function resizeExercise(ex, timeSignature, subdivision) {
+  if (Array.isArray(ex.bars) && ex.bars.length) {
+    const uniform = { ts: timeSignature, beatSubs: Array.from({ length: timeSignature.beats }, () => subdivision) }
+    let out = ex
+    for (let i = 0; i < ex.bars.length; i++) out = replaceBar(out, i, uniform)
+    return out
+  }
   const beatSubs = Array.from({ length: timeSignature.beats }, () => subdivision)
   return rebuild(ex, timeSignature, beatSubs)
 }
 
-// Change the subdivision of a single beat (keeps the others).
+// Change the subdivision of a single beat (global beat index), keeping others.
 export function setBeatSub(ex, beatIndex, subdivision) {
+  if (Array.isArray(ex.bars) && ex.bars.length) {
+    const layout = barLayout(ex)
+    let target = null
+    layout.bars.forEach((lb) => lb.beats.forEach((bt) => { if (bt.globalBeat === beatIndex) target = bt }))
+    if (!target) return ex
+    const bars = getBars(ex)
+    const beatSubs = bars[target.bar].beatSubs.slice()
+    beatSubs[target.beatInBar] = subdivision
+    return replaceBar(ex, target.bar, { ts: bars[target.bar].ts, beatSubs })
+  }
   const beatSubs = getBeatSubs(ex).slice()
   beatSubs[beatIndex] = subdivision
   return rebuild(ex, ex.timeSignature, beatSubs)
@@ -194,27 +381,32 @@ export function parseImported(text) {
   }
   // Normalize: per-beat subdivisions (fall back to uniform), then row lengths.
   const subdivision = obj.subdivision || 'sixteenth'
+  const barsSpec = Array.isArray(obj.bars) && obj.bars.length
+    ? obj.bars.map((b) => normalizeBarSpec(b, subdivision))
+    : null
   const beatSubs = Array.isArray(obj.beatSubs) && obj.beatSubs.length === obj.timeSignature.beats
     ? obj.beatSubs
     : Array.from({ length: obj.timeSignature.beats }, () => subdivision)
-  const n = beatSubs.reduce((t, s) => t + stepsPerBeat(s), 0)
+  const n = barsSpec
+    ? barsSpec.reduce((t, b) => t + b.beatSubs.reduce((s, sub) => s + stepsPerBeat(sub), 0), 0)
+    : beatSubs.reduce((t, s) => t + stepsPerBeat(s), 0)
   const rows = {}
   INSTRUMENTS.forEach((key) => {
     const old = obj.rows[key] || []
     rows[key] = Array.from({ length: n }, (_, i) => {
       const c = old[i]
-      return c ? { on: !!c.on, accent: !!c.accent, roll: c.roll || 0 } : { on: false, accent: false, roll: 0 }
+      return copyCell(c)
     })
   })
-  return {
+  const ex = {
     version: 1,
     app: 'drums',
     id: genId(),
     name: obj.name || 'Imported',
     bpm: obj.bpm || 90,
-    timeSignature: obj.timeSignature,
-    subdivision,
-    beatSubs,
+    timeSignature: barsSpec ? barsSpec[0].ts : obj.timeSignature,
+    subdivision: barsSpec ? barsSpec[0].beatSubs[0] : subdivision,
+    beatSubs: barsSpec ? barsSpec[0].beatSubs : beatSubs,
     instruments: [...INSTRUMENTS],
     rows,
     sticking: Array.from({ length: n }, (_, i) => obj.sticking?.[i] || ''),
@@ -224,6 +416,25 @@ export function parseImported(text) {
     page: obj.page ?? null,
     tags: Array.isArray(obj.tags) ? obj.tags : [],
   }
+  if (barsSpec && barsSpec.length > 1) ex.bars = barsSpec
+  return ex
+}
+
+// Ensure an exercise has rows for every current instrument (older saves predate
+// the toms) and that row/sticking lengths match the bar layout. Preserves cells.
+export function normalizeExercise(ex) {
+  if (!ex || !ex.rows) return ex
+  const n = exerciseTotalSteps(ex)
+  const rows = {}
+  INSTRUMENTS.forEach((key) => {
+    const row = ex.rows[key] || []
+    rows[key] = Array.from({ length: n }, (_, i) => {
+      const c = row[i]
+      return copyCell(c)
+    })
+  })
+  const sticking = Array.from({ length: n }, (_, i) => ex.sticking?.[i] || '')
+  return { ...ex, instruments: [...INSTRUMENTS], rows, sticking }
 }
 
 // ---- localStorage library ----
@@ -233,7 +444,8 @@ const LS_KEY = 'drums.library'
 export function loadLibrary() {
   try {
     const raw = localStorage.getItem(LS_KEY)
-    return raw ? JSON.parse(raw) : []
+    const lib = raw ? JSON.parse(raw) : []
+    return Array.isArray(lib) ? lib.map(normalizeExercise) : []
   } catch {
     return []
   }

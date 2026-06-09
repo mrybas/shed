@@ -72,7 +72,7 @@ test('plays a catalog exercise (player bar shows it)', async ({ page }) => {
   await page.locator('.pb-play').click()
 })
 
-test('new exercise: grid cell cycles off -> on -> accent -> roll -> off', async ({ page }) => {
+test('new exercise: grid cell cycles off -> on -> accent -> flam -> roll -> off', async ({ page }) => {
   await page.locator('.side-parent-main').click()
   await page.getByRole('button', { name: /New exercise/ }).click()
   await expect(page.locator('.practice')).toBeVisible()
@@ -84,6 +84,8 @@ test('new exercise: grid cell cycles off -> on -> accent -> roll -> off', async 
   await expect(cell).toHaveClass(/\bon\b/)
   await cell.click()
   await expect(cell).toHaveClass(/\baccent\b/)
+  await cell.click()
+  await expect(cell).toHaveClass(/\bflam\b/)
   await cell.click()
   await expect(cell).toHaveClass(/\broll\b/)
   await cell.click()

@@ -15,6 +15,13 @@ import {
   beatRanges,
   setBeatSub,
   exerciseTotalSteps,
+  getBars,
+  barCount,
+  barLayout,
+  addBar,
+  removeBar,
+  setBarTimeSignature,
+  normalizeExercise,
 } from './exercise.js'
 
 describe('per-beat subdivisions', () => {
@@ -43,6 +50,101 @@ describe('per-beat subdivisions', () => {
     expect(ex.rows.snare).toHaveLength(7)
     expect(ex.rows.snare[0].on).toBe(true)
     expect(ex.rows.snare[4].on).toBe(true)
+  })
+})
+
+describe('bars (multi-bar exercises)', () => {
+  it('single-bar exercises report one bar and carry no bars field', () => {
+    const ex = createEmptyExercise({ timeSignature: { beats: 4, unit: 4 }, subdivision: 'sixteenth' })
+    expect(ex.bars).toBeUndefined()
+    expect(barCount(ex)).toBe(1)
+    expect(getBars(ex)).toEqual([{ ts: { beats: 4, unit: 4 }, beatSubs: ['sixteenth', 'sixteenth', 'sixteenth', 'sixteenth'] }])
+  })
+
+  it('addBar appends a bar of empty steps, extending flat rows', () => {
+    let ex = createEmptyExercise({ timeSignature: { beats: 4, unit: 4 }, subdivision: 'eighth' }) // 8 steps
+    ex.rows.snare[0] = { on: true, accent: false, roll: 0 }
+    ex = addBar(ex)
+    expect(barCount(ex)).toBe(2)
+    expect(ex.rows.snare).toHaveLength(16) // 8 + 8
+    expect(ex.rows.snare[0].on).toBe(true)
+    expect(ex.rows.snare.slice(8).every((c) => !c.on)).toBe(true)
+    expect(exerciseTotalSteps(ex)).toBe(16)
+  })
+
+  it('removeBar splices that bar out and keeps the others intact', () => {
+    let ex = createEmptyExercise({ timeSignature: { beats: 2, unit: 4 }, subdivision: 'quarter' }) // 2 steps/bar
+    ex = addBar(ex); ex = addBar(ex) // 3 bars, 6 steps
+    ex.rows.kick[0] = { on: true, accent: false, roll: 0 } // bar 0
+    ex.rows.kick[4] = { on: true, accent: false, roll: 0 } // bar 2
+    ex = removeBar(ex, 1) // drop middle bar
+    expect(barCount(ex)).toBe(2)
+    expect(ex.rows.kick).toHaveLength(4)
+    expect(ex.rows.kick[0].on).toBe(true) // old bar 0 preserved
+    expect(ex.rows.kick[2].on).toBe(true) // old bar 2 now at steps 2..3
+  })
+
+  it('removeBar refuses to drop the last remaining bar', () => {
+    const ex = createEmptyExercise()
+    expect(removeBar(ex, 0)).toBe(ex)
+  })
+
+  it('per-bar time signature changes only that bar', () => {
+    let ex = createEmptyExercise({ timeSignature: { beats: 4, unit: 4 }, subdivision: 'quarter' }) // 4 steps
+    ex = addBar(ex) // 2 bars, 8 steps
+    ex = setBarTimeSignature(ex, 1, { beats: 3, unit: 4 }) // bar 1 -> 3 beats
+    expect(getBars(ex)[0].ts).toEqual({ beats: 4, unit: 4 })
+    expect(getBars(ex)[1].ts).toEqual({ beats: 3, unit: 4 })
+    expect(exerciseTotalSteps(ex)).toBe(7) // 4 + 3
+    expect(ex.rows.snare).toHaveLength(7)
+  })
+
+  it('barLayout gives per-bar step ranges and global beat indices', () => {
+    let ex = createEmptyExercise({ timeSignature: { beats: 2, unit: 4 }, subdivision: 'eighth' }) // 4 steps/bar
+    ex = addBar(ex)
+    const layout = barLayout(ex)
+    expect(layout.totalSteps).toBe(8)
+    expect(layout.bars[1].startStep).toBe(4)
+    expect(layout.bars[1].beats[0].globalBeat).toBe(2)
+  })
+
+  it('setBeatSub targets the right bar by global beat index', () => {
+    let ex = createEmptyExercise({ timeSignature: { beats: 2, unit: 4 }, subdivision: 'sixteenth' })
+    ex = addBar(ex) // 2 bars × 2 beats = global beats 0..3
+    ex = setBeatSub(ex, 3, 'triplet') // bar 1, beat 1
+    expect(getBars(ex)[1].beatSubs).toEqual(['sixteenth', 'triplet'])
+    expect(getBars(ex)[0].beatSubs).toEqual(['sixteenth', 'sixteenth'])
+  })
+
+  it('multi-bar exercises round-trip through parseImported', () => {
+    let ex = createEmptyExercise({ timeSignature: { beats: 4, unit: 4 }, subdivision: 'eighth' })
+    ex = addBar(ex)
+    ex = setBarTimeSignature(ex, 1, { beats: 2, unit: 4 })
+    ex.rows.snare[0] = { on: true, accent: true, roll: 0 }
+    const parsed = parseImported(JSON.stringify(ex))
+    expect(barCount(parsed)).toBe(2)
+    expect(getBars(parsed)[1].ts).toEqual({ beats: 2, unit: 4 })
+    expect(parsed.rows.snare[0]).toEqual({ on: true, accent: true, roll: 0 })
+  })
+
+  it('preserves the flam flag through resize and import (and only when set)', () => {
+    let ex = createEmptyExercise({ timeSignature: { beats: 4, unit: 4 }, subdivision: 'eighth' })
+    ex.rows.snare[0] = { on: true, accent: false, roll: 0, flam: true }
+    // plain cells stay minimal (no flam key) so legacy equality checks hold
+    expect(ex.rows.snare[1]).toEqual({ on: false, accent: false, roll: 0 })
+    const grown = resizeExercise(ex, ex.timeSignature, 'sixteenth')
+    expect(grown.rows.snare[0].flam).toBe(true)
+    const parsed = parseImported(JSON.stringify(grown))
+    expect(parsed.rows.snare[0].flam).toBe(true)
+    expect(parsed.rows.snare[1].flam).toBeUndefined()
+  })
+
+  it('normalizeExercise adds missing tom rows to older saves', () => {
+    const legacy = { app: 'drums', timeSignature: { beats: 4, unit: 4 }, subdivision: 'quarter', rows: { snare: [{ on: true, accent: false, roll: 0 }, {}, {}, {}] }, sticking: [] }
+    const norm = normalizeExercise(legacy)
+    expect(norm.rows.tom1).toHaveLength(4)
+    expect(norm.rows.floorTom).toHaveLength(4)
+    expect(norm.rows.snare[0].on).toBe(true)
   })
 })
 

@@ -22,7 +22,7 @@ vi.mock('./click.js', () => ({ click: vi.fn() }))
 import { Scheduler } from './Scheduler.js'
 import { DRUM_VOICES, snareRoll } from './drumSynths.js'
 import { click } from './click.js'
-import { createEmptyExercise } from '../model/exercise.js'
+import { createEmptyExercise, addBar } from '../model/exercise.js'
 
 describe('Scheduler timing math', () => {
   it('computes seconds per step from bpm and subdivision', () => {
@@ -141,6 +141,33 @@ describe('Scheduler timing math', () => {
     expect(s.bpm).toBe(100)
   })
 
+  it('builds a per-bar layout (divisor / isBeat / isBarStart) across all bars', () => {
+    const s = new Scheduler()
+    let ex = createEmptyExercise({ timeSignature: { beats: 2, unit: 4 }, subdivision: 'eighth' }) // 4 steps/bar
+    ex = addBar(ex) // 2 bars, 8 steps
+    s.pattern = ex
+    s._recompute()
+    expect(s._total).toBe(8)
+    expect(s._isBeat).toEqual([true, false, true, false, true, false, true, false])
+    expect(s._isBarStart).toEqual([true, false, false, false, true, false, false, false])
+  })
+
+  it('counts a musical bar at each bar-start on advance', () => {
+    const s = new Scheduler()
+    let ex = createEmptyExercise({ timeSignature: { beats: 2, unit: 4 }, subdivision: 'quarter' }) // 2 steps/bar
+    ex = addBar(ex) // 2 bars, 4 steps
+    s.pattern = ex
+    s.baseBpm = 100
+    s._recompute()
+    s.currentStep = 0
+    s._bars = 0
+    s.isPlaying = true
+    for (let i = 0; i < 2; i++) s._advance() // step 0 -> 1 -> 2 (start of bar 2)
+    expect(s._bars).toBe(1) // one bar boundary crossed
+    for (let i = 0; i < 2; i++) s._advance() // -> 3 -> 0 (phrase wrap = bar start)
+    expect(s._bars).toBe(2)
+  })
+
   it('wraps currentStep at the bar boundary on advance', () => {
     const s = new Scheduler()
     s.timeSignature = { beats: 4, unit: 4 }
@@ -194,6 +221,25 @@ describe('Scheduler step scheduling', () => {
     expect(DRUM_VOICES.snare).not.toHaveBeenCalled()
   })
 
+  it('flam schedules a soft grace stroke just before the main hit', () => {
+    const s = new Scheduler()
+    s.subdivision = 'quarter'
+    s.metronomeEnabled = false
+    const ex = createEmptyExercise({ subdivision: 'quarter' })
+    ex.rows.snare[0] = { on: true, accent: false, roll: 0, flam: true }
+    s.pattern = ex
+    s._scheduleStep(0, 5.0)
+    // main hit at 5.0 plus a quieter grace a touch earlier
+    expect(DRUM_VOICES.snare).toHaveBeenCalledTimes(2)
+    const calls = DRUM_VOICES.snare.mock.calls
+    const times = calls.map((c) => c[1]).sort((a, b) => a - b)
+    expect(times[1]).toBe(5.0)
+    expect(times[0]).toBeLessThan(5.0)
+    const graceGain = calls.find((c) => c[1] < 5.0)[3].gain
+    const mainGain = calls.find((c) => c[1] === 5.0)[3].gain
+    expect(graceGain).toBeLessThan(mainGain)
+  })
+
   it('scales drum gain by patternVolume', () => {
     const s = new Scheduler()
     s.subdivision = 'quarter'
@@ -206,6 +252,22 @@ describe('Scheduler step scheduling', () => {
     s._scheduleStep(0, 2.0)
     expect(DRUM_VOICES.snare).toHaveBeenCalledWith(fakeCtx, 2.0, expect.anything(), { gain: 0.5 })
     expect(DRUM_VOICES.kick).toHaveBeenCalledWith(fakeCtx, 2.0, expect.anything(), { gain: 0.275 })
+  })
+
+  it('accents the downbeat of every bar (not just the first bar)', () => {
+    const s = new Scheduler()
+    let ex = createEmptyExercise({ timeSignature: { beats: 2, unit: 4 }, subdivision: 'quarter' }) // 2 steps/bar
+    ex = addBar(ex) // 2 bars, steps: 0=bar0 b1, 1=bar0 b2, 2=bar1 b1, 3=bar1 b2
+    s.pattern = ex
+    s.metronomeEnabled = true
+    s.accentFirst = true
+    s._recompute()
+
+    s._scheduleStep(2, 9.0) // start of bar 2 -> accent
+    expect(click).toHaveBeenCalledWith(expect.anything(), 9.0, expect.anything(), 'accent', 1)
+    click.mockClear()
+    s._scheduleStep(3, 9.5) // bar 2 beat 2 -> normal
+    expect(click).toHaveBeenCalledWith(expect.anything(), 9.5, expect.anything(), 'normal', 1)
   })
 
   it('clicks a normal beat (not accent) on later beats, no subdivision click by default', () => {

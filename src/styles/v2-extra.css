@@ -41,6 +41,13 @@
   font-family: var(--num-font); font-weight: 700; font-size: 12px;
 }
 
+/* Flam cell (a grace stroke before the hit). */
+.seq .cell.flam {
+  background: oklch(0.72 0.13 250); border-color: transparent; color: var(--on-accent);
+  display: grid; place-items: center;
+  font-family: var(--num-font); font-weight: 700; font-size: 12px;
+}
+
 /* Green "now playing" highlight in the grid (distinct from the coral hits). */
 :root { --play-green: oklch(0.77 0.16 153); }
 .seq .cell.play-col { box-shadow: 0 0 0 2px var(--play-green); }
@@ -77,4 +84,38 @@
   padding: 2px 7px; border-radius: 999px;
   background: oklch(0.7 0.16 38 / 0.16); color: var(--accent);
   text-transform: uppercase; white-space: nowrap;
+}
+
+/* ---- Multi-bar editor ---- */
+.bar-strip { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--s-3); margin-bottom: var(--s-3); }
+.bar-block {
+  border: 1px solid var(--border-soft); border-radius: var(--r-md);
+  padding: 8px; background: var(--surface-1);
+}
+.bar-block-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.bar-tag { font-size: 0.72rem; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: .03em; }
+.bar-ts { height: 30px; padding: 0 6px; font-size: 0.85rem; }
+.bar-del {
+  margin-left: auto; display: grid; place-items: center; width: 28px; height: 28px;
+  border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface-2);
+  color: var(--text-3); cursor: pointer;
+}
+.bar-del:hover { color: var(--danger, oklch(0.65 0.2 25)); border-color: var(--border-strong); }
+.bar-block .beat-feel { margin: 0; }
+.bar-add {
+  align-self: center; display: inline-flex; align-items: center; gap: 6px;
+  height: 36px; padding: 0 14px; border-radius: var(--r-md);
+  border: 1px dashed var(--border-strong); background: transparent; color: var(--text-2);
+  font-weight: 600; font-size: var(--fs-sm); cursor: pointer;
+}
+.bar-add:hover { color: var(--text); border-color: var(--accent); }
+.bar-add .ic { width: 16px; height: 16px; }
+
+/* Heavier divider at the start of each bar in the grid + ruler. */
+.seq .cell.bar-start { border-left: 2px solid var(--accent); }
+.seq-ruler .tick.bar-start { position: relative; }
+.seq-ruler .tick .tick-bar {
+  position: absolute; bottom: 100%; left: 0; white-space: nowrap;
+  font-size: 0.62rem; font-weight: 700; color: var(--accent);
+  text-transform: uppercase; letter-spacing: .03em; padding-bottom: 2px;
 }

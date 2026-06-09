@@ -38,6 +38,9 @@ export const translations = {
     // instruments
     kick: 'Бочка',
     snare: 'Снейр',
+    tom1: 'Том 1',
+    tom2: 'Том 2',
+    floorTom: 'Підлоговий том',
     hihatClosed: 'Хай-хет (закр.)',
     hihatOpen: 'Хай-хет (відкр.)',
     ride: 'Райд',
@@ -111,6 +114,8 @@ export const translations = {
     clickOn: 'Клік',
     clickOff: 'тиша',
     gapMutedTag: 'метроном вимкнено',
+    addBar: 'Додати такт',
+    removeBar: 'Видалити такт',
   },
   en: {
     appTitle: 'Drums',
@@ -147,6 +152,9 @@ export const translations = {
     playMetronomeWithExercise: 'Metronome with exercise',
     kick: 'Kick',
     snare: 'Snare',
+    tom1: 'High tom',
+    tom2: 'Mid tom',
+    floorTom: 'Floor tom',
     hihatClosed: 'Hi-hat (closed)',
     hihatOpen: 'Hi-hat (open)',
     ride: 'Ride',
@@ -219,5 +227,7 @@ export const translations = {
     clickOn: 'Click on',
     clickOff: 'mute',
     gapMutedTag: 'metronome muted',
+    addBar: 'Add bar',
+    removeBar: 'Remove bar',
   },
 }

@@ -12,10 +12,10 @@ import { sigToTimeSignature } from './components/v2/util.js'
 import { CATEGORIES, sigOf } from './data/catalogV2.js'
 import {
   createEmptyExercise, exportExercise, parseImported,
-  loadLibrary, saveToLibrary, deleteFromLibrary, genId,
+  loadLibrary, saveToLibrary, deleteFromLibrary, genId, barLayout,
 } from './model/exercise.js'
 
-const APP_VERSION = 'v3.0' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v3.2' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const TW_DEFAULT = { theme: 'dark', accent: 'coral', density: 'regular' }
@@ -175,6 +175,26 @@ export default function App() {
   const bpm = mode === 'metronome' ? metro.bpm : (item ? item.bpm : 100)
   const setActiveBpm = (b) => mode === 'metronome' ? setMetro((m) => ({ ...m, bpm: b })) : setItem((p) => ({ ...p, bpm: b }))
 
+  // Meter-aware beat indicator for the player bar (handles multi-bar / mixed meter).
+  const barView = useMemo(() => {
+    if (mode !== 'practice' || !item) return null
+    const layout = barLayout(item)
+    let cur = null
+    if (step >= 0) {
+      for (const b of layout.bars) {
+        for (const bt of b.beats) {
+          if (step >= bt.start && step < bt.start + bt.len) cur = { bar: b.bar, beatInBar: bt.beatInBar, beatsInBar: b.beats.length }
+        }
+      }
+    }
+    return {
+      bars: layout.bars.length,
+      barIndex: cur ? cur.bar : 0,
+      beatsInBar: cur ? cur.beatsInBar : layout.bars[0].beats.length,
+      beatInBar: cur ? cur.beatInBar : -1,
+    }
+  }, [mode, item, step])
+
   const themeIcon = tw.theme === 'dark' ? 'sun' : 'moon'
   const toggleTheme = () => setTweak('theme', tw.theme === 'dark' ? 'light' : 'dark')
   const libActive = nav === 'library' || nav === 'practice'
@@ -260,7 +280,7 @@ export default function App() {
         setSub={(s) => setMetro((m) => ({ ...m, sub: s }))} showSub={mode === 'metronome'}
         soundSubs={mode === 'metronome' ? metro.soundSubs : options.soundSubs}
         onToggleSoundSubs={(v) => mode === 'metronome' ? setMetro((m) => ({ ...m, soundSubs: v })) : setOptions((o) => ({ ...o, soundSubs: v }))}
-        step={step} playing={playing} onToggle={sched.toggle} gapMuted={sched.gapMuted} />
+        step={step} playing={playing} onToggle={sched.toggle} gapMuted={sched.gapMuted} barView={barView} />
 
       <nav className="bottomnav">
         <button className={'bn-link' + (nav === 'metronome' ? ' is-active' : '')} onClick={() => setNav('metronome')}>

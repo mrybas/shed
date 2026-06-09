@@ -25,6 +25,18 @@ export function BeatDots({ sig, sub, step, playing, compact }) {
   return <div className="beats" aria-hidden="true">{dots}</div>
 }
 
+// Meter-aware dots for exercises: one dot per beat of the current bar.
+function BarBeats({ beatsInBar, beatInBar, playing }) {
+  const dots = []
+  for (let b = 0; b < beatsInBar; b++) {
+    const active = playing && beatInBar === b
+    dots.push(
+      <span key={b} className={['beat', b === 0 ? 'is-down' : '', active ? 'is-active' : '', active && b === 0 ? 'is-down' : ''].join(' ')} />,
+    )
+  }
+  return <div className="beats" aria-hidden="true">{dots}</div>
+}
+
 function CompactSub({ value, onChange }) {
   const opts = ['quarter', 'eighth', 'triplet', 'sixteenth']
   return (
@@ -40,10 +52,10 @@ function CompactSub({ value, onChange }) {
 
 export default function PlayerBar({
   t, mode, title, sourceLabel, cat, bpm, setBpm, sig, sub, setSub, showSub,
-  soundSubs, onToggleSoundSubs, bars = 1, step, playing, onToggle, gapMuted,
+  soundSubs, onToggleSoundSubs, step, playing, onToggle, gapMuted, barView,
 }) {
-  const perBar = parseSig(sig).num * (SUB_MULT[sub] || 1)
-  const curBar = bars > 1 && step >= 0 ? Math.floor(step / perBar) + 1 : 0
+  const bars = barView ? barView.bars : 1
+  const curBar = barView ? barView.barIndex + 1 : 0
   return (
     <div className="playerbar">
       <div className="pb-inner">
@@ -63,7 +75,9 @@ export default function PlayerBar({
 
         <div className="pb-beats">
           {bars > 1 && <span className="pb-barcount num">{t('bar')} {curBar || 1}/{bars}</span>}
-          <BeatDots sig={sig} sub={sub} step={step} playing={playing} />
+          {barView
+            ? <BarBeats beatsInBar={barView.beatsInBar} beatInBar={barView.beatInBar} playing={playing} />
+            : <BeatDots sig={sig} sub={sub} step={step} playing={playing} />}
         </div>
 
         {showSub && <CompactSub value={sub} onChange={setSub} />}

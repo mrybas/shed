@@ -97,6 +97,16 @@ describe('buildNotationData — mixed per-beat subdivisions', () => {
   })
 })
 
+describe('buildNotationData — flam', () => {
+  it('marks the flam flag on the struck note', () => {
+    const ex = createEmptyExercise({ subdivision: 'quarter' }) // 4 beats, 1/beat
+    ex.rows.snare[0] = { on: true, accent: false, roll: 0, flam: true }
+    const data = buildNotationData(ex)
+    expect(data.beatsData[0].tickables[0].flam).toBe(true)
+    expect(data.beatsData[1].tickables[0].flam).toBe(false) // empty beat -> rest, no flam
+  })
+})
+
 describe('buildNotationData — grooves chord per onset', () => {
   it('basic rock: kick+hihat chord on beat 1', () => {
     const data = buildNotationData(byId('builtin_basic_rock')) // eighth grid
