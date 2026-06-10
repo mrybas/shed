@@ -57,14 +57,41 @@ function CompactSub({ value, onChange }) {
   )
 }
 
+const mmss = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`
+
 export default function PlayerBar({
   t, mode, title, sourceLabel, cat, bpm, setBpm, sig, sub, setSub, showSub,
   soundSubs, onToggleSoundSubs, step, playing, onToggle, gapMuted, countingIn, barView, loopRange,
+  workout, onWorkoutSkip, onWorkoutStop,
 }) {
   const bars = barView ? barView.bars : 1
   const curBar = barView ? barView.barIndex + 1 : 0
   return (
     <div className="playerbar">
+      {/* Workout strip: its own thin row above the transport, so the workout
+          status never fights the title/tempo for space (esp. on phones). */}
+      {workout && (
+        <div className={'pb-wkrow' + (workout.done ? ' is-done' : '')}>
+          {workout.done ? (
+            <span className="pb-wk-note">{t('wkDone')}</span>
+          ) : (
+            <>
+              <span className="pb-wk-step num">{t('wkBlock')} {workout.idx}/{workout.total}</span>
+              <span className="pb-wktime num">{mmss(workout.secLeft)}</span>
+              <span className="pb-wk-note">{workout.note}</span>
+            </>
+          )}
+          <span className="pb-wk-spacer" />
+          {!workout.done && (
+            <button className="pb-wkbtn" onClick={onWorkoutSkip} title={t('wkSkip')} aria-label={t('wkSkip')}>
+              <Icon name="chevright" className="ic" />
+            </button>
+          )}
+          <button className="pb-wkbtn" onClick={onWorkoutStop} title={workout.done ? t('wkClose') : t('wkStop')} aria-label={workout.done ? t('wkClose') : t('wkStop')}>
+            <Icon name="close" className="ic" />
+          </button>
+        </div>
+      )}
       <div className="pb-inner">
         <button className={'pb-play' + (playing ? ' is-playing' : '')} onClick={onToggle} aria-label={playing ? t('stop') : t('play')}>
           <Icon name={playing ? 'stop' : 'play'} />

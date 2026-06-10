@@ -18,7 +18,7 @@ import {
   loadLibrary, saveToLibrary, deleteFromLibrary, genId, barLayout,
 } from './model/exercise.js'
 
-const APP_VERSION = 'v4.4' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v4.5' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -255,7 +255,9 @@ export default function App() {
     const scheduler = sched.scheduler // stable instance for the run's lifetime
     const id = setInterval(() => {
       const r = runRef.current
-      if (!r || r.done || !scheduler.isPlaying) return
+      // Tick only during the exercise itself — not while paused, not during a
+      // count-in lead-in (those seconds aren't practice).
+      if (!r || r.done || !scheduler.isPlaying || scheduler.inCountIn()) return
       if (r.secLeft > 1) setRun({ ...r, secLeft: r.secLeft - 1 })
       else advanceRef.current()
     }, 1000)
@@ -371,7 +373,9 @@ export default function App() {
 
   const themeIcon = tw.theme === 'dark' ? 'sun' : 'moon'
   const toggleTheme = () => setTweak('theme', tw.theme === 'dark' ? 'light' : 'dark')
-  const libActive = nav === 'library' || nav === 'practice'
+  // While a workout runs, the open practice page belongs to Workouts, not Library.
+  const libActive = nav === 'library' || (nav === 'practice' && !run)
+  const wkActive = nav === 'workouts' || (nav === 'practice' && !!run)
   const goLib = (target) => { setLibTarget(target); setNav('library'); if (!libOpen) setLibOpen(true) }
 
   const accentPicker = (
@@ -419,7 +423,7 @@ export default function App() {
               </div>
             )}
           </div>
-          <button className={'side-link' + (nav === 'workouts' ? ' is-active' : '')} onClick={() => setNav('workouts')}>
+          <button className={'side-link' + (wkActive ? ' is-active' : '')} onClick={() => setNav('workouts')}>
             <Icon name="star" className="ic" /><span>{t('workouts')}</span>
           </button>
         </nav>
@@ -453,7 +457,6 @@ export default function App() {
           <PracticeView t={t} lang={lang} item={item} setItem={setItem} options={options} setOptions={setOptions}
             vols={vols} setVols={setVols} playing={playing && mode === 'practice'} step={step}
             loopRange={loopRange} onLoopRange={setLoopRange}
-            workoutRun={runView} onWorkoutSkip={advanceWorkout} onWorkoutStop={stopWorkout}
             progress={progressMap[item.id] || 'none'} onProgress={setProgress} onDuplicate={duplicate}
             onBack={() => { if (runRef.current) { stopWorkout(); setNav('workouts') } else setNav('library') }} onSave={saveCurrent} onExport={() => exportExercise(item)}
             onNew={newExercise} savedFlash={savedFlash} />
@@ -467,7 +470,8 @@ export default function App() {
         soundSubs={mode === 'metronome' ? metro.soundSubs : options.soundSubs}
         onToggleSoundSubs={(v) => mode === 'metronome' ? setMetro((m) => ({ ...m, soundSubs: v })) : setOptions((o) => ({ ...o, soundSubs: v }))}
         step={step} playing={playing} onToggle={sched.toggle} gapMuted={sched.gapMuted} countingIn={sched.countingIn}
-        barView={barView} loopRange={mode === 'practice' ? loopRange : null} />
+        barView={barView} loopRange={mode === 'practice' ? loopRange : null}
+        workout={runView} onWorkoutSkip={advanceWorkout} onWorkoutStop={stopWorkout} />
 
       <nav className="bottomnav">
         <button className={'bn-link' + (nav === 'metronome' ? ' is-active' : '')} onClick={() => setNav('metronome')}>
@@ -476,7 +480,7 @@ export default function App() {
         <button className={'bn-link' + (libActive ? ' is-active' : '')} onClick={() => goLib({ section: 'home', cat: null })}>
           <Icon name="library" className="ic" /><span>{t('library')}</span>
         </button>
-        <button className={'bn-link' + (nav === 'workouts' ? ' is-active' : '')} onClick={() => setNav('workouts')}>
+        <button className={'bn-link' + (wkActive ? ' is-active' : '')} onClick={() => setNav('workouts')}>
           <Icon name="star" className="ic" /><span>{t('workouts')}</span>
         </button>
       </nav>

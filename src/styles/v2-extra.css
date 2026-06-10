@@ -245,16 +245,24 @@
 .wk-block-meta { display: grid; gap: 2px; justify-items: end; color: var(--text-2); font-size: var(--fs-sm); }
 .wk-block-set { color: var(--text-3); font-size: var(--fs-xs); }
 
-/* Runner banner on the practice page. */
-.wk-banner {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px;
-  padding: var(--s-3) var(--s-4); border-radius: var(--r-md);
-  border: 1px solid var(--accent); background: color-mix(in oklab, var(--accent) 10%, var(--surface-1));
+
+/* Workout strip: a thin row above the transport in the player bar. */
+.pb-wkrow {
+  display: flex; align-items: center; gap: 10px;
+  max-width: 1180px; margin-inline: auto; width: 100%;
+  padding: 5px 2px; border-bottom: 1px solid var(--border-soft);
+  min-height: 32px;
 }
-.wk-banner.is-done { border-color: oklch(0.72 0.17 150); background: color-mix(in oklab, oklch(0.72 0.17 150) 12%, var(--surface-1)); }
-.wk-banner-title { font-weight: 700; }
-.wk-banner-step { color: var(--text-2); font-weight: 700; }
-.wk-banner-time { font-size: 1.15rem; font-weight: 700; color: var(--accent); }
-.wk-banner-note { color: var(--text-2); font-size: var(--fs-sm); }
-.wk-banner-next { color: var(--text-3); font-size: var(--fs-xs); }
-.wk-banner-spacer { flex: 1; }
+.pb-wkrow.is-done { color: oklch(0.72 0.17 150); }
+.pb-wk-step { font-size: var(--fs-xs); font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+.pb-wktime { font-size: 1.05rem; font-weight: 700; letter-spacing: -.02em; color: var(--accent); white-space: nowrap; }
+.pb-wk-note { font-size: var(--fs-xs); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.pb-wkrow.is-done .pb-wk-note { color: inherit; font-size: var(--fs-sm); font-weight: 700; }
+.pb-wk-spacer { flex: 1; }
+.pb-wkbtn {
+  width: 26px; height: 26px; flex: none; display: grid; place-items: center; cursor: pointer;
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+  background: var(--surface-2); color: var(--text-2);
+}
+.pb-wkbtn:hover { color: var(--text); border-color: var(--border-strong); }
+.pb-wkbtn .ic { width: 14px; height: 14px; }

@@ -30,12 +30,9 @@ const TOOL_GLYPHS = { hit: '●', accent: '>', ghost: '( )', flam: 'f', drag: 'd
 // Beat-value button in the ruler; click cycles through these four.
 const TICK_CYCLE = ['quarter', 'eighth', 'triplet', 'sixteenth']
 
-const mmss = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`
-
 export default function PracticeView({
   t, lang, item, setItem, options, setOptions, vols, setVols, playing, step,
   loopRange, onLoopRange,
-  workoutRun, onWorkoutSkip, onWorkoutStop,
   progress, onProgress, onDuplicate, onBack, onSave, onExport, onNew, savedFlash,
 }) {
   const editable = item.source === 'user'
@@ -218,29 +215,6 @@ export default function PracticeView({
 
   return (
     <div className="practice" data-screen-label="Practice">
-      {workoutRun && (
-        <div className={'wk-banner' + (workoutRun.done ? ' is-done' : '')}>
-          {workoutRun.done ? (
-            <>
-              <span className="wk-banner-title">{t('wkDone')}</span>
-              <span className="wk-banner-name">{workoutRun.name}</span>
-              <span className="wk-banner-spacer" />
-              <Button size="sm" onClick={onWorkoutStop}>{t('wkClose')}</Button>
-            </>
-          ) : (
-            <>
-              <span className="wk-banner-title">{workoutRun.name}</span>
-              <span className="wk-banner-step num">{t('wkBlock')} {workoutRun.idx}/{workoutRun.total}</span>
-              <span className="wk-banner-time num">{mmss(workoutRun.secLeft)}</span>
-              <span className="wk-banner-note">{workoutRun.note}</span>
-              {workoutRun.nextName && <span className="wk-banner-next">{t('wkNext')}: {workoutRun.nextName}</span>}
-              <span className="wk-banner-spacer" />
-              <Button size="sm" onClick={onWorkoutSkip}>{t('wkSkip')}</Button>
-              <Button size="sm" onClick={onWorkoutStop}>{t('wkStop')}</Button>
-            </>
-          )}
-        </div>
-      )}
       <div className="prac-top">
         <button className="prac-back" onClick={onBack}><Icon name="back" className="ic" /><span>{t('backToLibrary')}</span></button>
       </div>
