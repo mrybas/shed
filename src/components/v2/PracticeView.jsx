@@ -566,24 +566,22 @@ export default function PracticeView({
           {editable && (
             <>
               <div className="stamp-bar" role="toolbar" aria-label={t('tools')}>
-                {[['hit', 'accent', 'ghost', 'flam', 'drag', 'roll'], ['cross', 'rim', 'bell', 'erase']].map((row, ri) => (
-                  <div className="stamp-row" key={ri}>
-                    {row.map((id) => (
-                      <button key={id} className={'stamp' + (tool === id ? ' is-active' : '')}
-                        title={t(`tool_${id}`)} aria-pressed={tool === id}
-                        onClick={() => setTool(tool === id ? null : id)}>
-                        <span className="stamp-glyph num">{TOOL_GLYPHS[id]}</span>
-                        <span className="stamp-lbl">{t(`tool_${id}`)}</span>
-                      </button>
-                    ))}
-                    {ri === 1 && (
-                      <>
-                        <span className="stamp-spacer" />
-                        <Button size="sm" icon="back" onClick={undo} disabled={!histRef.current.undo.length}>{t('undo')}</Button>
-                      </>
-                    )}
-                  </div>
-                ))}
+                <div className="stamp-rows">
+                  {[['hit', 'accent', 'ghost', 'flam', 'drag', 'roll'], ['cross', 'rim', 'bell', 'erase']].map((row, ri) => (
+                    <div className="stamp-row" key={ri}>
+                      {row.map((id) => (
+                        <button key={id} className={'stamp' + (tool === id ? ' is-active' : '')}
+                          title={t(`tool_${id}`)} aria-pressed={tool === id}
+                          onClick={() => setTool(tool === id ? null : id)}>
+                          <span className="stamp-glyph num">{TOOL_GLYPHS[id]}</span>
+                          <span className="stamp-lbl">{t(`tool_${id}`)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                {/* Undo spans both stamp rows on the right. */}
+                <Button size="sm" icon="back" className="stamp-undo" onClick={undo} disabled={!histRef.current.undo.length}>{t('undo')}</Button>
               </div>
               <div className="stamp-hint-line">{tool ? t('paintHint') : t('cycleHint')}</div>
             </>

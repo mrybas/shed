@@ -147,13 +147,16 @@
 
 /* ---- Stamp palette (paint tools) ---- */
 .stamp-bar {
-  display: flex; flex-direction: column; gap: 6px;
+  display: flex; align-items: stretch; gap: 6px;
   margin-bottom: var(--s-3); padding: 6px;
   border: 1px solid var(--border-soft); border-radius: var(--r-md);
   background: var(--surface-1);
 }
-/* Two deliberate rows: basic strokes, then articulations + erase + undo. */
+/* Two deliberate rows: basic strokes, then articulations + erase. Undo sits
+   to the right and stretches across both rows. */
+.stamp-rows { display: flex; flex-direction: column; gap: 6px; flex: 1 1 auto; min-width: 0; }
 .stamp-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.stamp-bar .stamp-undo { align-self: stretch; height: auto; }
 .stamp {
   display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px;
   border: 1px solid var(--border); border-radius: var(--r-sm);
