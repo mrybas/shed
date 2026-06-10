@@ -391,7 +391,9 @@ export class Scheduler {
           const artKey = cell.art ? ART_VOICE_KEYS[`${inst}:${cell.art}`] : null
           const voice = DRUM_VOICES[artKey || inst]
           if (cell.roll && voice) {
-            drumRoll(ctx, time, this._rollDuration(step, !!cell.tie), cell.roll, master, gain, voice)
+            // Open rolls are metered 32nd-note doubles: 8 strokes per quarter.
+            const strokesPerSec = (this.bpm / 60) * 8
+            drumRoll(ctx, time, this._rollDuration(step, !!cell.tie), cell.roll, master, gain, voice, strokesPerSec)
           } else if (voice) {
             // Flam: one soft grace stroke ~28ms early; drag (ruff): two graces
             // ~52/26ms early — clamped so they can't land in the past.
@@ -432,7 +434,9 @@ export class Scheduler {
     // Internal barlines only — the loop seam (s === 0) stays seamless so
     // existing one-bar roll exercises keep their sound.
     const endsAtBarline = s !== 0 && (this._isBarStart ? !!this._isBarStart[s] : false)
-    if (!tied && endsAtBarline) dur = Math.max(dur * 0.6, dur - 0.16)
+    // The release breath scales with tempo: an eighth note, capped at half
+    // the roll so very short rolls still speak.
+    if (!tied && endsAtBarline) dur -= Math.min(dur * 0.5, 30 / this.bpm)
     return dur
   }
 

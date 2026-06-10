@@ -333,7 +333,7 @@ describe('Scheduler step scheduling', () => {
     s._recompute()
     s._scheduleStep(0, 5.0)
     // step 1 is empty -> roll runs to the end of the bar (2 beats = 2s at 60 BPM)
-    expect(drumRoll).toHaveBeenCalledWith(fakeCtx, 5.0, 2, 'open', expect.anything(), expect.any(Number), DRUM_VOICES.snare)
+    expect(drumRoll).toHaveBeenCalledWith(fakeCtx, 5.0, 2, 'open', expect.anything(), expect.any(Number), DRUM_VOICES.snare, expect.any(Number))
     expect(DRUM_VOICES.snare).not.toHaveBeenCalled()
   })
 
@@ -347,7 +347,7 @@ describe('Scheduler step scheduling', () => {
     s.pattern = ex
     s._recompute()
     s._scheduleStep(0, 3.0)
-    expect(drumRoll).toHaveBeenCalledWith(fakeCtx, 3.0, 2, 'closed', expect.anything(), expect.any(Number), DRUM_VOICES.tom1)
+    expect(drumRoll).toHaveBeenCalledWith(fakeCtx, 3.0, 2, 'closed', expect.anything(), expect.any(Number), DRUM_VOICES.tom1, expect.any(Number))
     expect(DRUM_VOICES.tom1).not.toHaveBeenCalled()
   })
 
@@ -655,7 +655,7 @@ describe('tied vs untied rolls at a barline', () => {
     s._scheduleStep(4, 1.0)
     const dur = drumRoll.mock.calls[0][2]
     expect(dur).toBeLessThan(tiedDur)
-    expect(dur).toBeCloseTo(tiedDur - 0.16)
+    expect(dur).toBeCloseTo(tiedDur - 0.5) // an eighth at 60 bpm
   })
 
   it('the loop seam stays seamless for untied rolls (single-bar exercises)', () => {
@@ -669,5 +669,29 @@ describe('tied vs untied rolls at a barline', () => {
     s._recompute()
     s._scheduleStep(0, 5.0)
     expect(drumRoll.mock.calls[0][2]).toBe(2) // both beats, no release
+  })
+})
+
+
+describe('roll stroke rate follows the tempo', () => {
+  beforeEach(() => { vi.clearAllMocks() })
+
+  const make = (bpm) => {
+    const s = new Scheduler()
+    s.bpm = bpm
+    s.metronomeEnabled = false
+    const ex = createEmptyExercise({ timeSignature: { beats: 2, unit: 4 }, subdivision: 'quarter' })
+    ex.rows.snare[0] = { on: true, accent: false, roll: 'open' }
+    s.pattern = ex
+    s._recompute()
+    return s
+  }
+
+  it('passes a 32nd-note stroke rate derived from bpm', () => {
+    make(60)._scheduleStep(0, 1.0)
+    expect(drumRoll.mock.calls[0][7]).toBeCloseTo(8) // 8 strokes/sec at 60
+    vi.clearAllMocks()
+    make(120)._scheduleStep(0, 1.0)
+    expect(drumRoll.mock.calls[0][7]).toBeCloseTo(16)
   })
 })

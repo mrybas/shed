@@ -490,8 +490,12 @@ export function setKit(name) {
 
 // A roll = a rapid series of strokes on `voice` over `durationSec`.
 // open = double-stroke style (alternating louder/softer); closed = denser buzz.
-export function drumRoll(ctx, startTime, durationSec, type, destination, gain = 1, voice = snare) {
-  const rate = type === 'closed' ? 28 : 13 // strokes per second
+// `strokesPerSec` couples the roll to the tempo (an open roll is metered
+// 32nd-note doubles); without it the legacy fixed rates apply.
+export function drumRoll(ctx, startTime, durationSec, type, destination, gain = 1, voice = snare, strokesPerSec = 0) {
+  const rate = strokesPerSec > 0
+    ? (type === 'closed' ? strokesPerSec * 2 : strokesPerSec)
+    : (type === 'closed' ? 28 : 13) // legacy strokes per second
   const n = Math.max(2, Math.round(durationSec * rate))
   const dt = durationSec / n
   for (let i = 0; i < n; i++) {
