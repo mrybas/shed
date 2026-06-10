@@ -17,9 +17,9 @@ function rudiment({ id, name, bpm, beats, unit, subdivision, sticking, accentEve
 
 // Build a flam/drag rudiment: explicit accent/flam/drag step indices.
 // All patterns follow the PAS standard rudiment definitions.
-function flamRud({ id, name, bpm, beats, unit, subdivision, beatSubs, sticking, flams = [], drags = [], accents = [] }) {
+function flamRud({ id, name, bpm, beats, unit, subdivision, beatSubs, sticking, flams = [], drags = [], accents = [], level }) {
   const ex = createEmptyExercise({
-    id, name, bpm, timeSignature: { beats, unit }, subdivision, beatSubs,
+    id, name, bpm, timeSignature: { beats, unit }, subdivision, beatSubs, level,
     source: 'basics', section: 'rudiments', tags: ['rudiment'],
   })
   const chars = sticking.replace(/\s+/g, '').split('')
@@ -161,28 +161,28 @@ export function getBuiltinExercises() {
       accents: [0, 2, 4, 6],
     }),
     flamRud({
-      id: 'builtin_flamacue', name: 'Flamacue', bpm: 70,
+      id: 'builtin_flamacue', level: 'advanced', name: 'Flamacue', bpm: 70,
       beats: 2, unit: 4, beatSubs: ['sixteenth', 'quarter'],
       sticking: 'RLRLR', // lR-Ĺ-R-L + lR on the downbeat
       flams: [0, 4],
       accents: [1],
     }),
     flamRud({
-      id: 'builtin_flam_paradiddle', name: 'Flam paradiddle', bpm: 80,
+      id: 'builtin_flam_paradiddle', level: 'advanced', name: 'Flam paradiddle', bpm: 80,
       beats: 4, unit: 4, subdivision: 'sixteenth',
       sticking: 'RLRRLRLLRLRRLRLL', // lŔ-L-R-R rĹ-R-L-L
       flams: [0, 4, 8, 12],
       accents: [0, 4, 8, 12],
     }),
     flamRud({
-      id: 'builtin_single_drag_tap', name: 'Single drag tap', bpm: 60,
+      id: 'builtin_single_drag_tap', level: 'advanced', name: 'Single drag tap', bpm: 60,
       beats: 4, unit: 4, subdivision: 'eighth',
       sticking: 'RLLRRLLR', // llR-Ĺ rrL-Ŕ
       drags: [0, 2, 4, 6],
       accents: [1, 3, 5, 7],
     }),
     flamRud({
-      id: 'builtin_double_drag_tap', name: 'Double drag tap', bpm: 60,
+      id: 'builtin_double_drag_tap', level: 'advanced', name: 'Double drag tap', bpm: 60,
       beats: 4, unit: 4, subdivision: 'triplet',
       sticking: 'RRLLLRRRLLLR', // llR-llR-Ĺ rrL-rrL-Ŕ
       drags: [0, 1, 3, 4, 6, 7, 9, 10],

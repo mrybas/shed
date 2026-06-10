@@ -207,3 +207,11 @@
   background: transparent; color: var(--text-3); cursor: pointer; padding: 0;
 }
 .bar-insert:hover { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
+
+/* Difficulty level dot (library rows + level filter chips). */
+.level-dot {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  flex: none; vertical-align: middle;
+}
+.fchip .level-dot { margin-right: 5px; }
+.exrow-sub .level-dot { margin-right: 2px; }

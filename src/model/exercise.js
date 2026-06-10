@@ -298,6 +298,7 @@ export function createEmptyExercise(opts = {}) {
     page: opts.page ?? null,
     tags: opts.tags || [],
   }
+  if (opts.level) ex.level = opts.level // beginner | intermediate | advanced
   if (barsSpec && barsSpec.length > 1) ex.bars = barsSpec
   return ex
 }
@@ -486,6 +487,7 @@ function parseOne(obj) {
     page: obj.page ?? null,
     tags: Array.isArray(obj.tags) ? obj.tags : [],
   }
+  if (obj.level) ex.level = obj.level
   if (barsSpec && barsSpec.length > 1) ex.bars = barsSpec
   return ex
 }

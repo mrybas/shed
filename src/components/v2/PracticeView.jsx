@@ -3,7 +3,7 @@ import { Slider, NumberStepper, NotePicker, NoteGlyph, Segmented, Switch, Button
 import { useTapTempo } from '../../hooks/useTapTempo.js'
 import NotationView from '../NotationView.jsx'
 import { TIME_SIGS } from './util.js'
-import { CAT, catOf, sigOf } from '../../data/catalogV2.js'
+import { CAT, catOf, sigOf, levelOf } from '../../data/catalogV2.js'
 import { INSTRUMENTS, resizeExercise, setBeatSub, setAllBeatSubs, barLayout, addBar, insertBar, duplicateBar, removeBar, setBarTimeSignature } from '../../model/exercise.js'
 import { sigToTimeSignature } from './util.js'
 
@@ -226,6 +226,7 @@ export default function PracticeView({
             : <h1 className="prac-name">{item.name}</h1>}
           <div className="prac-meta">
             {cat && <span className="chip"><span className="chip-dot" style={{ background: cat.hue }} />{cat.label[lang] || cat.label.en}</span>}
+            <span className="chip">{t(`level_${levelOf(item)}`)}</span>
             <span className="chip num">{sig}</span>
             {item.number != null && <span className="chip chip-source"><Icon name="bookmark" className="ic-xs" />#{item.number}</span>}
             {(item.tags || []).map((tg) => <span key={tg} className="chip chip-tag">#{t(`tag_${tg}`)}</span>)}

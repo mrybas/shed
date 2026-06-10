@@ -1,6 +1,12 @@
 import { useState, useMemo, useRef } from 'react'
 import { Icon, Button } from '../ui.jsx'
-import { CATEGORIES, CAT, catOf, sigOf, getCatalogExercises } from '../../data/catalogV2.js'
+import { CATEGORIES, CAT, catOf, sigOf, levelOf, LEVELS, getCatalogExercises } from '../../data/catalogV2.js'
+
+const LEVEL_HUES = {
+  beginner: 'oklch(0.72 0.17 150)',
+  intermediate: 'oklch(0.78 0.14 78)',
+  advanced: 'oklch(0.65 0.18 25)',
+}
 import { stepsPerBeat, INSTRUMENTS } from '../../model/exercise.js'
 
 function PatternStrip({ item }) {
@@ -30,6 +36,7 @@ function ExRow({ t, lang, item, prog, onOpen, onExport, onDelete }) {
       <span className="exrow-main">
         <span className="exrow-name">{item.name}<ProgressDot state={prog} /></span>
         <span className="exrow-sub">
+          <span className="level-dot" style={{ background: LEVEL_HUES[levelOf(item)] }} title={t(`level_${levelOf(item)}`)} />
           <span className="chip-sm">{cat ? (cat.label[lang] || cat.label.en) : ''}</span>
           {item.number != null && <span className="exrow-source"><Icon name="bookmark" className="ic-xs" />#{item.number}</span>}
         </span>
@@ -61,10 +68,11 @@ export default function LibraryView({ t, lang, saved, progressMap, onOpen, onNew
   const [query, setQuery] = useState('')
   const [fTag, setFTag] = useState(new Set())
   const [fProg, setFProg] = useState(new Set())
+  const [fLevel, setFLevel] = useState(new Set())
   const fileRef = useRef(null)
 
   const toggle = (set, setter, v) => { const n = new Set(set); n.has(v) ? n.delete(v) : n.add(v); setter(n) }
-  const anyFilter = fTag.size || fProg.size || query.trim()
+  const anyFilter = fTag.size || fProg.size || fLevel.size || query.trim()
   const allItems = useMemo(() => [...getCatalogExercises(), ...saved], [saved])
 
   const filtered = useMemo(() => allItems.filter((it) => {
@@ -72,14 +80,15 @@ export default function LibraryView({ t, lang, saved, progressMap, onOpen, onNew
     const q = query.trim().toLowerCase()
     if (q && !it.name.toLowerCase().includes(q) && !String(it.number ?? '').includes(q) && !(it.sticking || []).join('').toLowerCase().includes(q)) return false
     if (fTag.size && !(it.tags || []).some((x) => fTag.has(x))) return false
+    if (fLevel.size && !fLevel.has(levelOf(it))) return false
     if (fProg.size) { const p = progressMap[it.id] || 'none'; if (!fProg.has(p)) return false }
     return true
-  }), [allItems, section, activeCat, query, fTag, fProg, progressMap])
+  }), [allItems, section, activeCat, query, fTag, fLevel, fProg, progressMap])
 
   const catCount = (id) => allItems.filter((i) => catOf(i) === id).length
   const showList = section === 'cat' || section === 'saved' || (section === 'home' && anyFilter)
   const listItems = section === 'saved' ? saved : filtered
-  const clearAll = () => { setQuery(''); setFTag(new Set()); setFProg(new Set()) }
+  const clearAll = () => { setQuery(''); setFTag(new Set()); setFProg(new Set()); setFLevel(new Set()) }
 
   return (
     <div className="library2" data-screen-label="Library">
@@ -102,6 +111,13 @@ export default function LibraryView({ t, lang, saved, progressMap, onOpen, onNew
       <div className="filters-row">
         <div className="fgroup"><span className="fg-label">{t('tags')}</span>
           {TAG_FILTERS.map((tg) => <FilterChip key={tg} active={fTag.has(tg)} onClick={() => toggle(fTag, setFTag, tg)}>#{t(`tag_${tg}`)}</FilterChip>)}
+        </div>
+        <div className="fgroup"><span className="fg-label">{t('levels')}</span>
+          {LEVELS.map((lv) => (
+            <FilterChip key={lv} active={fLevel.has(lv)} onClick={() => toggle(fLevel, setFLevel, lv)}>
+              <span className="level-dot" style={{ background: LEVEL_HUES[lv] }} />{t(`level_${lv}`)}
+            </FilterChip>
+          ))}
         </div>
         <div className="fgroup"><span className="fg-label">{t('progress')}</span>
           <FilterChip active={fProg.has('mastered')} onClick={() => toggle(fProg, setFProg, 'mastered')}>{t('mastered')}</FilterChip>
