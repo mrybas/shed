@@ -495,9 +495,16 @@ export default function PracticeView({
         <div ref={playAreaRef} className="print-area">
           <div className="print-head">{item.name} · {item.bpm} {t('bpm')} · {sig}</div>
           <div className="notation-wrap">
-            <NotationView exercise={item} currentStep={localPlay} printWidth={printing ? 660 : 0}
+            <NotationView exercise={item} currentStep={localPlay}
               loopRange={loopRange} onBarClick={toggleLoopBar} barClickTitle={t('loopBarTitle')} />
           </div>
+          {printing && (
+            // Hidden print-only copy laid out at A4 width, so the on-screen
+            // notation never reflows when the print dialog opens.
+            <div className="print-notation" aria-hidden="true">
+              <NotationView exercise={item} currentStep={-1} printWidth={660} />
+            </div>
+          )}
           <div className="notation-hint">
             {layout.bars.length > 1 ? `${t('loopNotesHint')} · ` : ''}{editable ? t('editInGridHint') : t('viewOnly')}
           </div>

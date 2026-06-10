@@ -183,30 +183,32 @@ test('share link copies via fallback (no clipboard API) and the URL opens the ex
   await expect(page.locator('.notation-wrap svg').first()).toBeVisible()
 })
 
-test('print relayouts notation to A4 width, then restores', async ({ page }) => {
+test('print renders a hidden A4-width copy without reflowing the screen', async ({ page }) => {
   await page.locator('.side-parent-main').click()
   await page.locator('.cat-card').first().click()
   await page.locator('.exrow').first().click()
   await expect(page.locator('.notation-wrap .vf-line svg').first()).toBeVisible()
+  const screenW = await page.evaluate(
+    () => document.querySelector('.notation-wrap .notation-inner')?.style.width,
+  )
   await page.evaluate(() => {
     window.__printW = null
     window.print = () => {
       window.__printW = {
-        inner: document.querySelector('.notation-inner')?.style.width,
-        svg: document.querySelector('.vf-line svg')?.getAttribute('width'),
+        print: document.querySelector('.print-notation .notation-inner')?.style.width,
+        screen: document.querySelector('.notation-wrap .notation-inner')?.style.width,
       }
     }
   })
   await page.locator('button:visible', { hasText: 'Print' }).click()
-  // By the time print() fires, the notation must be laid out at 660px.
+  // By the time print() fires, the print copy must be laid out at 660px…
   await expect.poll(() => page.evaluate(() => window.__printW)).not.toBeNull()
   const w = await page.evaluate(() => window.__printW)
-  expect(w.inner).toBe('660px')
-  expect(w.svg).toBe('660')
-  // …and the screen layout comes back afterwards.
-  await expect.poll(() => page.evaluate(
-    () => document.querySelector('.notation-inner')?.style.width,
-  )).not.toBe('660px')
+  expect(w.print).toBe('660px')
+  // …while the on-screen notation never changed.
+  expect(w.screen).toBe(screenW)
+  // The print copy unmounts afterwards.
+  await expect(page.locator('.print-notation')).toHaveCount(0)
 })
 
 test('new exercise opens in grid; reopening a saved one opens in notes', async ({ page }) => {

@@ -316,6 +316,7 @@
 
 /* ---- Print: only the notation + a small header reach paper ---- */
 .print-head { display: none; }
+.print-notation { display: none; }
 @media print {
   @page { size: A4 portrait; margin: 12mm; }
   body { background: #fff !important; }
@@ -324,6 +325,9 @@
      absolutely-positioned content gets clipped after a few pages. */
   .topbar, .sidebar, .playerbar, .bottomnav,
   .practice > *:not(.print-area) { display: none !important; }
+  /* Swap the screen notation for the A4-width print copy. */
+  .print-area > .notation-wrap { display: none !important; }
+  .print-notation { display: block; }
   .shell { display: block !important; min-height: 0 !important; }
   .main { padding: 0 !important; margin: 0 !important; max-width: none !important; }
   /* Never split a staff line across pages. Natural (svg) height: a child
