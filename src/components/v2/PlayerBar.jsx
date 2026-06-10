@@ -78,6 +78,7 @@ export default function PlayerBar({
             <>
               <span className="pb-wk-step num">{t('wkBlock')} {workout.idx}/{workout.total}</span>
               <span className="pb-wktime num">{mmss(workout.secLeft)}</span>
+              {workout.resumed && <span className="pb-muted-pill" title={t('wkResumedTitle')}>↗ {workout.resumed}</span>}
               <span className="pb-wk-note">{workout.note}</span>
             </>
           )}

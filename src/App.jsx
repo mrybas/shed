@@ -12,12 +12,12 @@ import WorkoutView from './components/v2/WorkoutView.jsx'
 import WorkoutsView from './components/v2/WorkoutsView.jsx'
 import { sigToTimeSignature } from './components/v2/util.js'
 import { CATEGORIES, sigOf, getCatalogExercises } from './data/catalogV2.js'
-import { WORKOUTS } from './data/workouts.js'
+import { WORKOUTS, adaptiveStartBpm } from './data/workouts.js'
 import {
   createEmptyExercise, exportExercise, exportLibraryFile, parseImported,
   loadLibrary, saveToLibrary, deleteFromLibrary, genId, barLayout,
 } from './model/exercise.js'
-import { logPracticeSeconds, logTempo, flushJournal, exportJournal, mergeJournal } from './model/progress.js'
+import { logPracticeSeconds, logTempo, flushJournal, exportJournal, mergeJournal, getTempoStats } from './model/progress.js'
 
 const APP_VERSION = 'v4.7' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
@@ -266,6 +266,9 @@ export default function App() {
     if (!src) return
     const it = clone(src)
     if (block.settings?.bpm) it.bpm = block.settings.bpm
+    // Adaptive progression: resume ramped blocks near the last reached tempo.
+    const resumed = adaptiveStartBpm(block, getTempoStats(block.exerciseId))
+    if (resumed) it.bpm = resumed
     setItem(it)
     setOptions((cur) => blockOptions(block, cur))
     setLoopRange(null)
@@ -338,6 +341,7 @@ export default function App() {
     return {
       name: w.name, idx: run.blockIdx + 1, total: w.blocks.length,
       secLeft: run.secLeft, note: block.note, done: !!run.done,
+      resumed: adaptiveStartBpm(block, getTempoStats(block.exerciseId)),
       nextName: nextBlock ? (exById.get(nextBlock.exerciseId)?.name || '') : null,
     }
   }, [run, exById])

@@ -164,6 +164,7 @@ export const translations = {
     prWeek: 'min this week',
     prRecent: 'Most practiced · 7 days',
     prBestTitle: 'Best tempo reached (history below)',
+    wkResumedTitle: 'Resumed near your last reached tempo',
     loopBarTitle: 'Loop this bar — click another bar to extend, click again to clear',
     loopNotesHint: 'Click a bar to loop it',
   },

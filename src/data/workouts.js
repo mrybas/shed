@@ -106,6 +106,18 @@ export const WORKOUTS = [
   },
 ]
 
+// Adaptive progression: when a ramped block has tempo history for its exercise,
+// start a touch below the last reached tempo instead of the cold base — classic
+// periodization. Clamped so it never starts below the block's base or within
+// 10 bpm of the ramp ceiling.
+export function adaptiveStartBpm(block, stats) {
+  const s = block.settings || {}
+  if (!s.tempoRamp?.enabled || !s.bpm || !stats?.last) return null
+  const cap = (s.tempoRamp.maxBpm || Infinity) - 10
+  const start = Math.max(s.bpm, Math.min(stats.last - 4, cap))
+  return start > s.bpm ? Math.round(start) : null
+}
+
 // Test helper: every workout must reference real exercises and add up.
 export function validateWorkouts(catalog) {
   const ids = new Set(catalog.map((e) => e.id))
