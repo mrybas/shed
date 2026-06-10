@@ -8,6 +8,7 @@ const LEVEL_HUES = {
   advanced: 'oklch(0.65 0.18 25)',
 }
 import { stepsPerBeat, INSTRUMENTS } from '../../model/exercise.js'
+import { getRecentExercises } from '../../model/progress.js'
 
 function PatternStrip({ item }) {
   const mult = stepsPerBeat(item.subdivision)
@@ -27,9 +28,9 @@ function ProgressDot({ state }) {
   return null
 }
 
-function ExRow({ t, lang, item, prog, onOpen, onExport, onDelete }) {
+function ExRow({ t, lang, item, prog, onOpen, onExport, onDelete, fav, onFav }) {
   const cat = CAT(catOf(item))
-  const hasActions = onExport || onDelete
+  const hasActions = onExport || onDelete || onFav
   return (
     <button className={'exrow' + (hasActions ? ' has-actions' : '')} onClick={() => onOpen(item)}>
       <span className="exrow-cat" style={{ background: cat ? cat.hue : 'var(--text-3)' }} />
@@ -45,6 +46,7 @@ function ExRow({ t, lang, item, prog, onOpen, onExport, onDelete }) {
       <span className="exrow-meta num">{sigOf(item)} · {item.bpm}</span>
       {hasActions ? (
         <span className="exrow-actions">
+          {onFav && <span role="button" tabIndex={0} className={'rowact star' + (fav ? ' is-on' : '')} aria-label={t('favorite')} onClick={(e) => { e.stopPropagation(); onFav(item.id) }}><Icon name="star" className="ic" /></span>}
           {onExport && <span role="button" tabIndex={0} className="rowact" aria-label={t('export')} onClick={(e) => { e.stopPropagation(); onExport(item) }}><Icon name="download" className="ic" /></span>}
           {onDelete && <span role="button" tabIndex={0} className="rowact del" aria-label={t('delete')} onClick={(e) => { e.stopPropagation(); onDelete(item.id) }}><Icon name="trash" className="ic" /></span>}
         </span>
@@ -61,7 +63,7 @@ function FilterChip({ active, onClick, children }) {
 
 const TAG_FILTERS = ['singles', 'doubles', 'triples', 'quads', 'rudiment', 'groove']
 
-export default function LibraryView({ t, lang, saved, progressMap, onOpen, onNew, onImport, onExportItem, onExportAll, onDeleteSaved, route, onRoute, onGenerate }) {
+export default function LibraryView({ t, lang, saved, progressMap, onOpen, onNew, onImport, onExportItem, onExportAll, onDeleteSaved, route, onRoute, onGenerate, favs = [], onToggleFav }) {
   const section = route?.section || 'home'
   const activeCat = route?.cat || null
   const go = (s, c = null) => onRoute?.({ section: s, cat: c })
@@ -74,6 +76,11 @@ export default function LibraryView({ t, lang, saved, progressMap, onOpen, onNew
   const toggle = (set, setter, v) => { const n = new Set(set); n.has(v) ? n.delete(v) : n.add(v); setter(n) }
   const anyFilter = fTag.size || fProg.size || fLevel.size || query.trim()
   const allItems = useMemo(() => [...getCatalogExercises(), ...saved], [saved])
+
+  const byId = useMemo(() => new Map(allItems.map((i) => [i.id, i])), [allItems])
+  const favItems = favs.map((id) => byId.get(id)).filter(Boolean)
+  const recentItems = useMemo(() => getRecentExercises()
+    .map((r) => byId.get(r.exId)).filter(Boolean).slice(0, 6), [byId])
 
   const filtered = useMemo(() => allItems.filter((it) => {
     if (section === 'cat' && activeCat && catOf(it) !== activeCat) return false
@@ -128,6 +135,22 @@ export default function LibraryView({ t, lang, saved, progressMap, onOpen, onNew
 
       {section === 'home' && !anyFilter && (
         <div className="lib2-home">
+          {favItems.length > 0 && (
+            <>
+              <div className="sec-label">{t('favorites')}</div>
+              <div className="ex-list shelf">
+                {favItems.map((it) => <ExRow key={'f' + it.id} t={t} lang={lang} item={it} prog={progressMap[it.id] || 'none'} onOpen={onOpen} fav onFav={onToggleFav} />)}
+              </div>
+            </>
+          )}
+          {recentItems.length > 0 && (
+            <>
+              <div className="sec-label">{t('recentTitle')}</div>
+              <div className="ex-list shelf">
+                {recentItems.map((it) => <ExRow key={'r' + it.id} t={t} lang={lang} item={it} prog={progressMap[it.id] || 'none'} onOpen={onOpen} fav={favs.includes(it.id)} onFav={onToggleFav} />)}
+              </div>
+            </>
+          )}
           <div className="sec-label">{t('catBrowse')}</div>
           <div className="cat-grid">
             {CATEGORIES.map((c) => (
@@ -200,6 +223,7 @@ export default function LibraryView({ t, lang, saved, progressMap, onOpen, onNew
             </div>
             {listItems.length === 0 ? <div className="muted-line" style={{ padding: '24px 4px' }}>{t('noResults')}</div>
               : listItems.map((it) => <ExRow key={it.id} t={t} lang={lang} item={it} prog={progressMap[it.id] || 'none'} onOpen={onOpen}
+                fav={favs.includes(it.id)} onFav={onToggleFav}
                 onExport={section === 'saved' ? onExportItem : undefined} onDelete={section === 'saved' ? onDeleteSaved : undefined} />)}
           </div>
         )

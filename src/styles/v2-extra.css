@@ -457,3 +457,8 @@
 /* The brand is a "home" button — takes you to the metronome. */
 .brand-btn { background: none; border: none; padding: 0; font: inherit; color: inherit; cursor: pointer; }
 .brand-btn:hover .brand-name { color: var(--accent); }
+
+/* ---- Favorites ---- */
+.rowact.star.is-on { color: var(--accent); }
+.prog-btn.prog-fav.is-on { color: var(--accent); border-color: var(--accent); }
+.ex-list.shelf { margin-bottom: var(--s-4); }

@@ -23,9 +23,10 @@ import {
 } from './model/exercise.js'
 import { logPracticeSeconds, logTempo, flushJournal, exportJournal, mergeJournal, getTempoStats, dayKey } from './model/progress.js'
 import { generateRhythm, exerciseOfTheDay } from './data/generator.js'
+import { loadFavs, toggleFav } from './model/favs.js'
 import { decodeShare, shareFromHash } from './model/share.js'
 
-const APP_VERSION = 'v5.15' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v5.16' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -91,6 +92,8 @@ export default function App() {
   const [myWk, setMyWk] = useState(() => loadMyWorkouts())
   const [item, setItem] = useState(null)
   const [saved, setSaved] = useState(() => loadLibrary())
+  const [favs, setFavs] = useState(() => loadFavs())
+  const onToggleFav = (id) => setFavs(toggleFav(id))
   const [progressMap, setProgressMap] = useState(() => loadJSON(PROG_KEY, {}))
   const [savedFlash, setSavedFlash] = useState(false)
   const [libTarget, setLibTarget] = useState({ section: 'home', cat: null })
@@ -621,7 +624,7 @@ export default function App() {
           <LibraryView t={t} lang={lang} saved={saved} progressMap={progressMap} onOpen={openItem}
             onNew={newExercise} onImport={importFile} onExportItem={exportExercise} onExportAll={() => exportLibraryFile({ journal: exportJournal(), myWorkouts: loadMyWorkouts() })}
             onDeleteSaved={deleteSaved} route={libTarget} onRoute={setLibTarget}
-            onGenerate={openGenerated} />
+            onGenerate={openGenerated} favs={favs} onToggleFav={onToggleFav} />
         )}
         {nav === 'practice' && item && (
           <PracticeView t={t} lang={lang} item={item} setItem={setItem} options={options} setOptions={setOptions}
@@ -630,7 +633,8 @@ export default function App() {
             loopRange={loopRange} onLoopRange={setLoopRange}
             progress={progressMap[item.id] || 'none'} onProgress={setProgress} onDuplicate={duplicate}
             onBack={() => { if (runRef.current) { stopWorkout(); setNav('workouts') } else setNav('library') }} onSave={saveCurrent} onExport={() => exportExercise(item)}
-            onNew={newExercise} savedFlash={savedFlash} onRegenerate={regenerate} />
+            onNew={newExercise} savedFlash={savedFlash} onRegenerate={regenerate}
+            fav={favs.includes(item.id)} onToggleFav={() => onToggleFav(item.id)} />
         )}
       </main>
 

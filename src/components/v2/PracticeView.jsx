@@ -61,7 +61,7 @@ export default function PracticeView({
   t, lang, item, setItem, options, setOptions, vols, setVols, playing, step,
   loopRange, onLoopRange,
   progress, onProgress, onDuplicate, onBack, onSave, onExport, onNew, savedFlash,
-  initialView = 'notes', onRegenerate,
+  initialView = 'notes', onRegenerate, fav, onToggleFav,
 }) {
   const editable = item.source === 'user'
   // Catalog items have no grid editing to land on; user items open in the
@@ -316,6 +316,9 @@ export default function PracticeView({
           </div>
         </div>
         <div className="prac-progress">
+          <button className={'prog-btn prog-fav' + (fav ? ' is-on' : '')} onClick={onToggleFav} aria-pressed={!!fav}>
+            <Icon name="star" className="ic" /><span>{t('favorite')}</span>
+          </button>
           <button className={'prog-btn' + (progress === 'practiced' ? ' is-on' : '')} onClick={() => onProgress(progress === 'practiced' ? 'none' : 'practiced')}>
             <Icon name="checkcircle" className="ic" /><span>{t('practiced')}</span>
           </button>

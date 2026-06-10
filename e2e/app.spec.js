@@ -371,3 +371,33 @@ test('legend shows in grid view only; tied roll exercise renders', async ({ page
   await page.locator('.view-bar .seg-item', { hasText: 'Grid' }).click()
   await expect(page.locator('.cell-legend')).toBeVisible()
 })
+
+test('favorites: star an exercise, see it on the library home shelf', async ({ page }) => {
+  await page.locator('.side-parent-main').click()
+  await page.locator('.cat-card').first().click()
+  await page.locator('.exrow').first().click()
+  const name = (await page.locator('.pb-title').textContent()).trim()
+  await page.locator('.prog-btn.prog-fav').click()
+  await expect(page.locator('.prog-btn.prog-fav')).toHaveClass(/is-on/)
+  // Home shelf lists it; un-star from the row removes the shelf.
+  await page.locator('.side-parent-main').click()
+  await expect(page.locator('.sec-label', { hasText: 'Favorites' })).toBeVisible()
+  await expect(page.locator('.ex-list.shelf .exrow-name', { hasText: name })).toBeVisible()
+  await page.locator('.ex-list.shelf .rowact.star').first().click()
+  await expect(page.locator('.sec-label', { hasText: 'Favorites' })).toHaveCount(0)
+})
+
+test('recently practiced shelf appears from journal data', async ({ page }) => {
+  // Seed today's journal with practice on a known catalog id.
+  await page.addInitScript(() => {
+    const d = new Date()
+    const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    localStorage.setItem('drums2_journal', JSON.stringify({
+      days: { [k]: { seconds: 120, byExercise: { sc_sb_1: 120 } } }, tempo: {},
+    }))
+  })
+  await page.reload()
+  await page.locator('.side-parent-main').click()
+  await expect(page.locator('.sec-label', { hasText: 'Recently practiced' })).toBeVisible()
+  await expect(page.locator('.ex-list.shelf .exrow-name', { hasText: 'Stick Control #1' })).toBeVisible()
+})
