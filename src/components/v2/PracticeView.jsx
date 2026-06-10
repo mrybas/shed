@@ -131,17 +131,20 @@ export default function PracticeView({
   const hasClosed = INSTRUMENTS.some((k) => item.rows[k].some((c) => c.roll === 'closed'))
   const rollType = hasClosed ? 'closed' : 'open'
 
-  // off -> on -> accent -> flam -> roll -> off (plain click, no tool selected)
+  // Plain click cycles through every cell state the palette offers:
+  // off -> hit -> accent -> ghost -> flam -> drag -> roll -> off
   const cycleCell = (k, i) => {
     if (suppressClickRef.current) { suppressClickRef.current = false; return }
     mutate((prev) => {
     const rows = { ...prev.rows, [k]: prev.rows[k].map((c, idx) => {
       if (idx !== i) return c
-      if (!c.on) return { on: true, accent: false, roll: 0 }
-      if (!c.accent && !c.flam && !c.roll) return { on: true, accent: true, roll: 0 }
-      if (c.accent) return { on: true, accent: false, roll: 0, flam: true }
-      if (c.flam) return { on: true, accent: false, roll: rollType }
-      return { on: false, accent: false, roll: 0 }
+      if (!c.on) return STAMPS.hit()
+      if (!c.accent && !c.ghost && !c.flam && !c.roll) return STAMPS.accent()
+      if (c.accent) return STAMPS.ghost()
+      if (c.ghost) return STAMPS.flam()
+      if (c.flam === true) return STAMPS.drag()
+      if (c.flam === 'drag') return STAMPS.roll(rollType)
+      return STAMPS.erase()
     }) }
     return { ...prev, rows }
     })
@@ -510,7 +513,10 @@ export default function PracticeView({
                 </div>
                 </div>
               ))}
-              <button className="bar-add" onClick={addBarBtn}><Icon name="plus" className="ic" />{t('addBar')}</button>
+              {/* Trailing insertion point — same affordance as the ones between bars. */}
+              <button className="bar-insert" onClick={addBarBtn} aria-label={t('addBar')} title={t('addBar')}>
+                <Icon name="plus" className="ic-xs" />
+              </button>
             </div>
           )}
           {editable && (
