@@ -92,7 +92,8 @@ function WorkoutCard({ t, w, onOpen, onEdit, onDelete }) {
   )
 }
 
-export default function WorkoutsView({ t, lang, exercisesById, onOpenWorkout, myWorkouts = [], onNew, onEdit, onDelete, daily, onOpenDaily }) {
+export default function WorkoutsView({ t, lang, exercisesById, onOpenWorkout, myWorkouts = [], onNew, onEdit, onDelete, daily, onOpenDaily,
+  setlistItems = [], onSetlistStart, onSetlistRemove, onSetlistMove, onSetlistClear }) {
   const byLevel = (lv) => WORKOUTS.filter((w) => w.level === lv)
   return (
     <div className="lib2-home" data-screen-label="Workouts">
@@ -107,6 +108,31 @@ export default function WorkoutsView({ t, lang, exercisesById, onOpenWorkout, my
           </span>
           <span className="daily-go"><Icon name="chevright" className="ic" /></span>
         </button>
+      )}
+      {setlistItems.length > 0 && (
+        <div className="sl-panel">
+          <div className="sec-row">
+            <span className="sec-label">{t('slTitle')} · {setlistItems.length}</span>
+            <span className="sec-actions">
+              <Button size="sm" onClick={onSetlistClear}>{t('slClear')}</Button>
+              <Button size="sm" variant="accent" icon="play" onClick={onSetlistStart}>{t('slStart')}</Button>
+            </span>
+          </div>
+          <div className="sl-list">
+            {setlistItems.map((ex, i) => (
+              <div className="sl-row" key={ex.id}>
+                <span className="sl-num num">{i + 1}</span>
+                <span className="sl-name">{ex.name}</span>
+                <span className="sl-meta num">{ex.bpm} {t('bpm')}</span>
+                <span className="sl-acts">
+                  <button className="rowact" aria-label="up" disabled={i === 0} onClick={() => onSetlistMove(ex.id, -1)}><Icon name="chevup" className="ic" /></button>
+                  <button className="rowact" aria-label="down" disabled={i === setlistItems.length - 1} onClick={() => onSetlistMove(ex.id, 1)}><Icon name="chevdown" className="ic" /></button>
+                  <button className="rowact del" aria-label={t('delete')} onClick={() => onSetlistRemove(ex.id)}><Icon name="trash" className="ic" /></button>
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
       <p className="wk-desc">{t('workoutsIntro')}</p>
 

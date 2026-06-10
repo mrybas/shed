@@ -24,9 +24,10 @@ import {
 import { logPracticeSeconds, logTempo, flushJournal, exportJournal, mergeJournal, getTempoStats, dayKey } from './model/progress.js'
 import { generateRhythm, exerciseOfTheDay } from './data/generator.js'
 import { loadFavs, toggleFav } from './model/favs.js'
+import { loadSetlist, toggleInSetlist, removeFromSetlist, moveInSetlist, clearSetlist } from './model/setlist.js'
 import { decodeShare, shareFromHash } from './model/share.js'
 
-const APP_VERSION = 'v5.22' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v5.23' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -94,6 +95,11 @@ export default function App() {
   const [saved, setSaved] = useState(() => loadLibrary())
   const [favs, setFavs] = useState(() => loadFavs())
   const onToggleFav = (id) => setFavs(toggleFav(id))
+  // Setlist: an ordered queue played through by hand (no timers).
+  const [setlist, setSetlist] = useState(() => loadSetlist())
+  const [slRun, setSlRun] = useState(null) // { idx } while a setlist session runs
+  const slRunRef = useRef(null)
+  slRunRef.current = slRun
   const [progressMap, setProgressMap] = useState(() => loadJSON(PROG_KEY, {}))
   const [savedFlash, setSavedFlash] = useState(false)
   const [libTarget, setLibTarget] = useState({ section: 'home', cat: null })
@@ -294,6 +300,7 @@ export default function App() {
   const [practiceView, setPracticeView] = useState('notes')
   const openItem = (ex) => {
     if (runRef.current) { setRun(null); restoreUserOptions() } // manual open ends a workout
+    if (slRunRef.current) setSlRun(null)
     const it = clone(ex)
     // Restore the user's working tempo for catalog exercises.
     if (it.source !== 'user' && tempoMap[it.id]) it.bpm = tempoMap[it.id]
@@ -310,6 +317,35 @@ export default function App() {
   const regenerate = () => { if (item?.genLevel) openGenerated(item.genLevel) }
   // The daily exercise — same seed (the local date) all day.
   const daily = useMemo(() => exerciseOfTheDay(dayKey()), [])
+
+  // ---- Setlist session ----
+  const resolveSetlistItem = (id) => exById.get(id) || saved.find((x) => x.id === id) || null
+  const setlistItems = setlist.map((id) => resolveSetlistItem(id)).filter(Boolean)
+  const onToggleSetlist = (id) => setSetlist(toggleInSetlist(id))
+  const openSetlistIdx = (idx) => {
+    const ex = setlistItems[idx]
+    if (!ex) return
+    const it = clone(ex)
+    if (it.source !== 'user' && tempoMap[it.id]) it.bpm = tempoMap[it.id]
+    setPracticeView('notes')
+    setItem(it)
+    setLoopRange(null)
+    setNav('practice')
+    setSlRun({ idx })
+  }
+  const startSetlist = () => { if (setlistItems.length) openSetlistIdx(0) }
+  const setlistNext = () => {
+    const cur = slRunRef.current
+    if (!cur) return
+    if (cur.idx + 1 >= setlistItems.length) { setSlRun(null); sched.stop(); return }
+    openSetlistIdx(cur.idx + 1)
+  }
+  const stopSetlist = () => { setSlRun(null); sched.stop() }
+  const slView = slRun ? {
+    idx: slRun.idx + 1,
+    total: setlistItems.length,
+    nextName: setlistItems[slRun.idx + 1]?.name || null,
+  } : null
   // Fully close the exercise from the player bar: stop the transport and
   // return the bar to plain-metronome duty.
   const closeItem = () => {
@@ -386,6 +422,7 @@ export default function App() {
   // the player-bar strip exists only while a routine is actually running.
   const navTo = useCallback((dest) => {
     if (runRef.current) { setRun(null); sched.stop(); restoreUserOptions() }
+    if (slRunRef.current) setSlRun(null)
     setNav(dest)
   }, [sched, restoreUserOptions])
 
@@ -620,7 +657,11 @@ export default function App() {
           <WorkoutsView t={t} lang={lang} exercisesById={exById} onOpenWorkout={setWkId}
             myWorkouts={myWk} onNew={() => setWkEdit(emptyWorkout())}
             onEdit={(w) => setWkEdit(w)} onDelete={deleteWk}
-            daily={daily} onOpenDaily={() => openItem(daily)} />
+            daily={daily} onOpenDaily={() => openItem(daily)}
+            setlistItems={setlistItems} onSetlistStart={startSetlist}
+            onSetlistRemove={(id) => setSetlist(removeFromSetlist(id))}
+            onSetlistMove={(id, dir) => setSetlist(moveInSetlist(id, dir))}
+            onSetlistClear={() => setSetlist(clearSetlist())} />
         ))}
         {nav === 'library' && (
           <LibraryView t={t} lang={lang} saved={saved} progressMap={progressMap} onOpen={openItem}
@@ -636,7 +677,8 @@ export default function App() {
             progress={progressMap[item.id] || 'none'} onProgress={setProgress} onDuplicate={duplicate}
             onBack={() => { if (runRef.current) { stopWorkout(); setNav('workouts') } else setNav('library') }} onSave={saveCurrent} onExport={() => exportExercise(item)}
             onNew={newExercise} savedFlash={savedFlash} onRegenerate={regenerate}
-            fav={favs.includes(item.id)} onToggleFav={() => onToggleFav(item.id)} />
+            fav={favs.includes(item.id)} onToggleFav={() => onToggleFav(item.id)}
+            inSetlist={setlist.includes(item.id)} onToggleSetlist={() => onToggleSetlist(item.id)} />
         )}
       </main>
 
@@ -649,6 +691,7 @@ export default function App() {
         step={step} playing={playing} onToggle={sched.toggle} gapMuted={sched.gapMuted} countingIn={sched.countingIn}
         barView={barView} loopRange={mode === 'practice' ? loopRange : null}
         workout={runView} onWorkoutSkip={advanceWorkout} onWorkoutStop={stopWorkout}
+        setlist={slView} onSetlistNext={setlistNext} onSetlistStop={stopSetlist}
         onOpenItem={mode === 'practice' && nav !== 'practice' ? () => setNav('practice') : null}
         onClearItem={mode === 'practice' ? closeItem : null} />
 

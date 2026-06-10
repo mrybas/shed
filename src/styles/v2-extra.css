@@ -460,7 +460,7 @@
 
 /* ---- Favorites ---- */
 .rowact.star.is-on { color: var(--accent); }
-.prog-btn.prog-fav.is-on { color: var(--accent); border-color: var(--accent); }
+.prog-btn.prog-fav.is-on, .prog-btn.prog-sl.is-on { color: var(--accent); border-color: var(--accent); }
 .ex-list.shelf { margin-bottom: var(--s-4); }
 
 /* ---- Tempo goals ---- */
@@ -562,3 +562,18 @@
 .st-tempo-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-3); }
 .st-tempo-name { font-size: var(--fs-sm); font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .st-tempo-best { color: var(--text-3); font-size: var(--fs-xs); }
+
+/* ---- Setlist ---- */
+.sl-panel {
+  margin-top: var(--s-4); padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--border-soft); border-radius: var(--r-md); background: var(--surface-1);
+}
+.sl-list { display: grid; gap: 4px; margin-top: var(--s-2); }
+.sl-row { display: flex; align-items: center; gap: var(--s-3); padding: 6px 4px; border-bottom: 1px solid var(--border-soft); }
+.sl-row:last-child { border-bottom: none; }
+.sl-num { color: var(--text-3); width: 18px; text-align: right; font-size: var(--fs-xs); }
+.sl-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); font-weight: 600; }
+.sl-meta { color: var(--text-3); font-size: var(--fs-xs); }
+.sl-acts { display: inline-flex; gap: 2px; }
+.sl-acts .rowact[disabled] { opacity: .35; cursor: default; }
+.pb-slrow { background: color-mix(in oklab, var(--accent) 7%, transparent); }

@@ -82,6 +82,7 @@ export default function PlayerBar({
   t, mode, title, sourceLabel, cat, bpm, setBpm, sig, sub, setSub, showSub,
   soundSubs, onToggleSoundSubs, step, playing, onToggle, gapMuted, countingIn, barView, loopRange,
   workout, onWorkoutSkip, onWorkoutStop, onOpenItem, onClearItem,
+  setlist, onSetlistNext, onSetlistStop,
 }) {
   const bars = barView ? barView.bars : 1
   const curBar = barView ? barView.barIndex + 1 : 0
@@ -108,6 +109,19 @@ export default function PlayerBar({
             </button>
           )}
           <button className="pb-wkbtn" onClick={onWorkoutStop} title={workout.done ? t('wkClose') : t('wkStop')} aria-label={workout.done ? t('wkClose') : t('wkStop')}>
+            <Icon name="close" className="ic" />
+          </button>
+        </div>
+      )}
+      {setlist && (
+        <div className="pb-wkrow pb-slrow">
+          <span className="pb-wk-step num">{t('slTag')} {setlist.idx}/{setlist.total}</span>
+          {setlist.nextName && <span className="pb-wk-note">{t('slNext')}: {setlist.nextName}</span>}
+          <span className="pb-wk-spacer" />
+          <button className="pb-wkbtn" onClick={onSetlistNext} title={setlist.nextName ? t('slNextBtn') : t('slFinish')} aria-label={setlist.nextName ? t('slNextBtn') : t('slFinish')}>
+            <Icon name="chevright" className="ic" />
+          </button>
+          <button className="pb-wkbtn" onClick={onSetlistStop} title={t('slStop')} aria-label={t('slStop')}>
             <Icon name="close" className="ic" />
           </button>
         </div>

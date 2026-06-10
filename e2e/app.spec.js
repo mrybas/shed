@@ -517,3 +517,27 @@ test('stats sheet: daily bars, categories and tempo history render', async ({ pa
   await expect(page.locator('.st-cat-row')).not.toHaveCount(0)
   await expect(page.locator('.st-tempo-name')).toContainText('Stick Control #1')
 })
+
+test('setlist: add two exercises, run through them from the player bar', async ({ page }) => {
+  await page.locator('.side-parent-main').click()
+  await page.locator('.cat-card').first().click()
+  await page.locator('.exrow').nth(0).click()
+  const first = (await page.locator('.pb-title').textContent()).trim()
+  await page.locator('.prog-btn.prog-sl').click()
+  await page.locator('.prac-back').click()
+  await page.locator('.exrow').nth(1).click()
+  await page.locator('.prog-btn.prog-sl').click()
+  await expect(page.getByRole('button', { name: 'In setlist' })).toBeVisible()
+  // run it from Workouts
+  await page.locator('.side-link', { hasText: 'Workouts' }).click()
+  await expect(page.locator('.sl-row')).toHaveCount(2)
+  await page.locator('.sl-panel').getByRole('button', { name: 'Start' }).click()
+  await expect(page.locator('.practice')).toBeVisible()
+  await expect(page.locator('.pb-slrow')).toContainText('Setlist 1/2')
+  await expect(page.locator('.pb-title')).toHaveText(first)
+  await page.locator('button[aria-label="Next in setlist"]').click()
+  await expect(page.locator('.pb-slrow')).toContainText('Setlist 2/2')
+  // finishing the last item ends the session
+  await page.locator('button[aria-label="Finish setlist"]').click()
+  await expect(page.locator('.pb-slrow')).toHaveCount(0)
+})
