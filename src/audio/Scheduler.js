@@ -2,7 +2,7 @@
 // A timer wakes every `lookaheadMs` and schedules any notes due within
 // `scheduleAheadSec`, using absolute AudioContext times for jitter-free timing.
 import { getAudioContext, getMaster } from './AudioEngine.js'
-import { DRUM_VOICES, drumRoll } from './drumSynths.js'
+import { DRUM_VOICES, ART_VOICE_KEYS, drumRoll } from './drumSynths.js'
 import { click } from './click.js'
 import { stepsPerBeat as spbOf, totalSteps as totalStepsOf, INSTRUMENTS, getBars } from '../model/exercise.js'
 
@@ -387,7 +387,9 @@ export class Scheduler {
           if (mix <= 0) return // muted in the mixer
           // Three dynamic levels: ghost (quiet) < normal < accent.
           const gain = (cell.ghost ? 0.22 : cell.accent ? 1.0 : 0.55) * this.patternVolume * mix
-          const voice = DRUM_VOICES[inst]
+          // Articulations (cross-stick, rimshot, bell) swap in their own voice.
+          const artKey = cell.art ? ART_VOICE_KEYS[`${inst}:${cell.art}`] : null
+          const voice = DRUM_VOICES[artKey || inst]
           if (cell.roll && voice) {
             drumRoll(ctx, time, this._rollDuration(step), cell.roll, master, gain, voice)
           } else if (voice) {

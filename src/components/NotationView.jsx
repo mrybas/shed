@@ -110,6 +110,13 @@ export default function NotationView({ exercise, currentStep, loopRange, onBarCl
           o.setVerticalJustification(Annotation.VerticalJustify.TOP)
           sn.addModifier(o, 0)
         }
+        if (!td.rest && td.rim) {
+          // Rimshot: regular head + a small "rs" marking above.
+          const r = new Annotation('rs')
+          r.setVerticalJustification(Annotation.VerticalJustify.TOP)
+          r.setFont('Arial', 9, 'bold')
+          sn.addModifier(r, 0)
+        }
         if (td.sticking) {
           const a = new Annotation(td.sticking)
           a.setVerticalJustification(Annotation.VerticalJustify.BOTTOM)

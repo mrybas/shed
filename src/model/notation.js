@@ -8,6 +8,7 @@
 import { INSTRUMENTS, stepsPerBeat, barLayout } from './exercise.js'
 
 export const RENDER_INFO = {
+  hihatPedal: { key: 'd/4/x2', order: -1 },
   kick: { key: 'f/4', order: 0 },
   floorTom: { key: 'a/4', order: 1 },
   snare: { key: 'c/5', order: 2 },
@@ -17,6 +18,13 @@ export const RENDER_INFO = {
   hihatClosed: { key: 'g/5/x2', order: 6 },
   hihatOpen: { key: 'g/5/x2', order: 6, open: true },
   crash: { key: 'a/5/x2', order: 7 },
+}
+
+// Articulation variants override the plain notehead (cross-stick: x on the
+// snare line; ride bell: triangle). Rimshot keeps the head + an annotation.
+const ART_RENDER = {
+  'snare:cross': { key: 'c/5/x2', order: 2 },
+  'ride:bell': { key: 'f/5/tu', order: 5 },
 }
 
 export function durationFor(subdivision) {
@@ -64,14 +72,16 @@ export function buildNotationData(ex) {
 
   const stepInfo = (step) => {
     const active = INSTRUMENTS.filter((inst) => ex.rows[inst]?.[step]?.on)
+    const renderFor = (inst) => ART_RENDER[`${inst}:${ex.rows[inst][step].art || ''}`] || RENDER_INFO[inst]
     return {
       onset: active.length > 0,
       accent: active.some((inst) => ex.rows[inst][step].accent),
       flam: active.map((inst) => ex.rows[inst][step].flam).find(Boolean) || false,
       ghost: active.some((inst) => ex.rows[inst][step].ghost),
       open: active.some((inst) => RENDER_INFO[inst]?.open),
+      rim: active.some((inst) => inst === 'snare' && ex.rows[inst][step].art === 'rim'),
       roll: (active.find((inst) => ex.rows[inst][step].roll) && ex.rows[active[0]][step].roll) || 0,
-      keys: active.map((inst) => RENDER_INFO[inst]).filter(Boolean).sort((a, b) => a.order - b.order).map((r) => r.key),
+      keys: active.map(renderFor).filter(Boolean).sort((a, b) => a.order - b.order).map((r) => r.key),
       sticking: ex.sticking[step] || '',
     }
   }
@@ -99,7 +109,7 @@ export function buildNotationData(ex) {
           const info = stepInfo(gi)
           tickables.push({
             rest: !info.onset, keys: info.onset ? info.keys : ['b/4'], durKind: tDur, dots: 0,
-            accent: info.onset && info.accent, flam: info.onset && info.flam, ghost: info.onset && info.ghost, open: info.onset && info.open, roll: info.onset ? info.roll : 0,
+            accent: info.onset && info.accent, flam: info.onset && info.flam, ghost: info.onset && info.ghost, open: info.onset && info.open, rim: info.onset && info.rim, roll: info.onset ? info.roll : 0,
             sticking: info.onset ? info.sticking : '', startStep: gi, span: 1,
           })
         }
@@ -111,7 +121,7 @@ export function buildNotationData(ex) {
           const info = stepInfo(gi)
           tickables.push({
             rest: !info.onset, keys: info.onset ? info.keys : ['b/4'], durKind, dots: 0,
-            accent: info.onset && info.accent, flam: info.onset && info.flam, ghost: info.onset && info.ghost, open: info.onset && info.open, roll: info.onset ? info.roll : 0,
+            accent: info.onset && info.accent, flam: info.onset && info.flam, ghost: info.onset && info.ghost, open: info.onset && info.open, rim: info.onset && info.rim, roll: info.onset ? info.roll : 0,
             sticking: info.onset ? info.sticking : '', startStep: gi, span: 1,
           })
         }
@@ -128,7 +138,7 @@ export function buildNotationData(ex) {
           const durKind = shiftDur(baseDur, shift)
           tickables.push({
             rest: !info.onset, keys: info.onset ? info.keys : ['b/4'], durKind, dots,
-            accent: info.onset && info.accent, flam: info.onset && info.flam, ghost: info.onset && info.ghost, open: info.onset && info.open, roll: info.onset ? info.roll : 0,
+            accent: info.onset && info.accent, flam: info.onset && info.flam, ghost: info.onset && info.ghost, open: info.onset && info.open, rim: info.onset && info.rim, roll: info.onset ? info.roll : 0,
             sticking: info.onset ? info.sticking : '', startStep: gi, span,
           })
           p = q

@@ -200,6 +200,28 @@ describe('bars (multi-bar exercises)', () => {
     expect(parsed.rows.snare[1].flam).toBeUndefined()
   })
 
+  it('preserves the art flag through resize and import (and only when set)', () => {
+    let ex = createEmptyExercise({ timeSignature: { beats: 4, unit: 4 }, subdivision: 'eighth' })
+    ex.rows.snare[0] = { on: true, accent: false, roll: 0, art: 'cross' }
+    ex.rows.ride[2] = { on: true, accent: false, roll: 0, art: 'bell' }
+    const grown = resizeExercise(ex, ex.timeSignature, 'sixteenth')
+    expect(grown.rows.snare[0].art).toBe('cross')
+    const parsed = parseImported(JSON.stringify(grown))
+    expect(parsed.rows.snare[0].art).toBe('cross')
+    expect(parsed.rows.ride[4].art).toBe('bell')
+    expect(parsed.rows.snare[2].art).toBeUndefined()
+  })
+
+  it('new exercises include the hihatPedal row', () => {
+    const ex = createEmptyExercise({})
+    expect(ex.rows.hihatPedal).toHaveLength(16)
+    // old files without the row gain it on import
+    const legacy = JSON.parse(JSON.stringify(ex))
+    delete legacy.rows.hihatPedal
+    const parsed = parseImported(JSON.stringify(legacy))
+    expect(parsed.rows.hihatPedal).toHaveLength(16)
+  })
+
   it('normalizeExercise adds missing tom rows to older saves', () => {
     const legacy = { app: 'drums', timeSignature: { beats: 4, unit: 4 }, subdivision: 'quarter', rows: { snare: [{ on: true, accent: false, roll: 0 }, {}, {}, {}] }, sticking: [] }
     const norm = normalizeExercise(legacy)

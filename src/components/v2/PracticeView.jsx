@@ -31,7 +31,7 @@ import { sigToTimeSignature } from './util.js'
 
 const INSTR_COLORS = {
   crash: 'oklch(0.72 0.13 320)', ride: 'oklch(0.74 0.12 250)', hihatOpen: 'oklch(0.78 0.13 95)',
-  hihatClosed: 'oklch(0.74 0.12 175)', tom1: 'oklch(0.72 0.13 60)', tom2: 'oklch(0.68 0.13 45)',
+  hihatClosed: 'oklch(0.74 0.12 175)', hihatPedal: 'oklch(0.68 0.1 185)', tom1: 'oklch(0.72 0.13 60)', tom2: 'oklch(0.68 0.13 45)',
   snare: 'oklch(0.7 0.16 38)', floorTom: 'oklch(0.6 0.12 25)', kick: 'oklch(0.6 0.04 260)',
 }
 
@@ -45,9 +45,14 @@ const STAMPS = {
   flam: () => ({ on: true, accent: false, roll: 0, flam: true }),
   drag: () => ({ on: true, accent: false, roll: 0, flam: 'drag' }),
   roll: (rollType) => ({ on: true, accent: false, roll: rollType }),
+  cross: () => ({ on: true, accent: false, roll: 0, art: 'cross' }),
+  rim: () => ({ on: true, accent: false, roll: 0, art: 'rim' }),
+  bell: () => ({ on: true, accent: false, roll: 0, art: 'bell' }),
   erase: () => ({ on: false, accent: false, roll: 0 }),
 }
-const TOOL_GLYPHS = { hit: '●', accent: '>', ghost: '( )', flam: 'f', drag: 'd', roll: 'z', erase: '⌫' }
+const TOOL_GLYPHS = { hit: '●', accent: '>', ghost: '( )', flam: 'f', drag: 'd', roll: 'z', cross: '×', rim: 'rs', bell: '▲', erase: '⌫' }
+// Articulation stamps only land on rows that support them.
+const ART_TOOL_ROWS = { cross: 'snare', rim: 'snare', bell: 'ride' }
 
 // Beat-value button in the ruler; click cycles through these four.
 const TICK_CYCLE = ['quarter', 'eighth', 'triplet', 'sixteenth']
@@ -173,12 +178,14 @@ export default function PracticeView({
   // Apply the selected stamp to one cell (no history push — the paint gesture
   // pushes one snapshot at pointerdown).
   const applyStamp = useCallback((k, i) => {
+    if (ART_TOOL_ROWS[tool] && ART_TOOL_ROWS[tool] !== k) return // e.g. no bell on a kick
     const next = stampFor(tool, rollType)
     setItem((prev) => {
       const cur = prev.rows[k]?.[i]
       if (!cur) return prev
       const same = cur.on === next.on && cur.accent === next.accent && (cur.roll || 0) === (next.roll || 0)
         && (cur.flam || false) === (next.flam || false) && !!cur.ghost === !!next.ghost
+        && (cur.art || null) === (next.art || null)
       if (same) return prev
       const rows = { ...prev.rows, [k]: prev.rows[k].map((c, idx) => (idx === i ? { ...next } : c)) }
       return { ...prev, rows }
@@ -597,8 +604,8 @@ export default function PracticeView({
                   {item.rows[k].map((cell, i) => (
                     <button key={i} disabled={!editable} aria-label={t(k) + ' ' + (i + 1)}
                       data-cellk={k} data-celli={i}
-                      className={['cell', cell.roll ? 'roll' : cell.flam ? 'flam' : cell.ghost ? 'ghost' : cell.accent ? 'accent' : cell.on ? 'on' : '', beatStartSet.has(i) ? 'beat-start' : '', barStartSet.has(i) ? 'bar-start' : '', localPlay === i ? 'play-col' : '', !editable ? 'ro' : ''].join(' ')}
-                      onClick={() => editable && !tool && cycleCell(k, i)}>{cell.roll ? 'z' : cell.flam === 'drag' ? 'd' : cell.flam ? 'f' : cell.ghost ? '()' : ''}</button>
+                      className={['cell', cell.roll ? 'roll' : cell.flam ? 'flam' : cell.art ? 'art' : cell.ghost ? 'ghost' : cell.accent ? 'accent' : cell.on ? 'on' : '', beatStartSet.has(i) ? 'beat-start' : '', barStartSet.has(i) ? 'bar-start' : '', localPlay === i ? 'play-col' : '', !editable ? 'ro' : ''].join(' ')}
+                      onClick={() => editable && !tool && cycleCell(k, i)}>{cell.roll ? 'z' : cell.flam === 'drag' ? 'd' : cell.flam ? 'f' : cell.art === 'cross' ? '×' : cell.art === 'rim' ? 'rs' : cell.art === 'bell' ? '▲' : cell.ghost ? '()' : ''}</button>
                   ))}
                 </div>
               </div>
@@ -625,6 +632,9 @@ export default function PracticeView({
         <span className="cl-item"><span className="cl-sw cell flam">f</span>{t('legendFlam')}</span>
         <span className="cl-item"><span className="cl-sw cell flam">d</span>{t('legendDrag')}</span>
         <span className="cl-item"><span className="cl-sw cell roll">z</span>{t('legendRoll')}</span>
+        <span className="cl-item"><span className="cl-sw cell art">×</span>{t('legendCross')}</span>
+        <span className="cl-item"><span className="cl-sw cell art">rs</span>{t('legendRim')}</span>
+        <span className="cl-item"><span className="cl-sw cell art">▲</span>{t('legendBell')}</span>
         <span className="cl-item"><span className="cl-rl">R / L</span>{t('legendSticking')}</span>
       </div>
 

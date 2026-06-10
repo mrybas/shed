@@ -92,6 +92,94 @@ export function hihatOpen(ctx, time, destination, { gain = 1 } = {}) {
   registerOpenHat(amp, time)
 }
 
+// Hi-hat pedal "chick": a duller, quieter snap than a stick stroke, plus a
+// soft low thump from the cymbals meeting. Closes (chokes) a ringing open hat.
+export function hihatPedal(ctx, time, destination, { gain = 1 } = {}) {
+  chokeOpenHats(time)
+  const src = noiseSource(ctx)
+  const bp = ctx.createBiquadFilter()
+  bp.type = 'bandpass'
+  bp.frequency.value = 5200
+  bp.Q.value = 0.7
+  const amp = ctx.createGain()
+  amp.gain.setValueAtTime(gain * 0.45, time)
+  amp.gain.exponentialRampToValueAtTime(0.0001, time + 0.035)
+  src.connect(bp).connect(amp).connect(destination)
+  src.start(time)
+  src.stop(time + 0.05)
+
+  const osc = ctx.createOscillator()
+  const oamp = ctx.createGain()
+  osc.type = 'sine'
+  osc.frequency.setValueAtTime(320, time)
+  oamp.gain.setValueAtTime(gain * 0.15, time)
+  oamp.gain.exponentialRampToValueAtTime(0.0001, time + 0.04)
+  osc.connect(oamp).connect(destination)
+  osc.start(time)
+  osc.stop(time + 0.05)
+}
+
+// Cross-stick: stick laid across the rim — a dry woody click.
+export function crossStick(ctx, time, destination, { gain = 1 } = {}) {
+  const osc = ctx.createOscillator()
+  const amp = ctx.createGain()
+  osc.type = 'triangle'
+  osc.frequency.setValueAtTime(950, time)
+  osc.frequency.exponentialRampToValueAtTime(620, time + 0.025)
+  amp.gain.setValueAtTime(gain * 0.8, time)
+  amp.gain.exponentialRampToValueAtTime(0.0001, time + 0.06)
+  osc.connect(amp).connect(destination)
+  osc.start(time)
+  osc.stop(time + 0.08)
+
+  const src = noiseSource(ctx)
+  const bp = ctx.createBiquadFilter()
+  bp.type = 'bandpass'
+  bp.frequency.value = 2800
+  bp.Q.value = 1.5
+  const namp = ctx.createGain()
+  namp.gain.setValueAtTime(gain * 0.3, time)
+  namp.gain.exponentialRampToValueAtTime(0.0001, time + 0.03)
+  src.connect(bp).connect(namp).connect(destination)
+  src.start(time)
+  src.stop(time + 0.05)
+}
+
+// Rimshot: head + rim together — a regular snare with a hard, bright crack.
+export function rimshot(ctx, time, destination, { gain = 1 } = {}) {
+  snare(ctx, time, destination, { gain: gain * 0.9 })
+  const osc = ctx.createOscillator()
+  const amp = ctx.createGain()
+  osc.type = 'square'
+  osc.frequency.setValueAtTime(1750, time)
+  amp.gain.setValueAtTime(gain * 0.4, time)
+  amp.gain.exponentialRampToValueAtTime(0.0001, time + 0.05)
+  osc.connect(amp).connect(destination)
+  osc.start(time)
+  osc.stop(time + 0.07)
+}
+
+// Ride bell: a pingy strike with a strong fundamental and longer sustain.
+export function rideBell(ctx, time, destination, { gain = 1 } = {}) {
+  const out = ctx.createGain()
+  out.gain.setValueAtTime(gain * 0.55, time)
+  out.gain.exponentialRampToValueAtTime(0.0001, time + 0.7)
+  const hp = ctx.createBiquadFilter()
+  hp.type = 'highpass'
+  hp.frequency.value = 900
+  out.connect(hp).connect(destination)
+  ;[1, 1.48, 2.03, 2.62].forEach((r, i) => {
+    const osc = ctx.createOscillator()
+    osc.type = i === 0 ? 'triangle' : 'square'
+    osc.frequency.value = 1050 * r
+    const oamp = ctx.createGain()
+    oamp.gain.value = i === 0 ? 1 : 0.25
+    osc.connect(oamp).connect(out)
+    osc.start(time)
+    osc.stop(time + 0.72)
+  })
+}
+
 // Metallic voice: a cluster of inharmonic square oscillators + noise sheen.
 function cymbal(ctx, time, destination, gain, decay, baseFreq, ratios) {
   const out = ctx.createGain()
@@ -259,6 +347,37 @@ function eTom(ctx, time, destination, gain, freq) {
   osc.stop(time + 0.38)
 }
 
+function eHihatPedal(ctx, time, destination, { gain = 1 } = {}) {
+  chokeOpenHats(time)
+  eHat(ctx, time, destination, gain * 0.6, 0.03)
+}
+
+// 808 rimshot: a dry resonant click — doubles as the electronic cross-stick.
+function eClick(ctx, time, destination, gain, freq, decay) {
+  const osc = ctx.createOscillator()
+  const amp = ctx.createGain()
+  osc.type = 'triangle'
+  osc.frequency.setValueAtTime(freq, time)
+  amp.gain.setValueAtTime(gain, time)
+  amp.gain.exponentialRampToValueAtTime(0.0001, time + decay)
+  osc.connect(amp).connect(destination)
+  osc.start(time)
+  osc.stop(time + decay + 0.02)
+}
+
+function eCrossStick(ctx, time, destination, { gain = 1 } = {}) {
+  eClick(ctx, time, destination, gain * 0.8, 1700, 0.05)
+}
+
+function eRimshot(ctx, time, destination, { gain = 1 } = {}) {
+  eSnare(ctx, time, destination, { gain: gain * 0.7 })
+  eClick(ctx, time, destination, gain * 0.6, 1100, 0.06)
+}
+
+function eRideBell(ctx, time, destination, { gain = 1 } = {}) {
+  cymbal(ctx, time, destination, gain * 0.9, 0.5, 2100, [1, 1.5, 2.0])
+}
+
 function eRide(ctx, time, destination, { gain = 1 } = {}) {
   cymbal(ctx, time, destination, gain * 0.8, 0.3, 4200, METAL_RATIOS)
 }
@@ -307,7 +426,8 @@ function padTock(ctx, time, destination, gain, pitch) {
 
 const PAD_PITCH = {
   kick: 0.7, floorTom: 0.8, tom2: 0.9, tom1: 1.0, snare: 1.05,
-  hihatClosed: 1.25, hihatOpen: 1.35, ride: 1.3, crash: 1.2,
+  hihatClosed: 1.25, hihatOpen: 1.35, hihatPedal: 1.15, ride: 1.3, crash: 1.2,
+  crossStick: 1.1, rimshot: 1.0, rideBell: 1.4,
 }
 
 const padVoice = (inst) => (ctx, time, destination, { gain = 1 } = {}) =>
@@ -317,23 +437,32 @@ const padVoice = (inst) => (ctx, time, destination, { gain = 1 } = {}) =>
 // Kits + dispatch. The active kit is a module-level global (a sound-device
 // setting, not an exercise property) persisted under drums2_kit.
 
+const VOICE_KEYS = [
+  'kick', 'snare', 'hihatClosed', 'hihatOpen', 'hihatPedal', 'ride', 'crash',
+  'tom1', 'tom2', 'floorTom', 'crossStick', 'rimshot', 'rideBell',
+]
+
 const KITS = {
-  acoustic: { kick, snare, hihatClosed, hihatOpen, ride, crash, tom1, tom2, floorTom },
+  acoustic: {
+    kick, snare, hihatClosed, hihatOpen, hihatPedal, ride, crash, tom1, tom2, floorTom,
+    crossStick, rimshot, rideBell,
+  },
   electronic: {
     kick: eKick,
     snare: eSnare,
     hihatClosed: eHihatClosed,
     hihatOpen: eHihatOpen,
+    hihatPedal: eHihatPedal,
     ride: eRide,
     crash: eCrash,
     tom1: (ctx, t, d, o = {}) => eTom(ctx, t, d, o.gain ?? 1, 240),
     tom2: (ctx, t, d, o = {}) => eTom(ctx, t, d, o.gain ?? 1, 170),
     floorTom: (ctx, t, d, o = {}) => eTom(ctx, t, d, o.gain ?? 1, 110),
+    crossStick: eCrossStick,
+    rimshot: eRimshot,
+    rideBell: eRideBell,
   },
-  pad: Object.fromEntries(
-    ['kick', 'snare', 'hihatClosed', 'hihatOpen', 'ride', 'crash', 'tom1', 'tom2', 'floorTom']
-      .map((inst) => [inst, padVoice(inst)]),
-  ),
+  pad: Object.fromEntries(VOICE_KEYS.map((inst) => [inst, padVoice(inst)])),
 }
 
 export const KIT_NAMES = Object.keys(KITS)
@@ -381,14 +510,11 @@ export function snareRoll(ctx, startTime, durationSec, type, destination, gain =
 // takes effect immediately (even mid-pattern).
 const dispatch = (inst) => (ctx, time, destination, opts) => KITS[currentKit][inst](ctx, time, destination, opts)
 
-export const DRUM_VOICES = {
-  kick: dispatch('kick'),
-  snare: dispatch('snare'),
-  hihatClosed: dispatch('hihatClosed'),
-  hihatOpen: dispatch('hihatOpen'),
-  ride: dispatch('ride'),
-  crash: dispatch('crash'),
-  tom1: dispatch('tom1'),
-  tom2: dispatch('tom2'),
-  floorTom: dispatch('floorTom'),
+export const DRUM_VOICES = Object.fromEntries(VOICE_KEYS.map((inst) => [inst, dispatch(inst)]))
+
+// cell.art -> which voice replaces the instrument's default one.
+export const ART_VOICE_KEYS = {
+  'snare:cross': 'crossStick',
+  'snare:rim': 'rimshot',
+  'ride:bell': 'rideBell',
 }

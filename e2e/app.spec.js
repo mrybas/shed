@@ -283,3 +283,30 @@ test('player bar reopens the paused exercise; close clears it', async ({ page })
   await expect(page.locator('.pb-close')).toHaveCount(0)
   await expect(page.locator('.pb-title')).toContainText('/')
 })
+
+test('articulations: pedal row exists; cross-stick stamps only on snare', async ({ page }) => {
+  await page.locator('.side-parent-main').click()
+  await page.getByRole('button', { name: /New exercise/ }).click()
+  // The new hi-hat pedal row is in the grid.
+  await expect(page.locator('.seq-rowlabel', { hasText: /^Hi-hat pedal$/ })).toBeVisible()
+
+  // Pick the cross-stick stamp: it paints on the snare…
+  await page.locator('.stamp', { hasText: 'Cross-stick' }).click()
+  const snareCell = page.locator('.seq-row').filter({ has: page.locator('.seq-rowlabel', { hasText: /^Snare$/ }) }).locator('.cell').first()
+  await snareCell.click()
+  await expect(snareCell).toHaveClass(/\bart\b/)
+  await expect(snareCell).toHaveText('×')
+
+  // …but not on the kick.
+  const kickCell = page.locator('.seq-row').filter({ has: page.locator('.seq-rowlabel', { hasText: /^Kick$/ }) }).locator('.cell').first()
+  await kickCell.click()
+  await expect(kickCell).not.toHaveClass(/\bart\b/)
+
+  // Bell lands on the ride and the notation still renders.
+  await page.locator('.stamp', { hasText: 'Ride bell' }).click()
+  const rideCell = page.locator('.seq-row').filter({ has: page.locator('.seq-rowlabel', { hasText: /^Ride$/ }) }).locator('.cell').nth(4)
+  await rideCell.click()
+  await expect(rideCell).toHaveText('▲')
+  await page.locator('.view-bar .seg-item', { hasText: 'Notes' }).click()
+  await expect(page.locator('.notation-wrap .vf-line svg').first()).toBeVisible()
+})

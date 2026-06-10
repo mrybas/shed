@@ -107,6 +107,33 @@ describe('buildNotationData — flam', () => {
   })
 })
 
+describe('buildNotationData — articulations', () => {
+  it('cross-stick renders an x head on the snare line; bell a triangle on ride', () => {
+    const ex = createEmptyExercise({ subdivision: 'quarter' })
+    ex.rows.snare[0] = { on: true, accent: false, roll: 0, art: 'cross' }
+    ex.rows.ride[1] = { on: true, accent: false, roll: 0, art: 'bell' }
+    const data = buildNotationData(ex)
+    expect(data.beatsData[0].tickables[0].keys).toEqual(['c/5/x2'])
+    expect(data.beatsData[1].tickables[0].keys).toEqual(['f/5/tu'])
+  })
+
+  it('rimshot keeps the plain head and sets the rim flag', () => {
+    const ex = createEmptyExercise({ subdivision: 'quarter' })
+    ex.rows.snare[0] = { on: true, accent: false, roll: 0, art: 'rim' }
+    const data = buildNotationData(ex)
+    expect(data.beatsData[0].tickables[0].keys).toEqual(['c/5'])
+    expect(data.beatsData[0].tickables[0].rim).toBe(true)
+  })
+
+  it('hihatPedal notates below the staff with an x head', () => {
+    const ex = createEmptyExercise({ subdivision: 'quarter' })
+    ex.rows.hihatPedal[0] = { on: true, accent: false, roll: 0 }
+    ex.rows.snare[0] = { on: true, accent: false, roll: 0 }
+    const data = buildNotationData(ex)
+    expect(data.beatsData[0].tickables[0].keys).toEqual(['d/4/x2', 'c/5'])
+  })
+})
+
 describe('buildNotationData — grooves chord per onset', () => {
   it('basic rock: kick+hihat chord on beat 1', () => {
     const data = buildNotationData(byId('builtin_basic_rock')) // eighth grid

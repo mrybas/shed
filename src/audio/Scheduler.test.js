@@ -12,11 +12,20 @@ vi.mock('./drumSynths.js', () => ({
     snare: vi.fn(),
     hihatClosed: vi.fn(),
     hihatOpen: vi.fn(),
+    hihatPedal: vi.fn(),
     ride: vi.fn(),
     crash: vi.fn(),
     tom1: vi.fn(),
     tom2: vi.fn(),
     floorTom: vi.fn(),
+    crossStick: vi.fn(),
+    rimshot: vi.fn(),
+    rideBell: vi.fn(),
+  },
+  ART_VOICE_KEYS: {
+    'snare:cross': 'crossStick',
+    'snare:rim': 'rimshot',
+    'ride:bell': 'rideBell',
   },
   drumRoll: vi.fn(),
   snareRoll: vi.fn(),
@@ -560,5 +569,51 @@ describe('per-instrument mixer', () => {
     s._scheduleStep(0, 1.0)
     expect(drumRoll).not.toHaveBeenCalled()
     expect(DRUM_VOICES.tom1).not.toHaveBeenCalled()
+  })
+})
+
+
+describe('articulations', () => {
+  beforeEach(() => { vi.clearAllMocks() })
+
+  it('cross-stick and rimshot replace the snare voice; bell replaces ride', () => {
+    const s = new Scheduler()
+    s.subdivision = 'quarter'
+    s.metronomeEnabled = false
+    const ex = createEmptyExercise({ subdivision: 'quarter' })
+    ex.rows.snare[0] = { on: true, accent: false, roll: 0, art: 'cross' }
+    ex.rows.snare[1] = { on: true, accent: false, roll: 0, art: 'rim' }
+    ex.rows.ride[2] = { on: true, accent: false, roll: 0, art: 'bell' }
+    s.pattern = ex
+    s._scheduleStep(0, 1.0)
+    s._scheduleStep(1, 1.5)
+    s._scheduleStep(2, 2.0)
+    expect(DRUM_VOICES.crossStick).toHaveBeenCalledWith(fakeCtx, 1.0, expect.anything(), { gain: 0.55 })
+    expect(DRUM_VOICES.rimshot).toHaveBeenCalledWith(fakeCtx, 1.5, expect.anything(), { gain: 0.55 })
+    expect(DRUM_VOICES.rideBell).toHaveBeenCalledWith(fakeCtx, 2.0, expect.anything(), { gain: 0.55 })
+    expect(DRUM_VOICES.snare).not.toHaveBeenCalled()
+    expect(DRUM_VOICES.ride).not.toHaveBeenCalled()
+  })
+
+  it('an unknown art falls back to the plain voice', () => {
+    const s = new Scheduler()
+    s.subdivision = 'quarter'
+    s.metronomeEnabled = false
+    const ex = createEmptyExercise({ subdivision: 'quarter' })
+    ex.rows.kick[0] = { on: true, accent: false, roll: 0, art: 'bell' } // no kick bell
+    s.pattern = ex
+    s._scheduleStep(0, 1.0)
+    expect(DRUM_VOICES.kick).toHaveBeenCalled()
+  })
+
+  it('hihatPedal row plays its own voice', () => {
+    const s = new Scheduler()
+    s.subdivision = 'quarter'
+    s.metronomeEnabled = false
+    const ex = createEmptyExercise({ subdivision: 'quarter' })
+    ex.rows.hihatPedal[0] = { on: true, accent: false, roll: 0 }
+    s.pattern = ex
+    s._scheduleStep(0, 1.0)
+    expect(DRUM_VOICES.hihatPedal).toHaveBeenCalledWith(fakeCtx, 1.0, expect.anything(), { gain: 0.55 })
   })
 })

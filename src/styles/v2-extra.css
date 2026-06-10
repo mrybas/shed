@@ -414,3 +414,10 @@
 @media (max-width: 900px) {
   .pb-close { width: 28px; height: 28px; }
 }
+
+/* Articulation cell (cross-stick / rimshot / ride bell). */
+.seq .cell.art {
+  background: oklch(0.72 0.11 200); border-color: transparent; color: var(--on-accent);
+  display: grid; place-items: center;
+  font-family: var(--num-font); font-weight: 700; font-size: 11px;
+}

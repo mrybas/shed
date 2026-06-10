@@ -6,12 +6,19 @@ export const INSTRUMENTS = [
   'ride',
   'hihatOpen',
   'hihatClosed',
+  'hihatPedal',
   'tom1',
   'tom2',
   'snare',
   'floorTom',
   'kick',
 ]
+
+// Cell articulations: which instruments support which `cell.art` value.
+export const ARTICULATIONS = {
+  snare: ['cross', 'rim'], // cross-stick, rimshot
+  ride: ['bell'],
+}
 
 // Subdivision = steps per beat. Labels describe the feel relative to one beat.
 export const SUBDIVISIONS = {
@@ -254,6 +261,7 @@ function copyCell(c) {
   const nc = { on: !!c.on, accent: !!c.accent, roll: c.roll || 0 }
   if (c.flam) nc.flam = c.flam === 'drag' ? 'drag' : true
   if (c.ghost) nc.ghost = true
+  if (c.art) nc.art = c.art // 'cross' | 'rim' | 'bell' (see ARTICULATIONS)
   return nc
 }
 
