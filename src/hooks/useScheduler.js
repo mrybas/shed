@@ -24,22 +24,42 @@ export function useScheduler(initial = {}) {
     const s = ref.current
     if (!s.isPlaying) return
     const step = s.visualStep()
-    if (step >= 0) setCurrentStep(step)
+    const ci = s.inCountIn()
+    // During a count-in the playhead must clear (otherwise "count-in each
+    // repeat" leaves the highlight stuck on the last played step).
+    if (ci) setCurrentStep(-1)
+    else if (step >= 0) setCurrentStep(step)
     const b = Math.round(s.bpm)
     setLiveBpm((prev) => (prev !== b ? b : prev))
     const m = s.metronomeMuted()
     setGapMuted((prev) => (prev !== m ? m : prev))
-    const ci = s.inCountIn()
     setCountingIn((prev) => (prev !== ci ? ci : prev))
     rafRef.current = requestAnimationFrame(loop)
   }, [])
+
+  // Keep the screen awake while playing (drummers' hands are busy). The lock is
+  // lost whenever the page is hidden — re-acquire on return if still playing.
+  const wakeRef = useRef(null)
+  const acquireWake = useCallback(async () => {
+    try { wakeRef.current = await navigator.wakeLock?.request('screen') } catch { /* unsupported / denied */ }
+  }, [])
+  const releaseWake = useCallback(() => {
+    try { wakeRef.current?.release() } catch { /* ignore */ }
+    wakeRef.current = null
+  }, [])
+  useEffect(() => {
+    const onVis = () => { if (!document.hidden && ref.current.isPlaying) acquireWake() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [acquireWake])
 
   const start = useCallback(async () => {
     await resumeAudio()
     sched.start()
     setIsPlaying(true)
+    acquireWake()
     rafRef.current = requestAnimationFrame(loop)
-  }, [sched, loop])
+  }, [sched, loop, acquireWake])
 
   const stop = useCallback(() => {
     sched.stop()
@@ -48,8 +68,9 @@ export function useScheduler(initial = {}) {
     setLiveBpm(sched.baseBpm)
     setGapMuted(false)
     setCountingIn(false)
+    releaseWake()
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
-  }, [sched])
+  }, [sched, releaseWake])
 
   const toggle = useCallback(() => {
     if (sched.isPlaying) stop()

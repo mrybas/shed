@@ -14,13 +14,17 @@ vi.mock('./drumSynths.js', () => ({
     hihatOpen: vi.fn(),
     ride: vi.fn(),
     crash: vi.fn(),
+    tom1: vi.fn(),
+    tom2: vi.fn(),
+    floorTom: vi.fn(),
   },
+  drumRoll: vi.fn(),
   snareRoll: vi.fn(),
 }))
 vi.mock('./click.js', () => ({ click: vi.fn() }))
 
 import { Scheduler } from './Scheduler.js'
-import { DRUM_VOICES, snareRoll } from './drumSynths.js'
+import { DRUM_VOICES, drumRoll } from './drumSynths.js'
 import { click } from './click.js'
 import { createEmptyExercise, addBar } from '../model/exercise.js'
 
@@ -281,8 +285,22 @@ describe('Scheduler step scheduling', () => {
     s._recompute()
     s._scheduleStep(0, 5.0)
     // step 1 is empty -> roll runs to the end of the bar (2 beats = 2s at 60 BPM)
-    expect(snareRoll).toHaveBeenCalledWith(fakeCtx, 5.0, 2, 'open', expect.anything(), expect.any(Number))
+    expect(drumRoll).toHaveBeenCalledWith(fakeCtx, 5.0, 2, 'open', expect.anything(), expect.any(Number), DRUM_VOICES.snare)
     expect(DRUM_VOICES.snare).not.toHaveBeenCalled()
+  })
+
+  it('plays a roll on any instrument with that instrument\'s voice', () => {
+    const s = new Scheduler()
+    s.bpm = 60
+    s.timeSignature = { beats: 2, unit: 4 }
+    s.metronomeEnabled = false
+    const ex = createEmptyExercise({ timeSignature: { beats: 2, unit: 4 }, subdivision: 'quarter' })
+    ex.rows.tom1[0] = { on: true, accent: false, roll: 'closed' }
+    s.pattern = ex
+    s._recompute()
+    s._scheduleStep(0, 3.0)
+    expect(drumRoll).toHaveBeenCalledWith(fakeCtx, 3.0, 2, 'closed', expect.anything(), expect.any(Number), DRUM_VOICES.tom1)
+    expect(DRUM_VOICES.tom1).not.toHaveBeenCalled()
   })
 
   it('flam schedules a soft grace stroke just before the main hit', () => {

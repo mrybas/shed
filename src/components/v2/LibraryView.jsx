@@ -1,15 +1,15 @@
 import { useState, useMemo, useRef } from 'react'
 import { Icon, Button } from '../ui.jsx'
 import { CATEGORIES, CAT, catOf, sigOf, getCatalogExercises } from '../../data/catalogV2.js'
-import { stepsPerBeat } from '../../model/exercise.js'
+import { stepsPerBeat, INSTRUMENTS } from '../../model/exercise.js'
 
 function PatternStrip({ item }) {
   const mult = stepsPerBeat(item.subdivision)
   const per = item.rows.snare.length
   const cells = []
   for (let i = 0; i < Math.min(per, 16); i++) {
-    const on = ['snare', 'kick', 'hihatClosed', 'ride', 'crash', 'hihatOpen'].some((k) => item.rows[k][i]?.on)
-    const acc = ['snare', 'kick', 'hihatClosed', 'ride', 'crash', 'hihatOpen'].some((k) => item.rows[k][i]?.accent)
+    const on = INSTRUMENTS.some((k) => item.rows[k]?.[i]?.on)
+    const acc = INSTRUMENTS.some((k) => item.rows[k]?.[i]?.accent)
     cells.push(<span key={i} className={'ps-cell' + (on ? ' on' : '') + (acc ? ' acc' : '') + (i % mult === 0 ? ' beat' : '')} />)
   }
   return <div className="pattern-strip" title="Rhythm preview" aria-hidden="true">{cells}</div>

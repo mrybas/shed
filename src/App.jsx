@@ -15,11 +15,34 @@ import {
   loadLibrary, saveToLibrary, deleteFromLibrary, genId, barLayout,
 } from './model/exercise.js'
 
-const APP_VERSION = 'v3.4' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v3.5' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
+const OPTS_KEY = 'drums2_opts'
+const METRO_KEY = 'drums2_metro'
+const TEMPO_KEY = 'drums2_tempo' // chosen bpm per catalog exercise id
 const TW_DEFAULT = { theme: 'dark', accent: 'coral', density: 'regular' }
+const METRO_DEFAULT = { bpm: 100, sig: '4/4', sub: 'quarter', accentOne: true, soundSubs: true, vol: 120 }
+const OPTIONS_DEFAULT = {
+  metroWith: true, accentOne: true, soundSubs: false,
+  tempoRamp: { enabled: false, everyBars: 4, stepBpm: 5, maxBpm: 0 },
+  gapTrainer: { enabled: false, onBars: 2, offBars: 2 },
+  countIn: { enabled: false, bars: 1, mode: 'loop', feel: 'quarter' },
+}
 const clone = (x) => JSON.parse(JSON.stringify(x))
+
+// Merge saved options over defaults, per nested block — older saves may be
+// missing newer fields.
+function mergeOptions(saved) {
+  if (!saved) return OPTIONS_DEFAULT
+  return {
+    ...OPTIONS_DEFAULT,
+    ...saved,
+    tempoRamp: { ...OPTIONS_DEFAULT.tempoRamp, ...saved.tempoRamp },
+    gapTrainer: { ...OPTIONS_DEFAULT.gapTrainer, ...saved.gapTrainer },
+    countIn: { ...OPTIONS_DEFAULT.countIn, ...saved.countIn },
+  }
+}
 
 const ACCENTS = ['coral', 'teal', 'indigo', 'amber']
 const ACCENT_SWATCH = {
@@ -54,14 +77,10 @@ export default function App() {
   const [libTarget, setLibTarget] = useState({ section: 'home', cat: null })
   const [libOpen, setLibOpen] = useState(false)
 
-  const [metro, setMetro] = useState({ bpm: 100, sig: '4/4', sub: 'quarter', accentOne: true, soundSubs: true, vol: 120 })
-  const [options, setOptions] = useState({
-    metroWith: true, accentOne: true, soundSubs: false,
-    tempoRamp: { enabled: false, everyBars: 4, stepBpm: 5, maxBpm: 0 },
-    gapTrainer: { enabled: false, onBars: 2, offBars: 2 },
-    countIn: { enabled: false, bars: 1, mode: 'loop' },
-  })
-  const [vols, setVols] = useState({ ex: 100, metro: 120 })
+  const [metro, setMetro] = useState(() => ({ ...METRO_DEFAULT, ...loadJSON(METRO_KEY, {}) }))
+  const [options, setOptions] = useState(() => mergeOptions(loadJSON(OPTS_KEY, null)?.options))
+  const [vols, setVols] = useState(() => ({ ex: 100, metro: 120, ...loadJSON(OPTS_KEY, null)?.vols }))
+  const [tempoMap, setTempoMap] = useState(() => loadJSON(TEMPO_KEY, {}))
 
   const sched = useScheduler({ pattern: null, metronomeEnabled: true })
   useSpacebar(sched.toggle)
@@ -87,6 +106,16 @@ export default function App() {
   }, [tw])
 
   useEffect(() => { try { localStorage.setItem(PROG_KEY, JSON.stringify(progressMap)) } catch { /* ignore */ } }, [progressMap])
+  useEffect(() => { try { localStorage.setItem(OPTS_KEY, JSON.stringify({ options, vols })) } catch { /* ignore */ } }, [options, vols])
+  useEffect(() => { try { localStorage.setItem(METRO_KEY, JSON.stringify(metro)) } catch { /* ignore */ } }, [metro])
+  useEffect(() => { try { localStorage.setItem(TEMPO_KEY, JSON.stringify(tempoMap)) } catch { /* ignore */ } }, [tempoMap])
+
+  // Remember the chosen tempo per catalog exercise (user exercises carry their
+  // bpm in the saved data itself). Catches every path that changes item.bpm.
+  useEffect(() => {
+    if (!item || item.source === 'user') return
+    setTempoMap((m) => (m[item.id] === item.bpm ? m : { ...m, [item.id]: item.bpm }))
+  }, [item])
 
   const mode = nav === 'metronome' ? 'metronome' : (item ? 'practice' : 'metronome')
 
@@ -128,7 +157,13 @@ export default function App() {
 
   // ---- handlers ----
   const refreshSaved = useCallback(() => setSaved(loadLibrary()), [])
-  const openItem = (ex) => { setItem(clone(ex)); setNav('practice') }
+  const openItem = (ex) => {
+    const it = clone(ex)
+    // Restore the user's working tempo for catalog exercises.
+    if (it.source !== 'user' && tempoMap[it.id]) it.bpm = tempoMap[it.id]
+    setItem(it)
+    setNav('practice')
+  }
   const newExercise = () => { setItem(createEmptyExercise({ source: 'user', name: t('newExercise') })); setNav('practice') }
 
   const setProgress = (state) => {
@@ -136,21 +171,29 @@ export default function App() {
     setProgressMap((m) => { const n = { ...m }; if (state === 'none') delete n[item.id]; else n[item.id] = state; return n })
   }
 
+  // Strip catalog-only metadata when an exercise becomes a user copy.
+  const asUserCopy = (ex) => {
+    const { sourceNumber, page, cat, ...rest } = clone(ex) // eslint-disable-line no-unused-vars
+    return { ...rest, id: genId(), source: 'user', section: null, number: null }
+  }
+
   const saveCurrent = () => {
     if (!item) return
     let ex = item
     if (ex.source !== 'user' || ex.id.startsWith('builtin') || ex.id.startsWith('dci') || ex.id.startsWith('sc_')) {
-      ex = { ...ex, id: genId(), source: 'user', section: null, number: null }
+      ex = asUserCopy(ex)
       setItem(ex)
     }
-    saveToLibrary(ex); refreshSaved()
+    if (!saveToLibrary(ex)) alert('Could not save — browser storage is full.')
+    refreshSaved()
     setSavedFlash(true); setTimeout(() => setSavedFlash(false), 1500)
   }
 
   const duplicate = () => {
     if (!item) return
-    const copy = { ...clone(item), id: genId(), source: 'user', section: null, number: null, name: item.name + (lang === 'uk' ? ' (копія)' : ' (copy)') }
-    saveToLibrary(copy); refreshSaved(); setItem(copy); setNav('practice')
+    const copy = { ...asUserCopy(item), name: item.name + ' (copy)' }
+    if (!saveToLibrary(copy)) alert('Could not save — browser storage is full.')
+    refreshSaved(); setItem(copy); setNav('practice')
   }
 
   const deleteSaved = (id) => { deleteFromLibrary(id); refreshSaved(); if (item && item.id === id) setNav('library') }

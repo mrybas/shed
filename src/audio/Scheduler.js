@@ -2,9 +2,21 @@
 // A timer wakes every `lookaheadMs` and schedules any notes due within
 // `scheduleAheadSec`, using absolute AudioContext times for jitter-free timing.
 import { getAudioContext, getMaster } from './AudioEngine.js'
-import { DRUM_VOICES, snareRoll } from './drumSynths.js'
+import { DRUM_VOICES, drumRoll } from './drumSynths.js'
 import { click } from './click.js'
 import { stepsPerBeat as spbOf, totalSteps as totalStepsOf, INSTRUMENTS, getBars } from '../model/exercise.js'
+
+// Shared Worker that posts a message every `ms` — main-thread setTimeout is
+// throttled to ~1s in background tabs, which would starve the lookahead loop
+// and cause audio dropouts; worker timers keep firing.
+let tickerUrl = null
+function getTickerUrl() {
+  if (!tickerUrl) {
+    const src = 'let id=null;onmessage=(e)=>{clearInterval(id);id=null;if(e.data&&e.data.ms)id=setInterval(()=>postMessage(0),e.data.ms)}'
+    tickerUrl = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }))
+  }
+  return tickerUrl
+}
 
 export class Scheduler {
   constructor() {
@@ -42,6 +54,14 @@ export class Scheduler {
     this.lookaheadMs = 25
     this.scheduleAheadSec = 0.1
     this.notesInQueue = [] // {step, time} for visualization
+
+    // In a hidden tab even worker messages can be delivered late — widen the
+    // scheduling horizon so the audio stream survives until we're visible again.
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        this.scheduleAheadSec = document.hidden ? 0.5 : 0.1
+      })
+    }
   }
 
   // Build the per-step layout across all bars: each step's divisor
@@ -70,7 +90,14 @@ export class Scheduler {
     this._isBarStart = isBarStart
     this._total = divisor.length || 1
     this._countInBeats = bars[0]?.beatSubs.length || this.timeSignature.beats
-    this._countInPlan = this._buildCountInPlan()
+    // _recompute runs every tick — only rebuild the count-in plan when one of
+    // its inputs actually changed.
+    const ci = this.countIn || {}
+    const ciKey = `${ci.enabled ? 1 : 0}|${ci.bars}|${ci.feel}|${this.bpm}|${this._countInBeats}`
+    if (ciKey !== this._countInKey) {
+      this._countInKey = ciKey
+      this._countInPlan = this._buildCountInPlan()
+    }
   }
 
   // Build the count-in click plan: an array of { dur, accent } per click. The
@@ -147,15 +174,12 @@ export class Scheduler {
     this._phase = this._countInLen() > 0 ? 'countin' : 'pattern'
     this.nextNoteTime = ctx.currentTime + 0.12
     this.notesInQueue = []
-    this._tick()
+    this._startTicker()
   }
 
   stop() {
     this.isPlaying = false
-    if (this.timerId) {
-      clearTimeout(this.timerId)
-      this.timerId = null
-    }
+    this._stopTicker()
     this.notesInQueue = []
     this.currentStep = 0
     this._bars = 0
@@ -164,7 +188,37 @@ export class Scheduler {
     this._countInStep = 0
   }
 
+  // Drive _tick from a Worker interval when possible (background-tab safe);
+  // fall back to a setTimeout chain (jsdom / very old browsers).
+  _startTicker() {
+    if (typeof Worker !== 'undefined' && typeof Blob !== 'undefined') {
+      try {
+        if (!this._worker) {
+          this._worker = new Worker(getTickerUrl())
+          this._worker.onmessage = this._tick
+        }
+        this._worker.postMessage({ ms: this.lookaheadMs })
+        this._usingWorker = true
+        this._tick() // schedule the first window immediately
+        return
+      } catch { /* fall back below */ }
+    }
+    this._usingWorker = false
+    this._tick()
+  }
+
+  _stopTicker() {
+    if (this._worker) {
+      try { this._worker.postMessage({ ms: 0 }) } catch { /* ignore */ }
+    }
+    if (this.timerId) {
+      clearTimeout(this.timerId)
+      this.timerId = null
+    }
+  }
+
   _tick = () => {
+    if (!this.isPlaying) return
     const ctx = getAudioContext()
     this._recompute() // cheap; picks up live edits to pattern / subdivision
     while (this.nextNoteTime < ctx.currentTime + this.scheduleAheadSec) {
@@ -176,7 +230,7 @@ export class Scheduler {
         this._advance()
       }
     }
-    this.timerId = setTimeout(this._tick, this.lookaheadMs)
+    if (!this._usingWorker) this.timerId = setTimeout(this._tick, this.lookaheadMs)
   }
 
   // A count-in click (one per beat); accents the first beat of each count-in bar.
@@ -253,15 +307,14 @@ export class Scheduler {
         const cell = this.pattern.rows[inst]?.[step]
         if (cell && cell.on) {
           const gain = (cell.accent ? 1.0 : 0.55) * this.patternVolume
-          if (cell.roll && inst === 'snare') {
-            snareRoll(ctx, time, this._rollDuration(step), cell.roll, master, gain)
-          } else {
-            const voice = DRUM_VOICES[inst]
-            if (voice) {
-              // Flam: a soft grace stroke a hair (~28 ms) before the main hit.
-              if (cell.flam) voice(ctx, time - 0.028, master, { gain: gain * 0.5 })
-              voice(ctx, time, master, { gain })
-            }
+          const voice = DRUM_VOICES[inst]
+          if (cell.roll && voice) {
+            drumRoll(ctx, time, this._rollDuration(step), cell.roll, master, gain, voice)
+          } else if (voice) {
+            // Flam: a soft grace stroke a hair (~28 ms) before the main hit —
+            // clamped so a tightly-scheduled grace can't land in the past.
+            if (cell.flam) voice(ctx, Math.max(time - 0.028, ctx.currentTime + 0.005), master, { gain: gain * 0.5 })
+            voice(ctx, time, master, { gain })
           }
         }
       })

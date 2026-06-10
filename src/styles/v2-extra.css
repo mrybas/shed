@@ -95,12 +95,14 @@
 .bar-block-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .bar-tag { font-size: 0.72rem; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: .03em; }
 .bar-ts { height: 30px; padding: 0 6px; font-size: 0.85rem; }
-.bar-del {
-  margin-left: auto; display: grid; place-items: center; width: 28px; height: 28px;
+.bar-acts { margin-left: auto; display: inline-flex; gap: 4px; }
+.bar-act {
+  display: grid; place-items: center; width: 28px; height: 28px;
   border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface-2);
   color: var(--text-3); cursor: pointer;
 }
-.bar-del:hover { color: var(--danger, oklch(0.65 0.2 25)); border-color: var(--border-strong); }
+.bar-act:hover { color: var(--text); border-color: var(--border-strong); }
+.bar-act.bar-del:hover { color: var(--danger, oklch(0.65 0.2 25)); }
 .bar-block .beat-feel { margin: 0; }
 .bar-add {
   align-self: center; display: inline-flex; align-items: center; gap: 6px;

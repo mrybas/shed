@@ -169,16 +169,47 @@ function replaceBar(ex, i, newSpec) {
   return { ...withBars({ ...ex, rows, sticking }, next) }
 }
 
-// Append a bar (defaults to the last bar's meter), with empty cells.
-export function addBar(ex, opts = {}) {
+// Insert a bar at position `index` (0..bars.length). The meter/subdivisions
+// default to a full copy of the neighbouring bar's (the bar currently at that
+// position, or the last bar when appending); cells start empty unless
+// `opts.cells` provides pre-filled `{ rows, sticking }` slices (duplicateBar).
+export function insertBar(ex, index, opts = {}) {
   const bars = getBars(ex)
-  const last = bars[bars.length - 1]
-  const spec = normalizeBarSpec(opts.bar || { ts: last.ts, beatSubs: last.beatSubs.map(() => last.beatSubs[0]) }, ex.subdivision)
-  const addCount = spec.beatSubs.reduce((t, s) => t + stepsPerBeat(s), 0)
+  const layout = barLayout(ex)
+  const i = Math.max(0, Math.min(index, bars.length))
+  const neighbour = bars[Math.min(i, bars.length - 1)]
+  const spec = normalizeBarSpec(opts.bar || { ts: neighbour.ts, beatSubs: neighbour.beatSubs.slice() }, ex.subdivision)
+  const count = spec.beatSubs.reduce((t, s) => t + stepsPerBeat(s), 0)
+  const at = i < layout.bars.length ? layout.bars[i].startStep : layout.totalSteps
   const rows = {}
-  INSTRUMENTS.forEach((key) => { rows[key] = [...(ex.rows[key] || []), ...makeRow(addCount)] })
-  const sticking = [...ex.sticking, ...Array.from({ length: addCount }, () => '')]
-  return withBars({ ...ex, rows, sticking }, [...bars, spec])
+  INSTRUMENTS.forEach((key) => {
+    const row = ex.rows[key] || []
+    const mid = opts.cells ? opts.cells.rows[key].map(copyCell) : makeRow(count)
+    rows[key] = [...row.slice(0, at), ...mid, ...row.slice(at)]
+  })
+  const midStick = opts.cells ? opts.cells.sticking.slice() : Array.from({ length: count }, () => '')
+  const sticking = [...ex.sticking.slice(0, at), ...midStick, ...ex.sticking.slice(at)]
+  const next = bars.slice()
+  next.splice(i, 0, spec)
+  return withBars({ ...ex, rows, sticking }, next)
+}
+
+// Append a bar at the end (full copy of the last bar's meter, empty cells).
+export function addBar(ex, opts = {}) {
+  return insertBar(ex, getBars(ex).length, opts)
+}
+
+// Insert an exact copy of bar `index` (meter + cells + sticking) right after it.
+export function duplicateBar(ex, index) {
+  const layout = barLayout(ex)
+  const lb = layout.bars[index]
+  if (!lb) return ex
+  const rows = {}
+  INSTRUMENTS.forEach((key) => {
+    rows[key] = (ex.rows[key] || []).slice(lb.startStep, lb.startStep + lb.stepCount)
+  })
+  const sticking = ex.sticking.slice(lb.startStep, lb.startStep + lb.stepCount)
+  return insertBar(ex, index + 1, { bar: { ts: lb.ts, beatSubs: lb.beatSubs.slice() }, cells: { rows, sticking } })
 }
 
 // Remove bar `i` (its step range is spliced out). Keeps at least one bar.
@@ -456,8 +487,12 @@ export function saveToLibrary(ex) {
   const idx = lib.findIndex((e) => e.id === ex.id)
   if (idx >= 0) lib[idx] = ex
   else lib.push(ex)
-  localStorage.setItem(LS_KEY, JSON.stringify(lib))
-  return lib
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(lib))
+    return lib
+  } catch {
+    return null // quota exceeded / storage unavailable
+  }
 }
 
 export function deleteFromLibrary(id) {

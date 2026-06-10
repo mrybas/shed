@@ -138,17 +138,22 @@ export function tom1(ctx, time, destination, { gain = 1 } = {}) { tom(ctx, time,
 export function tom2(ctx, time, destination, { gain = 1 } = {}) { tom(ctx, time, destination, gain, 140) }
 export function floorTom(ctx, time, destination, { gain = 1 } = {}) { tom(ctx, time, destination, gain, 95) }
 
-// A roll = a rapid series of snare strokes over `durationSec`.
+// A roll = a rapid series of strokes on `voice` over `durationSec`.
 // open = double-stroke style (alternating louder/softer); closed = denser buzz.
-export function snareRoll(ctx, startTime, durationSec, type, destination, gain = 1) {
+export function drumRoll(ctx, startTime, durationSec, type, destination, gain = 1, voice = snare) {
   const rate = type === 'closed' ? 28 : 13 // strokes per second
   const n = Math.max(2, Math.round(durationSec * rate))
   const dt = durationSec / n
   for (let i = 0; i < n; i++) {
     const t = startTime + i * dt
     const g = gain * (type === 'closed' ? 0.5 : (i % 2 === 0 ? 0.85 : 0.6))
-    snare(ctx, t, destination, { gain: g })
+    voice(ctx, t, destination, { gain: g })
   }
+}
+
+// Back-compat alias (rolls were snare-only before toms gained them).
+export function snareRoll(ctx, startTime, durationSec, type, destination, gain = 1) {
+  drumRoll(ctx, startTime, durationSec, type, destination, gain, snare)
 }
 
 export const DRUM_VOICES = {

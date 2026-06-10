@@ -19,6 +19,8 @@ import {
   barCount,
   barLayout,
   addBar,
+  insertBar,
+  duplicateBar,
   removeBar,
   setBarTimeSignature,
   normalizeExercise,
@@ -70,6 +72,42 @@ describe('bars (multi-bar exercises)', () => {
     expect(ex.rows.snare[0].on).toBe(true)
     expect(ex.rows.snare.slice(8).every((c) => !c.on)).toBe(true)
     expect(exerciseTotalSteps(ex)).toBe(16)
+  })
+
+  it('insertBar inserts an empty bar BEFORE the given index, shifting steps', () => {
+    let ex = createEmptyExercise({ timeSignature: { beats: 2, unit: 4 }, subdivision: 'quarter' }) // 2 steps/bar
+    ex.rows.snare[0] = { on: true, accent: true, roll: 0 } // bar 0 content
+    ex = insertBar(ex, 0) // empty bar before the first
+    expect(barCount(ex)).toBe(2)
+    expect(ex.rows.snare).toHaveLength(4)
+    expect(ex.rows.snare[0].on).toBe(false) // new empty bar first
+    expect(ex.rows.snare[2].on).toBe(true) // old content shifted to bar 2
+  })
+
+  it('insertBar in the middle copies the neighbouring bar\'s meter', () => {
+    let ex = createEmptyExercise({ timeSignature: { beats: 4, unit: 4 }, subdivision: 'quarter' })
+    ex = addBar(ex)
+    ex = setBarTimeSignature(ex, 1, { beats: 3, unit: 4 }) // bars: 4/4, 3/4
+    ex = insertBar(ex, 1) // before the 3/4 bar -> copies 3/4
+    expect(getBars(ex).map((b) => b.ts.beats)).toEqual([4, 3, 3])
+  })
+
+  it('duplicateBar copies meter, cells and sticking right after the bar', () => {
+    let ex = createEmptyExercise({ timeSignature: { beats: 2, unit: 4 }, subdivision: 'quarter' })
+    ex.rows.kick[0] = { on: true, accent: false, roll: 0 }
+    ex.sticking[0] = 'R'
+    ex = duplicateBar(ex, 0)
+    expect(barCount(ex)).toBe(2)
+    expect(ex.rows.kick[2].on).toBe(true) // copy in bar 2
+    expect(ex.sticking[2]).toBe('R')
+    expect(ex.rows.kick[0].on).toBe(true) // original untouched
+  })
+
+  it('addBar copies the full beatSubs of the last bar (not just the first sub)', () => {
+    let ex = createEmptyExercise({ timeSignature: { beats: 2, unit: 4 }, beatSubs: ['sixteenth', 'triplet'] })
+    ex = addBar(ex)
+    expect(getBars(ex)[1].beatSubs).toEqual(['sixteenth', 'triplet'])
+    expect(exerciseTotalSteps(ex)).toBe(14) // (4+3) × 2
   })
 
   it('removeBar splices that bar out and keeps the others intact', () => {

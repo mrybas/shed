@@ -3,7 +3,7 @@ import { Slider, NumberStepper, NotePicker, Segmented, Switch, Button, Icon } fr
 import NotationView from '../NotationView.jsx'
 import { TIME_SIGS } from './util.js'
 import { CAT, catOf, sigOf } from '../../data/catalogV2.js'
-import { INSTRUMENTS, resizeExercise, setBeatSub, barLayout, addBar, removeBar, setBarTimeSignature } from '../../model/exercise.js'
+import { INSTRUMENTS, resizeExercise, setBeatSub, barLayout, addBar, insertBar, duplicateBar, removeBar, setBarTimeSignature } from '../../model/exercise.js'
 import { sigToTimeSignature } from './util.js'
 
 const INSTR_COLORS = {
@@ -35,6 +35,8 @@ export default function PracticeView({
   const setSub = (s) => setItem((p) => resizeExercise(p, p.timeSignature, s))
   const setOneBeatSub = (b, s) => setItem((p) => setBeatSub(p, b, s))
   const addBarBtn = () => setItem((p) => addBar(p))
+  const insertBefore = (i) => setItem((p) => insertBar(p, i))
+  const dupBar = (i) => setItem((p) => duplicateBar(p, i))
   const delBar = (i) => setItem((p) => removeBar(p, i))
   const setBarTS = (i, s) => setItem((p) => setBarTimeSignature(p, i, sigToTimeSignature(s)))
 
@@ -134,14 +136,18 @@ export default function PracticeView({
           <div className="meter-block">
             <div className="blk">
               <span className="field-label">{t('timeSig')}</span>
-              {editable
+              {/* Multi-bar exercises are edited per bar (the bar strip) — a global
+                  selector here would silently overwrite every bar's meter. */}
+              {editable && layout.bars.length === 1
                 ? <select className="select" value={sig} onChange={(e) => setSig(e.target.value)}>{TIME_SIGS.map((s) => <option key={s} value={s}>{s}</option>)}</select>
-                : <div className="static-field num">{sig}</div>}
+                : <div className="static-field num">{layout.bars.length > 1 ? `${layout.bars.length} ${t('barsUnit')}` : sig}</div>}
             </div>
-            <div className="blk">
-              <span className="field-label">{t('subdivision')}</span>
-              {editable ? <NotePicker value={item.subdivision} onChange={setSub} /> : <div className="static-field num">{t(item.subdivision)}</div>}
-            </div>
+            {layout.bars.length === 1 && (
+              <div className="blk">
+                <span className="field-label">{t('subdivision')}</span>
+                {editable ? <NotePicker value={item.subdivision} onChange={setSub} /> : <div className="static-field num">{t(item.subdivision)}</div>}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -298,11 +304,19 @@ export default function PracticeView({
                     <select className="select bar-ts" value={`${bar.ts.beats}/${bar.ts.unit}`} onChange={(e) => setBarTS(bar.bar, e.target.value)}>
                       {TIME_SIGS.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
-                    {layout.bars.length > 1 && (
-                      <button className="bar-del" onClick={() => delBar(bar.bar)} aria-label={t('removeBar')} title={t('removeBar')}>
-                        <Icon name="trash" className="ic-xs" />
+                    <span className="bar-acts">
+                      <button className="bar-act" onClick={() => insertBefore(bar.bar)} aria-label={t('insertBarBefore')} title={t('insertBarBefore')}>
+                        <Icon name="plus" className="ic-xs" />
                       </button>
-                    )}
+                      <button className="bar-act" onClick={() => dupBar(bar.bar)} aria-label={t('duplicateBar')} title={t('duplicateBar')}>
+                        <Icon name="copy" className="ic-xs" />
+                      </button>
+                      {layout.bars.length > 1 && (
+                        <button className="bar-act bar-del" onClick={() => delBar(bar.bar)} aria-label={t('removeBar')} title={t('removeBar')}>
+                          <Icon name="trash" className="ic-xs" />
+                        </button>
+                      )}
+                    </span>
                   </div>
                   <div className="beat-feel">
                     {bar.beats.map((bt) => (

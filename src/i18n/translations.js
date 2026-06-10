@@ -244,6 +244,8 @@ export const translations = {
     gapMutedTag: 'metronome muted',
     addBar: 'Add bar',
     removeBar: 'Remove bar',
+    insertBarBefore: 'Insert bar before',
+    duplicateBar: 'Duplicate bar',
     countIn: 'Count-in',
     countInHint: 'Lead-in clicks before the exercise starts',
     countInModeLoop: 'Then loop',
