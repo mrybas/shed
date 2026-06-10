@@ -66,6 +66,7 @@ function shiftDur(durKind, shift) {
 
 export function buildNotationData(ex) {
   const layout = barLayout(ex)
+  const sectionLabel = new Map((Array.isArray(ex.sections) ? ex.sections : []).map((sec) => [sec.bar, sec.label]))
   // Rolls render one note per step (no duration merging) so a trailing empty
   // step shows as a real rest (the release), not a lengthened previous note.
   const noMerge = ex.section === 'rolls'
@@ -150,6 +151,7 @@ export function buildNotationData(ex) {
     barsMeta.push({
       bar: lb.bar, ts: lb.ts, timeSig: `${lb.ts.beats}/${lb.ts.unit}`,
       unit: lb.ts.unit, beatCount: lb.beats.length, stepCount: lb.stepCount, firstBeatIndex,
+      label: sectionLabel.get(lb.bar) || null,
     })
   })
 

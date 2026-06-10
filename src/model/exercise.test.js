@@ -23,6 +23,9 @@ import {
   insertBar,
   barSnapshot,
   repeatBar,
+  getSections,
+  setSectionLabel,
+  sectionRange,
   duplicateBar,
   removeBar,
   setBarTimeSignature,
@@ -422,5 +425,37 @@ describe('bar clipboard + repeat', () => {
     lay.bars.forEach((b) => {
       expect(out.rows.snare[b.startStep + 2].on).toBe(true)
     })
+  })
+})
+
+describe('section markers', () => {
+  const twoBars = () => addBar(createEmptyExercise({ timeSignature: { beats: 4, unit: 4 }, subdivision: 'eighth' }))
+
+  it('set/replace/clear labels; sectionRange spans to the next marker', () => {
+    let ex = repeatBar(twoBars(), 0, 2) // 4 bars
+    ex = setSectionLabel(ex, 0, 'Intro')
+    ex = setSectionLabel(ex, 2, 'Verse')
+    expect(getSections(ex)).toEqual([{ bar: 0, label: 'Intro' }, { bar: 2, label: 'Verse' }])
+    expect(sectionRange(ex, 0)).toEqual({ from: 0, to: 1 })
+    expect(sectionRange(ex, 2)).toEqual({ from: 2, to: 3 })
+    ex = setSectionLabel(ex, 2, '')
+    expect(getSections(ex)).toHaveLength(1)
+    expect(sectionRange(ex, 0)).toEqual({ from: 0, to: 3 })
+  })
+
+  it('markers shift on bar insert/remove and survive import', () => {
+    let ex = repeatBar(twoBars(), 0, 2) // 4 bars
+    ex = setSectionLabel(ex, 2, 'Chorus')
+    ex = insertBar(ex, 1) // insert before bar 2 -> marker moves to 3
+    expect(getSections(ex)).toEqual([{ bar: 3, label: 'Chorus' }])
+    ex = removeBar(ex, 0) // -> marker moves to 2
+    expect(getSections(ex)).toEqual([{ bar: 2, label: 'Chorus' }])
+    ex = removeBar(ex, 2) // remove the labelled bar -> marker dropped
+    expect(getSections(ex)).toEqual([])
+    // import keeps only valid markers
+    let ex2 = setSectionLabel(twoBars(), 1, 'B')
+    ex2.sections.push({ bar: 99, label: 'ghost' })
+    const parsed = parseImported(JSON.stringify(ex2))
+    expect(parsed.sections).toEqual([{ bar: 1, label: 'B' }])
   })
 })

@@ -26,7 +26,7 @@ function Sparkline({ history }) {
     </svg>
   )
 }
-import { INSTRUMENTS, resizeExercise, setBeatSub, setAllBeatSubs, barLayout, addBar, insertBar, duplicateBar, repeatBar, barSnapshot, removeBar, setBarTimeSignature } from '../../model/exercise.js'
+import { INSTRUMENTS, resizeExercise, setBeatSub, setAllBeatSubs, barLayout, addBar, insertBar, duplicateBar, repeatBar, barSnapshot, removeBar, setBarTimeSignature, getSections, setSectionLabel, sectionRange } from '../../model/exercise.js'
 import { sigToTimeSignature } from './util.js'
 
 const INSTR_COLORS = {
@@ -194,6 +194,11 @@ export default function PracticeView({
   const copyBar = (i) => setBarClip(barSnapshot(itemRef.current, i))
   const pasteBar = (i) => barClip && mutate((p) => insertBar(p, i, barClip))
   const repBar = (i, n) => { setRepeatMenuFor(null); mutate((p) => repeatBar(p, i, n)) }
+  // Section markers: label a bar, click the label to loop the whole section.
+  const [secEditFor, setSecEditFor] = useState(null)
+  const sectionLabelOf = (i) => getSections(item).find((sec) => sec.bar === i)?.label || ''
+  const saveSection = (i, label) => { setSecEditFor(null); mutate((p) => setSectionLabel(p, i, label)) }
+  const loopSection = (i) => { const r = sectionRange(item, i); if (r) onLoopRange?.(r) }
   const setBarTS = (i, s) => mutate((p) => setBarTimeSignature(p, i, sigToTimeSignature(s)))
 
   // Roll type currently authored (open/closed); also restamps existing rolls.
@@ -563,7 +568,8 @@ export default function PracticeView({
           <div className="print-head">{item.name} · {item.bpm} {t('bpm')} · {sig}</div>
           <div className="notation-wrap">
             <NotationView exercise={item} currentStep={localPlay}
-              loopRange={loopRange} onBarClick={toggleLoopBar} barClickTitle={t('loopBarTitle')} />
+              loopRange={loopRange} onBarClick={toggleLoopBar} barClickTitle={t('loopBarTitle')}
+              onSectionClick={loopSection} />
           </div>
           {printing && (
             // Hidden print-only copy laid out at A4 width, so the on-screen
@@ -599,6 +605,17 @@ export default function PracticeView({
                       onClick={() => toggleLoopBar(bar.bar)} title={t('loopBarTitle')}>
                       {t('bar')} {bar.bar + 1}
                     </button>
+                    {secEditFor === bar.bar ? (
+                      <input className="bar-sec-input" autoFocus defaultValue={sectionLabelOf(bar.bar)}
+                        placeholder={t('sectionPlaceholder')} maxLength={24}
+                        onBlur={(e) => saveSection(bar.bar, e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') setSecEditFor(null) }} />
+                    ) : sectionLabelOf(bar.bar) ? (
+                      <button className="bar-sec" onClick={() => loopSection(bar.bar)}
+                        onDoubleClick={() => setSecEditFor(bar.bar)} title={t('sectionLoopTitle')}>
+                        {sectionLabelOf(bar.bar)}
+                      </button>
+                    ) : null}
                     <select className="select bar-ts" value={`${bar.ts.beats}/${bar.ts.unit}`} onChange={(e) => setBarTS(bar.bar, e.target.value)}>
                       {TIME_SIGS.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
@@ -608,6 +625,10 @@ export default function PracticeView({
                       </button>
                       <button className="bar-act" onClick={() => dupBar(bar.bar)} aria-label={t('duplicateBar')} title={t('duplicateBar')}>
                         <Icon name="copy" className="ic-xs" />
+                      </button>
+                      <button className="bar-act" onClick={() => setSecEditFor(secEditFor === bar.bar ? null : bar.bar)}
+                        aria-label={t('sectionEdit')} title={t('sectionEdit')}>
+                        <Icon name="bookmark" className="ic-xs" />
                       </button>
                       <span className="bar-rep">
                         <button className="bar-act num" onClick={() => setRepeatMenuFor(repeatMenuFor === bar.bar ? null : bar.bar)}

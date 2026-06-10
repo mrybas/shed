@@ -198,7 +198,7 @@ export function insertBar(ex, index, opts = {}) {
   const sticking = [...ex.sticking.slice(0, at), ...midStick, ...ex.sticking.slice(at)]
   const next = bars.slice()
   next.splice(i, 0, spec)
-  return withBars({ ...ex, rows, sticking }, next)
+  return shiftSections(withBars({ ...ex, rows, sticking }, next), i, 1)
 }
 
 // Append a bar at the end (full copy of the last bar's meter, empty cells).
@@ -235,6 +235,47 @@ export function repeatBar(ex, index, times = 1) {
   return cur
 }
 
+// ---- Section markers ----
+// `ex.sections = [{ bar, label }]` — sparse labels on bar starts (Intro/Verse/…).
+export function getSections(ex) {
+  return Array.isArray(ex.sections) ? ex.sections : []
+}
+
+export function setSectionLabel(ex, barIdx, label) {
+  const list = getSections(ex).filter((sec) => sec.bar !== barIdx)
+  const clean = (label || '').trim()
+  if (clean) list.push({ bar: barIdx, label: clean.slice(0, 24) })
+  list.sort((a, b) => a.bar - b.bar)
+  const next = { ...ex }
+  if (list.length) next.sections = list
+  else delete next.sections
+  return next
+}
+
+// The bar range a section spans: from its marker to the next marker (or the end).
+export function sectionRange(ex, barIdx) {
+  const list = getSections(ex)
+  const sec = list.find((x) => x.bar === barIdx)
+  if (!sec) return null
+  const nextSec = list.filter((x) => x.bar > barIdx).sort((a, b) => a.bar - b.bar)[0]
+  const to = nextSec ? nextSec.bar - 1 : barCount(ex) - 1
+  return { from: barIdx, to }
+}
+
+// Shift markers after structural bar edits.
+function shiftSections(ex, fromBar, delta, removedBar = null) {
+  const list = getSections(ex)
+  if (!list.length) return ex
+  const next = list
+    .filter((sec) => sec.bar !== removedBar)
+    .map((sec) => (sec.bar >= fromBar ? { ...sec, bar: sec.bar + delta } : sec))
+    .filter((sec) => sec.bar >= 0)
+  const out = { ...ex }
+  if (next.length) out.sections = next
+  else delete out.sections
+  return out
+}
+
 // Remove bar `i` (its step range is spliced out). Keeps at least one bar.
 export function removeBar(ex, i) {
   const layout = barLayout(ex)
@@ -248,7 +289,7 @@ export function removeBar(ex, i) {
   })
   const sticking = [...ex.sticking.slice(0, lb.startStep), ...ex.sticking.slice(lb.startStep + lb.stepCount)]
   const bars = getBars(ex).filter((_, idx) => idx !== i)
-  return withBars({ ...ex, rows, sticking }, bars)
+  return shiftSections(withBars({ ...ex, rows, sticking }, bars), i + 1, -1, i)
 }
 
 // Change one bar's time signature (preserves overlapping beats/cells).
@@ -518,6 +559,13 @@ function parseOne(obj) {
   }
   if (obj.level) ex.level = obj.level
   if (barsSpec && barsSpec.length > 1) ex.bars = barsSpec
+  if (Array.isArray(obj.sections)) {
+    const bars = barCount(ex)
+    const sections = obj.sections
+      .filter((sec) => sec && typeof sec.label === 'string' && Number.isInteger(sec.bar) && sec.bar >= 0 && sec.bar < bars)
+      .map((sec) => ({ bar: sec.bar, label: sec.label.slice(0, 24) }))
+    if (sections.length) ex.sections = sections
+  }
   return ex
 }
 
@@ -535,7 +583,17 @@ export function normalizeExercise(ex) {
     })
   })
   const sticking = Array.from({ length: n }, (_, i) => ex.sticking?.[i] || '')
-  return { ...ex, instruments: [...INSTRUMENTS], rows, sticking }
+  const out = { ...ex, instruments: [...INSTRUMENTS], rows, sticking }
+  // Section markers: keep only well-formed ones pointing at existing bars.
+  if (Array.isArray(ex.sections)) {
+    const bars = barCount(ex)
+    const sections = ex.sections
+      .filter((sec) => sec && typeof sec.label === 'string' && Number.isInteger(sec.bar) && sec.bar >= 0 && sec.bar < bars)
+      .map((sec) => ({ bar: sec.bar, label: sec.label.slice(0, 24) }))
+    if (sections.length) out.sections = sections
+    else delete out.sections
+  }
+  return out
 }
 
 // ---- localStorage library ----

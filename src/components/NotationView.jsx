@@ -14,7 +14,7 @@ const COMFY_NOTE_PX = 30
 const CLEF_W = 42
 const TS_W = 30
 
-export default function NotationView({ exercise, currentStep, loopRange, onBarClick, barClickTitle, printWidth = 0 }) {
+export default function NotationView({ exercise, currentStep, loopRange, onBarClick, barClickTitle, onSectionClick, printWidth = 0 }) {
   const wrapRef = useRef(null)
   const hostRef = useRef(null)
   const [meta, setMeta] = useState([])
@@ -268,7 +268,7 @@ export default function NotationView({ exercise, currentStep, loopRange, onBarCl
 
           boxes.push({
             bar: bm.bar, x: x * outScale, top: (lineTop + PLAYHEAD_TOP) * outScale,
-            width: staveW * outScale, height: PLAYHEAD_H * outScale,
+            width: staveW * outScale, height: PLAYHEAD_H * outScale, label: bm.label || null,
           })
           x += staveW
         })
@@ -314,6 +314,13 @@ export default function NotationView({ exercise, currentStep, loopRange, onBarCl
             className={'note-barzone' + (inLoop(b.bar) ? ' is-loop' : '')}
             style={{ left: `${b.x}px`, top: `${b.top}px`, width: `${b.width}px`, height: `${b.height}px` }}
             onClick={() => onBarClick(b.bar)} aria-label={`bar ${b.bar + 1}`} />
+        ))}
+        {barBoxes.filter((b) => b.label).map((b) => (
+          <button key={'sec' + b.bar} type="button"
+            className="note-seclabel"
+            style={{ left: `${b.x + 2}px`, top: `${Math.max(0, b.top - 9)}px` }}
+            onClick={() => onSectionClick?.(b.bar)}
+            title={barClickTitle}>{b.label}</button>
         ))}
         {hl && (
           <div className="note-playhead" style={{ left: `${hl.x}px`, top: `${hl.top}px`, width: `${hl.width}px`, height: `${PLAYHEAD_H}px` }} />

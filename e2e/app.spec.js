@@ -461,3 +461,22 @@ test('bar clipboard: copy, paste and repeat ×N', async ({ page }) => {
   await expect(page.locator('.bar-block')).toHaveCount(6)
   await expect(kicks).toHaveCount(6)
 })
+
+test('sections: label a bar, click loops the section, label shows in notes', async ({ page }) => {
+  await page.locator('.side-parent-main').click()
+  await page.getByRole('button', { name: /New exercise/ }).click()
+  // 4 bars, label bar 3 as Chorus
+  await page.locator('button[aria-label="Repeat bar ×N"]').first().click()
+  await page.locator('.bar-rep-menu button', { hasText: '×4' }).click()
+  await expect(page.locator('.bar-block')).toHaveCount(5)
+  await page.locator('button[aria-label="Label section"]').nth(2).click()
+  await page.locator('.bar-sec-input').fill('Chorus')
+  await page.locator('.bar-sec-input').press('Enter')
+  await expect(page.locator('.bar-sec', { hasText: 'Chorus' })).toBeVisible()
+  // clicking the chip loops bars 3..5
+  await page.locator('.bar-sec', { hasText: 'Chorus' }).click()
+  await expect(page.locator('.pb-muted-pill', { hasText: /Loop/i })).toContainText('3–5')
+  // the label renders over the notation as well
+  await page.locator('.view-bar .seg-item', { hasText: 'Notes' }).click()
+  await expect(page.locator('.note-seclabel', { hasText: 'Chorus' })).toBeVisible()
+})
