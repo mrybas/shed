@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Slider, NumberStepper, NotePicker, Segmented, Switch, Button, Icon } from '../ui.jsx'
+import { Slider, NumberStepper, NotePicker, NoteGlyph, Segmented, Switch, Button, Icon } from '../ui.jsx'
 import { useTapTempo } from '../../hooks/useTapTempo.js'
 import NotationView from '../NotationView.jsx'
 import { TIME_SIGS } from './util.js'
@@ -27,13 +27,8 @@ const STAMPS = {
 }
 const TOOL_GLYPHS = { hit: '●', accent: '>', ghost: '( )', flam: 'f', drag: 'd', roll: 'z', erase: '⌫' }
 
-// Beat-value indicator in the ruler; click cycles through these four.
-const TICK_GLYPH = { quarter: '♩', eighth: '♪', triplet: '³', sixteenth: '♬', sextuplet: '⁶', thirtysecond: '⅛' }
+// Beat-value button in the ruler; click cycles through these four.
 const TICK_CYCLE = ['quarter', 'eighth', 'triplet', 'sixteenth']
-// spb -> subdivision name, for the drag-merge gesture (binary targets only;
-// triplets are entered via the ruler cycle).
-const SPB_NAME = { 1: 'quarter', 2: 'eighth', 3: 'triplet', 4: 'sixteenth', 6: 'sextuplet', 8: 'thirtysecond' }
-const MERGE_TARGETS = [1, 2, 4, 8]
 
 export default function PracticeView({
   t, lang, item, setItem, options, setOptions, vols, setVols, playing, step,
@@ -134,7 +129,6 @@ export default function PracticeView({
   // Plain click cycles through every cell state the palette offers:
   // off -> hit -> accent -> ghost -> flam -> drag -> roll -> off
   const cycleCell = (k, i) => {
-    if (suppressClickRef.current) { suppressClickRef.current = false; return }
     mutate((prev) => {
     const rows = { ...prev.rows, [k]: prev.rows[k].map((c, idx) => {
       if (idx !== i) return c
@@ -171,74 +165,25 @@ export default function PracticeView({
     return btn ? { k: btn.dataset.cellk, i: Number(btn.dataset.celli) } : null
   }
 
-  // DAW-style note-length gesture: with no tool selected, dragging across cells
-  // merges them — drag over two 16th cells and the beat becomes 8ths, over a
-  // whole beat and it becomes a quarter. (Splitting back / triplets: the ruler.)
-  const mergeRef = useRef(null) // { startI, lastI, moved }
-  const suppressClickRef = useRef(false)
-  const performMerge = (lo, hi) => {
-    const touched = beats.filter((b) => b.start <= hi && b.start + b.len - 1 >= lo)
-    if (!touched.length) return
-    // K = the widest span the gesture covers inside one beat = "K cells -> 1 note".
-    const K = Math.max(...touched.map((b) => Math.min(hi, b.start + b.len - 1) - Math.max(lo, b.start) + 1))
-    if (K < 2) return
-    mutate((p) => {
-      let out = p
-      touched.forEach((bt) => {
-        const raw = Math.max(1, Math.round(bt.len / K))
-        const target = MERGE_TARGETS.reduce((best, c) => (Math.abs(c - raw) < Math.abs(best - raw) ? c : best), MERGE_TARGETS[0])
-        if (target < bt.len) out = setBeatSubRaw(out, bt.globalBeat, SPB_NAME[target])
-      })
-      return out
-    })
-  }
-  // setBeatSub without its own history push (performMerge pushes once via mutate)
-  const setBeatSubRaw = (p, b, s) => setBeatSub(p, b, s)
-
   const onGridPointerDown = (e) => {
-    if (!editable) return
+    if (!editable || !tool) return
     const c = cellFromPoint(e.clientX, e.clientY)
     if (!c) return
-    if (tool) {
-      e.preventDefault()
-      pushHistory() // one undo step per paint gesture
-      paintingRef.current = true
-      applyStamp(c.k, c.i)
-    } else {
-      // Possible merge gesture; don't preventDefault so a plain click still cycles.
-      mergeRef.current = { startI: c.i, lastI: c.i, moved: false }
-    }
+    e.preventDefault()
+    pushHistory() // one undo step per paint gesture
+    paintingRef.current = true
+    applyStamp(c.k, c.i)
   }
   const onGridPointerMove = (e) => {
-    if (paintingRef.current) {
-      const c = cellFromPoint(e.clientX, e.clientY)
-      if (c) applyStamp(c.k, c.i)
-      return
-    }
-    const m = mergeRef.current
-    if (m) {
-      const c = cellFromPoint(e.clientX, e.clientY)
-      if (c && c.i !== m.lastI) { m.lastI = c.i; m.moved = true }
-    }
-  }
-  const mergeUpRef = useRef(() => {})
-  mergeUpRef.current = (cancelled) => {
-    paintingRef.current = false
-    const m = mergeRef.current
-    mergeRef.current = null
-    if (!m || !m.moved || cancelled) return
-    // A click can fire right after the drag's pointerup (same cell) — suppress
-    // it; clear on the next tick because a cross-cell drag fires no click at all.
-    suppressClickRef.current = true
-    setTimeout(() => { suppressClickRef.current = false }, 0)
-    performMerge(Math.min(m.startI, m.lastI), Math.max(m.startI, m.lastI))
+    if (!paintingRef.current) return
+    const c = cellFromPoint(e.clientX, e.clientY)
+    if (c) applyStamp(c.k, c.i)
   }
   useEffect(() => {
-    const up = () => mergeUpRef.current(false)
-    const cancel = () => mergeUpRef.current(true)
+    const up = () => { paintingRef.current = false }
     window.addEventListener('pointerup', up)
-    window.addEventListener('pointercancel', cancel)
-    return () => { window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', cancel) }
+    window.addEventListener('pointercancel', up)
+    return () => { window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up) }
   }, [])
 
   const toggleRollType = (closed) => mutate((prev) => {
@@ -543,7 +488,8 @@ export default function PracticeView({
                 return (
                   <button key={i} type="button" className={cls + ' tick-btn'} title={t('tickTitle')}
                     onClick={() => cycleTick(bt)}>
-                    {barTag}{bt.beatInBar + 1}<span className="tick-glyph">{TICK_GLYPH[bt.sub] || ''}</span>
+                    {barTag}{bt.beatInBar + 1}
+                    <span className="tick-glyph"><NoteGlyph kind={bt.sub} /></span>
                   </button>
                 )
               }

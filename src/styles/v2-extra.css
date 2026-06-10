@@ -187,15 +187,16 @@
   box-shadow: inset 0 0 0 2px var(--accent);
 }
 
-/* Ruler beat buttons: number + current beat-value glyph; click cycles. */
+/* Ruler beat buttons: number + current beat-value note glyph; click cycles. */
 .seq-ruler .tick.tick-btn {
-  border: none; background: none; cursor: pointer; padding: 0;
-  display: inline-flex; align-items: center; justify-content: center; gap: 2px;
+  border: 1px solid transparent; background: none; cursor: pointer; padding: 1px 3px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 3px;
   font-family: var(--num-font); font-size: var(--fs-xs);
-  color: var(--text-2); font-weight: 700;
+  color: var(--text-2); font-weight: 700; border-radius: var(--r-sm);
 }
-.seq-ruler .tick.tick-btn:hover { color: var(--accent); }
-.seq-ruler .tick .tick-glyph { font-size: 12px; line-height: 1; color: var(--text-3); }
+.seq-ruler .tick.tick-btn:hover { color: var(--accent); border-color: var(--border); background: var(--surface-2); }
+.seq-ruler .tick .tick-glyph { display: inline-flex; color: var(--text-2); }
+.seq-ruler .tick .tick-glyph svg { width: 13px; height: 17px; }
 .seq-ruler .tick.tick-btn:hover .tick-glyph { color: var(--accent); }
 
 /* Bar insertion points: a slim "+" before each bar; the new bar lands there. */

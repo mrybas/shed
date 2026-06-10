@@ -25,15 +25,22 @@ export function BeatDots({ sig, sub, step, playing, compact }) {
   return <div className="beats" aria-hidden="true">{dots}</div>
 }
 
-// Meter-aware dots for exercises: one dot per beat of the current bar.
-function BarBeats({ beatsInBar, beatInBar, playing }) {
+// Meter-aware dots for exercises: the current bar's beats, each with its own
+// subdivision dots (a triplet beat = 3 dots, a 16th beat = 4, a quarter = 1).
+function BarBeats({ beatLens = [], stepInBar, playing }) {
   const dots = []
-  for (let b = 0; b < beatsInBar; b++) {
-    const active = playing && beatInBar === b
-    dots.push(
-      <span key={b} className={['beat', b === 0 ? 'is-down' : '', active ? 'is-active' : '', active && b === 0 ? 'is-down' : ''].join(' ')} />,
-    )
-  }
+  let off = 0
+  beatLens.forEach((len, b) => {
+    for (let s = 0; s < len; s++) {
+      const isMain = s === 0
+      const active = playing && stepInBar === off + s
+      dots.push(
+        <span key={off + s}
+          className={['beat', isMain ? '' : 'sub', b === 0 && isMain ? 'is-down' : '', active ? 'is-active' : ''].join(' ')} />,
+      )
+    }
+    off += len
+  })
   return <div className="beats" aria-hidden="true">{dots}</div>
 }
 
@@ -78,7 +85,7 @@ export default function PlayerBar({
           {loopRange && <span className="pb-muted-pill">{t('loopTag')} {loopRange.from + 1}–{loopRange.to + 1}</span>}
           {bars > 1 && <span className="pb-barcount num">{t('bar')} {curBar || 1}/{bars}</span>}
           {barView
-            ? <BarBeats beatsInBar={barView.beatsInBar} beatInBar={barView.beatInBar} playing={playing} />
+            ? <BarBeats beatLens={barView.beatLens} stepInBar={barView.stepInBar} playing={playing} />
             : <BeatDots sig={sig} sub={sub} step={step} playing={playing} />}
         </div>
 

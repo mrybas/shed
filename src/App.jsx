@@ -15,7 +15,7 @@ import {
   loadLibrary, saveToLibrary, deleteFromLibrary, genId, barLayout,
 } from './model/exercise.js'
 
-const APP_VERSION = 'v4.1' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v4.2' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -247,23 +247,23 @@ export default function App() {
   const bpm = mode === 'metronome' ? metro.bpm : (item ? item.bpm : 100)
   const setActiveBpm = (b) => mode === 'metronome' ? setMetro((m) => ({ ...m, bpm: b })) : setItem((p) => ({ ...p, bpm: b }))
 
-  // Meter-aware beat indicator for the player bar (handles multi-bar / mixed meter).
+  // Meter-aware beat indicator for the player bar: the current bar's beats with
+  // their own subdivision dots (a triplet beat shows 3, a 16th beat shows 4).
   const barView = useMemo(() => {
     if (mode !== 'practice' || !item) return null
     const layout = barLayout(item)
-    let cur = null
+    let curBar = null
     if (step >= 0) {
       for (const b of layout.bars) {
-        for (const bt of b.beats) {
-          if (step >= bt.start && step < bt.start + bt.len) cur = { bar: b.bar, beatInBar: bt.beatInBar, beatsInBar: b.beats.length }
-        }
+        if (step >= b.startStep && step < b.startStep + b.stepCount) curBar = b
       }
     }
+    const shown = curBar || layout.bars[0]
     return {
       bars: layout.bars.length,
-      barIndex: cur ? cur.bar : 0,
-      beatsInBar: cur ? cur.beatsInBar : layout.bars[0].beats.length,
-      beatInBar: cur ? cur.beatInBar : -1,
+      barIndex: shown.bar,
+      beatLens: shown.beats.map((bt) => bt.len),
+      stepInBar: curBar && step >= 0 ? step - shown.startStep : -1,
     }
   }, [mode, item, step])
 
