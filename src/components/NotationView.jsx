@@ -37,7 +37,11 @@ export default function NotationView({ exercise, currentStep, loopRange, onBarCl
     r: exercise.rows, s: exercise.sticking, t: exercise.timeSignature, d: exercise.subdivision, b: exercise.bars,
   })
 
-  const layoutWidth = printWidth || containerWidth
+  // Print: lay out at a wider logical width, then scale the SVGs down to the
+  // paper width — smaller engraved notes, two 16th-grid bars per line.
+  const PRINT_SCALE = 0.6
+  const outScale = printWidth ? PRINT_SCALE : 1
+  const layoutWidth = printWidth ? Math.round(printWidth / PRINT_SCALE) : containerWidth
 
   useEffect(() => {
     const host = hostRef.current
@@ -124,7 +128,7 @@ export default function NotationView({ exercise, currentStep, loopRange, onBarCl
         // lines instead of tearing a staff in half.
         const lineDiv = document.createElement('div')
         lineDiv.className = 'vf-line'
-        lineDiv.style.height = `${line === lines.length - 1 ? LINE_H + BOTTOM_PAD : LINE_H}px`
+        lineDiv.style.height = `${Math.round((line === lines.length - 1 ? LINE_H + BOTTOM_PAD : LINE_H) * outScale)}px`
         host.appendChild(lineDiv)
         const renderer = new Renderer(lineDiv, Renderer.Backends.SVG)
         renderer.resize(width, LINE_H + BOTTOM_PAD)
@@ -219,23 +223,41 @@ export default function NotationView({ exercise, currentStep, loopRange, onBarCl
           tds.forEach((td, idx) => {
             const nx = idx + 1 < xs.length ? xs[idx + 1] : staveRight
             for (let s = 0; s < td.span; s++) {
-              stepMeta[td.startStep + s] = { x: xs[idx] - 12, top: lineTop + PLAYHEAD_TOP, width: Math.max(20, nx - xs[idx]) }
+              stepMeta[td.startStep + s] = {
+                x: (xs[idx] - 12) * outScale,
+                top: (lineTop + PLAYHEAD_TOP) * outScale,
+                width: Math.max(20, nx - xs[idx]) * outScale,
+              }
             }
           })
 
-          boxes.push({ bar: bm.bar, x, top: lineTop + PLAYHEAD_TOP, width: staveW, height: PLAYHEAD_H })
+          boxes.push({
+            bar: bm.bar, x: x * outScale, top: (lineTop + PLAYHEAD_TOP) * outScale,
+            width: staveW * outScale, height: PLAYHEAD_H * outScale,
+          })
           x += staveW
         })
+
+        if (outScale !== 1) {
+          const svg = lineDiv.querySelector('svg')
+          if (svg) {
+            svg.setAttribute('viewBox', `0 0 ${width} ${LINE_H + BOTTOM_PAD}`)
+            svg.setAttribute('width', `${Math.round(width * outScale)}`)
+            svg.setAttribute('height', `${Math.round((LINE_H + BOTTOM_PAD) * outScale)}`)
+            svg.style.width = `${Math.round(width * outScale)}px`
+            svg.style.height = `${Math.round((LINE_H + BOTTOM_PAD) * outScale)}px`
+          }
+        }
       })
 
       setBarBoxes(boxes)
       setMeta(stepMeta)
-      setDims({ w: width, h: lines.length * LINE_H + BOTTOM_PAD })
+      setDims({ w: Math.round(width * outScale), h: Math.round((lines.length * LINE_H + BOTTOM_PAD) * outScale) })
     } catch (e) {
       console.error('Notation render failed', e)
       setError(String(e?.message || e))
     }
-  }, [sig, layoutWidth]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sig, layoutWidth, printWidth]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const hl = currentStep >= 0 && currentStep < meta.length ? meta[currentStep] : null
   // Clickable bar zones (loop selection) only make sense with several bars.
