@@ -141,3 +141,31 @@
   border-radius: var(--r-sm); background: var(--surface-2); border: 1px solid var(--border-soft);
   font-family: var(--num-font); font-weight: 700; font-size: 11px; color: var(--accent);
 }
+
+/* ---- Stamp palette (paint tools) ---- */
+.stamp-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  margin-bottom: var(--s-3); padding: 6px;
+  border: 1px solid var(--border-soft); border-radius: var(--r-md);
+  background: var(--surface-1);
+}
+.stamp {
+  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px;
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+  background: var(--surface-2); color: var(--text-2);
+  font-size: var(--fs-sm); font-weight: 600; cursor: pointer;
+}
+.stamp:hover { color: var(--text); border-color: var(--border-strong); }
+.stamp.is-active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.stamp-glyph { font-weight: 700; font-size: 12px; }
+.stamp-hint { color: var(--text-3); font-size: var(--fs-xs); padding-left: 6px; }
+.stamp-spacer { flex: 1; }
+@media (max-width: 560px) { .stamp-hint { display: none; } .stamp-lbl { display: none; } .stamp { padding: 0 9px; } }
+
+/* Ghost cell: a quiet hit — dimmed accent fill with "( )" mark. */
+.seq .cell.ghost {
+  background: color-mix(in oklab, var(--accent) 38%, var(--surface-inset));
+  border-color: transparent; color: var(--on-accent);
+  display: grid; place-items: center;
+  font-family: var(--num-font); font-weight: 700; font-size: 10px;
+}

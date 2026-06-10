@@ -322,6 +322,21 @@ describe('Scheduler step scheduling', () => {
     expect(graceGain).toBeLessThan(mainGain)
   })
 
+  it('ghost notes play quieter than normal hits', () => {
+    const s = new Scheduler()
+    s.subdivision = 'quarter'
+    s.metronomeEnabled = false
+    const ex = createEmptyExercise({ subdivision: 'quarter' })
+    ex.rows.snare[0] = { on: true, accent: false, roll: 0, ghost: true }
+    ex.rows.snare[1] = { on: true, accent: false, roll: 0 }
+    s.pattern = ex
+    s._scheduleStep(0, 1.0)
+    s._scheduleStep(1, 1.5)
+    const gains = DRUM_VOICES.snare.mock.calls.map((c) => c[3].gain)
+    expect(gains[0]).toBeCloseTo(0.22)
+    expect(gains[1]).toBeCloseTo(0.55)
+  })
+
   it('scales drum gain by patternVolume', () => {
     const s = new Scheduler()
     s.subdivision = 'quarter'

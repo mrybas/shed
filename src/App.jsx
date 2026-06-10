@@ -15,7 +15,7 @@ import {
   loadLibrary, saveToLibrary, deleteFromLibrary, genId, barLayout,
 } from './model/exercise.js'
 
-const APP_VERSION = 'v3.5' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v3.6' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'

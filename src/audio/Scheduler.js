@@ -306,7 +306,8 @@ export class Scheduler {
       INSTRUMENTS.forEach((inst) => {
         const cell = this.pattern.rows[inst]?.[step]
         if (cell && cell.on) {
-          const gain = (cell.accent ? 1.0 : 0.55) * this.patternVolume
+          // Three dynamic levels: ghost (quiet) < normal < accent.
+          const gain = (cell.ghost ? 0.22 : cell.accent ? 1.0 : 0.55) * this.patternVolume
           const voice = DRUM_VOICES[inst]
           if (cell.roll && voice) {
             drumRoll(ctx, time, this._rollDuration(step), cell.roll, master, gain, voice)

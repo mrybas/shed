@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useLayoutEffect } from 'react'
 import {
   Renderer, Stave, StaveNote, Voice, Formatter, Beam, Tuplet, Articulation, Annotation, Modifier, Dot, Tremolo, StaveTie,
-  GraceNote, GraceNoteGroup,
+  GraceNote, GraceNoteGroup, Parenthesis,
 } from 'vexflow'
 import { buildNotationData } from '../model/notation.js'
 
@@ -76,6 +76,10 @@ export default function NotationView({ exercise, currentStep }) {
       const makeNote = (td) => {
         const sn = new StaveNote({ keys: td.keys, duration: td.rest ? td.durKind + 'r' : td.durKind, stemDirection: 1 })
         if (td.dots) Dot.buildAndAttach([sn])
+        if (!td.rest && td.ghost) {
+          // Ghost note: parentheses around the notehead.
+          try { Parenthesis.buildAndAttach([sn]) } catch { /* ignore */ }
+        }
         if (!td.rest && td.flam) {
           // Flam: a single slashed grace note before the main hit.
           try {

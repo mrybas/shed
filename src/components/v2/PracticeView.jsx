@@ -13,6 +13,19 @@ const INSTR_COLORS = {
   snare: 'oklch(0.7 0.16 38)', floorTom: 'oklch(0.6 0.12 25)', kick: 'oklch(0.6 0.04 260)',
 }
 
+const cloneEx = (x) => JSON.parse(JSON.stringify(x))
+
+// Stamp palette: each tool writes one definite cell state (drag-paintable).
+const STAMPS = {
+  hit: () => ({ on: true, accent: false, roll: 0 }),
+  accent: () => ({ on: true, accent: true, roll: 0 }),
+  ghost: () => ({ on: true, accent: false, roll: 0, ghost: true }),
+  flam: () => ({ on: true, accent: false, roll: 0, flam: true }),
+  roll: (rollType) => ({ on: true, accent: false, roll: rollType }),
+  erase: () => ({ on: false, accent: false, roll: 0 }),
+}
+const TOOL_GLYPHS = { hit: '●', accent: '>', ghost: '( )', flam: 'f', roll: 'z', erase: '⌫' }
+
 export default function PracticeView({
   t, lang, item, setItem, options, setOptions, vols, setVols, playing, step,
   progress, onProgress, onDuplicate, onBack, onSave, onExport, onNew, savedFlash,
@@ -20,6 +33,54 @@ export default function PracticeView({
   const editable = item.source === 'user'
   const [view, setView] = useState(editable ? 'grid' : 'notes')
   useEffect(() => { setView(editable ? 'grid' : 'notes') }, [item.id, editable])
+
+  // ---- Edit history (structural edits only; bpm/name are continuous) ----
+  const histRef = useRef({ undo: [], redo: [] })
+  const itemRef = useRef(item)
+  itemRef.current = item
+  const [, bumpHist] = useState(0)
+  useEffect(() => { histRef.current = { undo: [], redo: [] }; bumpHist((v) => v + 1) }, [item.id])
+  const pushHistory = useCallback(() => {
+    const h = histRef.current
+    h.undo.push(cloneEx(itemRef.current))
+    if (h.undo.length > 50) h.undo.shift()
+    h.redo = []
+    bumpHist((v) => v + 1)
+  }, [])
+  // Snapshot + apply: one undo step per discrete edit.
+  const mutate = useCallback((fn) => { pushHistory(); setItem(fn) }, [pushHistory, setItem])
+  const undo = useCallback(() => {
+    const h = histRef.current
+    const prev = h.undo.pop()
+    if (!prev) return
+    h.redo.push(cloneEx(itemRef.current))
+    setItem(prev)
+    bumpHist((v) => v + 1)
+  }, [setItem])
+  const redo = useCallback(() => {
+    const h = histRef.current
+    const next = h.redo.pop()
+    if (!next) return
+    h.undo.push(cloneEx(itemRef.current))
+    setItem(next)
+    bumpHist((v) => v + 1)
+  }, [setItem])
+  useEffect(() => {
+    const onKey = (e) => {
+      if (!(e.ctrlKey || e.metaKey)) return
+      const el = document.activeElement
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
+      if (e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo() }
+      else if (e.key.toLowerCase() === 'y') { e.preventDefault(); redo() }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [undo, redo])
+
+  // ---- Stamp palette + drag painting ----
+  const [tool, setTool] = useState(null)
+  const paintingRef = useRef(false)
+  const stampFor = useCallback((toolId, rt) => (toolId === 'roll' ? STAMPS.roll(rt) : STAMPS[toolId]()), [])
 
   const per = item.rows[INSTRUMENTS[0]].length
   const layout = barLayout(item)
@@ -32,21 +93,21 @@ export default function PracticeView({
   const sig = sigOf(item)
 
   const setBpm = (b) => setItem((p) => ({ ...p, bpm: b }))
-  const setSig = (s) => setItem((p) => resizeExercise(p, sigToTimeSignature(s), p.subdivision))
-  const setSub = (s) => setItem((p) => resizeExercise(p, p.timeSignature, s))
-  const setOneBeatSub = (b, s) => setItem((p) => setBeatSub(p, b, s))
-  const addBarBtn = () => setItem((p) => addBar(p))
-  const insertBefore = (i) => setItem((p) => insertBar(p, i))
-  const dupBar = (i) => setItem((p) => duplicateBar(p, i))
-  const delBar = (i) => setItem((p) => removeBar(p, i))
-  const setBarTS = (i, s) => setItem((p) => setBarTimeSignature(p, i, sigToTimeSignature(s)))
+  const setSig = (s) => mutate((p) => resizeExercise(p, sigToTimeSignature(s), p.subdivision))
+  const setSub = (s) => mutate((p) => resizeExercise(p, p.timeSignature, s))
+  const setOneBeatSub = (b, s) => mutate((p) => setBeatSub(p, b, s))
+  const addBarBtn = () => mutate((p) => addBar(p))
+  const insertBefore = (i) => mutate((p) => insertBar(p, i))
+  const dupBar = (i) => mutate((p) => duplicateBar(p, i))
+  const delBar = (i) => mutate((p) => removeBar(p, i))
+  const setBarTS = (i, s) => mutate((p) => setBarTimeSignature(p, i, sigToTimeSignature(s)))
 
   // Roll type currently authored (open/closed); also restamps existing rolls.
   const hasClosed = INSTRUMENTS.some((k) => item.rows[k].some((c) => c.roll === 'closed'))
   const rollType = hasClosed ? 'closed' : 'open'
 
-  // off -> on -> accent -> flam -> roll -> off
-  const cycleCell = (k, i) => setItem((prev) => {
+  // off -> on -> accent -> flam -> roll -> off (plain click, no tool selected)
+  const cycleCell = (k, i) => mutate((prev) => {
     const rows = { ...prev.rows, [k]: prev.rows[k].map((c, idx) => {
       if (idx !== i) return c
       if (!c.on) return { on: true, accent: false, roll: 0 }
@@ -58,17 +119,58 @@ export default function PracticeView({
     return { ...prev, rows }
   })
 
-  const toggleRollType = (closed) => setItem((prev) => {
+  // Apply the selected stamp to one cell (no history push — the paint gesture
+  // pushes one snapshot at pointerdown).
+  const applyStamp = useCallback((k, i) => {
+    const next = stampFor(tool, rollType)
+    setItem((prev) => {
+      const cur = prev.rows[k]?.[i]
+      if (!cur) return prev
+      const same = cur.on === next.on && cur.accent === next.accent && (cur.roll || 0) === (next.roll || 0)
+        && !!cur.flam === !!next.flam && !!cur.ghost === !!next.ghost
+      if (same) return prev
+      const rows = { ...prev.rows, [k]: prev.rows[k].map((c, idx) => (idx === i ? { ...next } : c)) }
+      return { ...prev, rows }
+    })
+  }, [tool, rollType, setItem, stampFor]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const cellFromPoint = (x, y) => {
+    const el = document.elementFromPoint(x, y)
+    const btn = el && el.closest ? el.closest('[data-cellk]') : null
+    return btn ? { k: btn.dataset.cellk, i: Number(btn.dataset.celli) } : null
+  }
+  const onGridPointerDown = (e) => {
+    if (!editable || !tool) return
+    const c = cellFromPoint(e.clientX, e.clientY)
+    if (!c) return
+    e.preventDefault()
+    pushHistory() // one undo step per paint gesture
+    paintingRef.current = true
+    applyStamp(c.k, c.i)
+  }
+  const onGridPointerMove = (e) => {
+    if (!paintingRef.current) return
+    const c = cellFromPoint(e.clientX, e.clientY)
+    if (c) applyStamp(c.k, c.i)
+  }
+  useEffect(() => {
+    const up = () => { paintingRef.current = false }
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
+    return () => { window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up) }
+  }, [])
+
+  const toggleRollType = (closed) => mutate((prev) => {
     const next = closed ? 'closed' : 'open'
     const rows = {}
     INSTRUMENTS.forEach((k) => { rows[k] = prev.rows[k].map((c) => (c.roll ? { ...c, roll: next } : c)) })
     return { ...prev, rows }
   })
-  const cycleStick = (i) => setItem((prev) => {
+  const cycleStick = (i) => mutate((prev) => {
     const next = prev.sticking[i] === '' ? 'R' : prev.sticking[i] === 'R' ? 'L' : ''
     return { ...prev, sticking: prev.sticking.map((s, idx) => (idx === i ? next : s)) }
   })
-  const clearCells = () => setItem((prev) => {
+  const clearCells = () => mutate((prev) => {
     const rows = {}
     INSTRUMENTS.forEach((k) => { rows[k] = prev.rows[k].map(() => ({ on: false, accent: false, roll: 0 })) })
     return { ...prev, rows, sticking: prev.sticking.map(() => '') }
@@ -321,6 +423,21 @@ export default function PracticeView({
               <button className="bar-add" onClick={addBarBtn}><Icon name="plus" className="ic" />{t('addBar')}</button>
             </div>
           )}
+          {editable && (
+            <div className="stamp-bar" role="toolbar" aria-label={t('tools')}>
+              {Object.keys(STAMPS).map((id) => (
+                <button key={id} className={'stamp' + (tool === id ? ' is-active' : '')}
+                  title={t(`tool_${id}`)} aria-pressed={tool === id}
+                  onClick={() => setTool(tool === id ? null : id)}>
+                  <span className="stamp-glyph num">{TOOL_GLYPHS[id]}</span>
+                  <span className="stamp-lbl">{t(`tool_${id}`)}</span>
+                </button>
+              ))}
+              <span className="stamp-hint">{tool ? t('paintHint') : t('cycleHint')}</span>
+              <span className="stamp-spacer" />
+              <Button size="sm" icon="back" onClick={undo} disabled={!histRef.current.undo.length}>{t('undo')}</Button>
+            </div>
+          )}
           <div className="seq-ruler"><div />
             <div className="ticks">{Array.from({ length: per }).map((_, i) => (
               <div key={i} className={'tick' + (beatStartSet.has(i) ? ' beat' : '') + (barStartSet.has(i) ? ' bar-start' : '') + (localPlay === i ? ' play' : '')}>
@@ -329,15 +446,17 @@ export default function PracticeView({
               </div>
             ))}</div>
           </div>
-          <div className="seq-grid">
+          <div className="seq-grid" onPointerDown={onGridPointerDown} onPointerMove={onGridPointerMove}
+            style={{ touchAction: tool ? 'none' : undefined }}>
             {INSTRUMENTS.map((k) => (
               <div className="seq-row" key={k}>
                 <div className="seq-rowlabel"><span className="dot" style={{ background: INSTR_COLORS[k] }} />{t(k)}</div>
                 <div className="seq-cells">
                   {item.rows[k].map((cell, i) => (
                     <button key={i} disabled={!editable} aria-label={t(k) + ' ' + (i + 1)}
-                      className={['cell', cell.roll ? 'roll' : cell.flam ? 'flam' : cell.accent ? 'accent' : cell.on ? 'on' : '', beatStartSet.has(i) ? 'beat-start' : '', barStartSet.has(i) ? 'bar-start' : '', localPlay === i ? 'play-col' : '', !editable ? 'ro' : ''].join(' ')}
-                      onClick={() => editable && cycleCell(k, i)}>{cell.roll ? 'z' : cell.flam ? 'f' : ''}</button>
+                      data-cellk={k} data-celli={i}
+                      className={['cell', cell.roll ? 'roll' : cell.flam ? 'flam' : cell.ghost ? 'ghost' : cell.accent ? 'accent' : cell.on ? 'on' : '', beatStartSet.has(i) ? 'beat-start' : '', barStartSet.has(i) ? 'bar-start' : '', localPlay === i ? 'play-col' : '', !editable ? 'ro' : ''].join(' ')}
+                      onClick={() => editable && !tool && cycleCell(k, i)}>{cell.roll ? 'z' : cell.flam ? 'f' : cell.ghost ? '()' : ''}</button>
                   ))}
                 </div>
               </div>
@@ -360,6 +479,7 @@ export default function PracticeView({
         <span className="cl-title">{t('legendTitle')}</span>
         <span className="cl-item"><span className="cl-sw cell on" />{t('legendHit')}</span>
         <span className="cl-item"><span className="cl-sw cell accent" />{t('legendAccent')}</span>
+        <span className="cl-item"><span className="cl-sw cell ghost">()</span>{t('legendGhost')}</span>
         <span className="cl-item"><span className="cl-sw cell flam">f</span>{t('legendFlam')}</span>
         <span className="cl-item"><span className="cl-sw cell roll">z</span>{t('legendRoll')}</span>
         <span className="cl-item"><span className="cl-rl">R / L</span>{t('legendSticking')}</span>

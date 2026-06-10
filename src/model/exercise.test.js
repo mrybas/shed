@@ -165,6 +165,16 @@ describe('bars (multi-bar exercises)', () => {
     expect(parsed.rows.snare[0]).toEqual({ on: true, accent: true, roll: 0 })
   })
 
+  it('preserves the ghost flag through resize and import', () => {
+    let ex = createEmptyExercise({ timeSignature: { beats: 4, unit: 4 }, subdivision: 'eighth' })
+    ex.rows.snare[0] = { on: true, accent: false, roll: 0, ghost: true }
+    const grown = resizeExercise(ex, ex.timeSignature, 'sixteenth')
+    expect(grown.rows.snare[0].ghost).toBe(true)
+    const parsed = parseImported(JSON.stringify(grown))
+    expect(parsed.rows.snare[0].ghost).toBe(true)
+    expect(parsed.rows.snare[1].ghost).toBeUndefined()
+  })
+
   it('preserves the flam flag through resize and import (and only when set)', () => {
     let ex = createEmptyExercise({ timeSignature: { beats: 4, unit: 4 }, subdivision: 'eighth' })
     ex.rows.snare[0] = { on: true, accent: false, roll: 0, flam: true }

@@ -246,12 +246,13 @@ function makeRow(n) {
   return Array.from({ length: n }, makeCell)
 }
 
-// Normalize a cell, preserving the optional `flam` flag only when set (so empty
-// cells keep their minimal { on, accent, roll } shape).
+// Normalize a cell, preserving the optional `flam`/`ghost` flags only when set
+// (so empty cells keep their minimal { on, accent, roll } shape).
 function copyCell(c) {
   if (!c) return { on: false, accent: false, roll: 0 }
   const nc = { on: !!c.on, accent: !!c.accent, roll: c.roll || 0 }
   if (c.flam) nc.flam = true
+  if (c.ghost) nc.ghost = true
   return nc
 }
 

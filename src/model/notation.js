@@ -68,6 +68,7 @@ export function buildNotationData(ex) {
       onset: active.length > 0,
       accent: active.some((inst) => ex.rows[inst][step].accent),
       flam: active.some((inst) => ex.rows[inst][step].flam),
+      ghost: active.some((inst) => ex.rows[inst][step].ghost),
       open: active.some((inst) => RENDER_INFO[inst]?.open),
       roll: (active.find((inst) => ex.rows[inst][step].roll) && ex.rows[active[0]][step].roll) || 0,
       keys: active.map((inst) => RENDER_INFO[inst]).filter(Boolean).sort((a, b) => a.order - b.order).map((r) => r.key),
@@ -98,7 +99,7 @@ export function buildNotationData(ex) {
           const info = stepInfo(gi)
           tickables.push({
             rest: !info.onset, keys: info.onset ? info.keys : ['b/4'], durKind: tDur, dots: 0,
-            accent: info.onset && info.accent, flam: info.onset && info.flam, open: info.onset && info.open, roll: info.onset ? info.roll : 0,
+            accent: info.onset && info.accent, flam: info.onset && info.flam, ghost: info.onset && info.ghost, open: info.onset && info.open, roll: info.onset ? info.roll : 0,
             sticking: info.onset ? info.sticking : '', startStep: gi, span: 1,
           })
         }
@@ -110,7 +111,7 @@ export function buildNotationData(ex) {
           const info = stepInfo(gi)
           tickables.push({
             rest: !info.onset, keys: info.onset ? info.keys : ['b/4'], durKind, dots: 0,
-            accent: info.onset && info.accent, flam: info.onset && info.flam, open: info.onset && info.open, roll: info.onset ? info.roll : 0,
+            accent: info.onset && info.accent, flam: info.onset && info.flam, ghost: info.onset && info.ghost, open: info.onset && info.open, roll: info.onset ? info.roll : 0,
             sticking: info.onset ? info.sticking : '', startStep: gi, span: 1,
           })
         }
@@ -127,7 +128,7 @@ export function buildNotationData(ex) {
           const durKind = shiftDur(baseDur, shift)
           tickables.push({
             rest: !info.onset, keys: info.onset ? info.keys : ['b/4'], durKind, dots,
-            accent: info.onset && info.accent, flam: info.onset && info.flam, open: info.onset && info.open, roll: info.onset ? info.roll : 0,
+            accent: info.onset && info.accent, flam: info.onset && info.flam, ghost: info.onset && info.ghost, open: info.onset && info.open, roll: info.onset ? info.roll : 0,
             sticking: info.onset ? info.sticking : '', startStep: gi, span,
           })
           p = q
