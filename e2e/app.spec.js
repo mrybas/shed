@@ -291,7 +291,7 @@ test('articulations: pedal row exists; cross-stick stamps only on snare', async 
   await expect(page.locator('.seq-rowlabel', { hasText: /^Hi-hat pedal$/ })).toBeVisible()
 
   // Pick the cross-stick stamp: it paints on the snare…
-  await page.locator('.stamp', { hasText: 'Cross-stick' }).click()
+  await page.locator('.stamp', { hasText: 'X-stick' }).click()
   const snareCell = page.locator('.seq-row').filter({ has: page.locator('.seq-rowlabel', { hasText: /^Snare$/ }) }).locator('.cell').first()
   await snareCell.click()
   await expect(snareCell).toHaveClass(/\bart\b/)
@@ -303,7 +303,7 @@ test('articulations: pedal row exists; cross-stick stamps only on snare', async 
   await expect(kickCell).not.toHaveClass(/\bart\b/)
 
   // Bell lands on the ride and the notation still renders.
-  await page.locator('.stamp', { hasText: 'Ride bell' }).click()
+  await page.locator('.stamp', { hasText: 'Bell' }).click()
   const rideCell = page.locator('.seq-row').filter({ has: page.locator('.seq-rowlabel', { hasText: /^Ride$/ }) }).locator('.cell').nth(4)
   await rideCell.click()
   await expect(rideCell).toHaveText('▲')

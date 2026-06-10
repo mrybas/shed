@@ -147,11 +147,13 @@
 
 /* ---- Stamp palette (paint tools) ---- */
 .stamp-bar {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  display: flex; flex-direction: column; gap: 6px;
   margin-bottom: var(--s-3); padding: 6px;
   border: 1px solid var(--border-soft); border-radius: var(--r-md);
   background: var(--surface-1);
 }
+/* Two deliberate rows: basic strokes, then articulations + erase + undo. */
+.stamp-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .stamp {
   display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px;
   border: 1px solid var(--border); border-radius: var(--r-sm);
@@ -161,9 +163,11 @@
 .stamp:hover { color: var(--text); border-color: var(--border-strong); }
 .stamp.is-active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .stamp-glyph { font-weight: 700; font-size: 12px; }
-.stamp-hint { color: var(--text-3); font-size: var(--fs-xs); padding-left: 6px; }
 .stamp-spacer { flex: 1; }
-@media (max-width: 560px) { .stamp-hint { display: none; } .stamp-lbl { display: none; } .stamp { padding: 0 9px; } }
+/* The paint/cycle hint sits on its own line under the toolbar, so the
+   toolbar row never has to wrap just to fit it. */
+.stamp-hint-line { color: var(--text-3); font-size: var(--fs-xs); margin: -6px 2px var(--s-3); }
+@media (max-width: 560px) { .stamp-hint-line { display: none; } .stamp-lbl { display: none; } .stamp { padding: 0 9px; } }
 
 /* Ghost cell: a quiet hit — dimmed accent fill with "( )" mark. */
 .seq .cell.ghost {

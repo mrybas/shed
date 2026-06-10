@@ -564,19 +564,29 @@ export default function PracticeView({
             </div>
           )}
           {editable && (
-            <div className="stamp-bar" role="toolbar" aria-label={t('tools')}>
-              {Object.keys(STAMPS).map((id) => (
-                <button key={id} className={'stamp' + (tool === id ? ' is-active' : '')}
-                  title={t(`tool_${id}`)} aria-pressed={tool === id}
-                  onClick={() => setTool(tool === id ? null : id)}>
-                  <span className="stamp-glyph num">{TOOL_GLYPHS[id]}</span>
-                  <span className="stamp-lbl">{t(`tool_${id}`)}</span>
-                </button>
-              ))}
-              <span className="stamp-hint">{tool ? t('paintHint') : t('cycleHint')}</span>
-              <span className="stamp-spacer" />
-              <Button size="sm" icon="back" onClick={undo} disabled={!histRef.current.undo.length}>{t('undo')}</Button>
-            </div>
+            <>
+              <div className="stamp-bar" role="toolbar" aria-label={t('tools')}>
+                {[['hit', 'accent', 'ghost', 'flam', 'drag', 'roll'], ['cross', 'rim', 'bell', 'erase']].map((row, ri) => (
+                  <div className="stamp-row" key={ri}>
+                    {row.map((id) => (
+                      <button key={id} className={'stamp' + (tool === id ? ' is-active' : '')}
+                        title={t(`tool_${id}`)} aria-pressed={tool === id}
+                        onClick={() => setTool(tool === id ? null : id)}>
+                        <span className="stamp-glyph num">{TOOL_GLYPHS[id]}</span>
+                        <span className="stamp-lbl">{t(`tool_${id}`)}</span>
+                      </button>
+                    ))}
+                    {ri === 1 && (
+                      <>
+                        <span className="stamp-spacer" />
+                        <Button size="sm" icon="back" onClick={undo} disabled={!histRef.current.undo.length}>{t('undo')}</Button>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="stamp-hint-line">{tool ? t('paintHint') : t('cycleHint')}</div>
+            </>
           )}
           <div className="seq-ruler"><div />
             <div className="ticks">{Array.from({ length: per }).map((_, i) => {
