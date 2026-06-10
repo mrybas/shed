@@ -15,7 +15,7 @@ import { sigToTimeSignature } from './components/v2/util.js'
 import { CATEGORIES, sigOf, getCatalogExercises } from './data/catalogV2.js'
 import {
   WORKOUTS, adaptiveStartBpm, loadMyWorkouts, saveMyWorkout, deleteMyWorkout,
-  emptyWorkout, duplicateWorkout, exportWorkoutFile,
+  emptyWorkout, duplicateWorkout, exportWorkoutFile, generateWorkout,
 } from './data/workouts.js'
 import {
   createEmptyExercise, exportExercise, exportLibraryFile, parseImported,
@@ -27,7 +27,7 @@ import { loadFavs, toggleFav } from './model/favs.js'
 import { loadSetlist, toggleInSetlist, removeFromSetlist, moveInSetlist, clearSetlist } from './model/setlist.js'
 import { decodeShare, shareFromHash } from './model/share.js'
 
-const APP_VERSION = 'v5.23' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v5.24' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -116,7 +116,13 @@ export default function App() {
   const runRef = useRef(run)
   runRef.current = run
   const exById = useMemo(() => new Map(getCatalogExercises().map((e) => [e.id, e])), [])
-  const workoutById = (id) => WORKOUTS.find((w) => w.id === id) || myWk.find((w) => w.id === id)
+  const [genWk, setGenWk] = useState(null) // last "surprise me" workout (ephemeral)
+  const workoutById = (id) => WORKOUTS.find((w) => w.id === id) || myWk.find((w) => w.id === id) || (genWk?.id === id ? genWk : null)
+  const surpriseMe = (level, minutes) => {
+    const w = generateWorkout({ level, minutes, seed: Math.floor(Math.random() * 1e9) })
+    setGenWk(w)
+    setWkId(w.id)
+  }
 
   // ---- Practice journal collectors ----
   const modeRef = useRef('metronome')
@@ -658,6 +664,7 @@ export default function App() {
             myWorkouts={myWk} onNew={() => setWkEdit(emptyWorkout())}
             onEdit={(w) => setWkEdit(w)} onDelete={deleteWk}
             daily={daily} onOpenDaily={() => openItem(daily)}
+            onSurprise={surpriseMe}
             setlistItems={setlistItems} onSetlistStart={startSetlist}
             onSetlistRemove={(id) => setSetlist(removeFromSetlist(id))}
             onSetlistMove={(id, dir) => setSetlist(moveInSetlist(id, dir))}

@@ -541,3 +541,15 @@ test('setlist: add two exercises, run through them from the player bar', async (
   await page.locator('button[aria-label="Finish setlist"]').click()
   await expect(page.locator('.pb-slrow')).toHaveCount(0)
 })
+
+test('surprise me: generates a session and the runner starts it', async ({ page }) => {
+  await page.locator('.side-link', { hasText: 'Workouts' }).click()
+  await page.locator('.surprise-card .select').first().selectOption('beginner')
+  await page.locator('.surprise-card').getByRole('button', { name: 'Generate' }).click()
+  // Detail view of the generated workout opens
+  await expect(page.locator('.page-title, h1').first()).toBeVisible()
+  await expect(page.getByText(/Surprise session/)).toBeVisible()
+  await page.getByRole('button', { name: /Start/ }).first().click()
+  await expect(page.locator('.practice')).toBeVisible()
+  await expect(page.locator('.pb-wkrow')).toContainText('Block 1/')
+})

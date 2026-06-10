@@ -577,3 +577,13 @@
 .sl-acts { display: inline-flex; gap: 2px; }
 .sl-acts .rowact[disabled] { opacity: .35; cursor: default; }
 .pb-slrow { background: color-mix(in oklab, var(--accent) 7%, transparent); }
+
+/* ---- Surprise-me workout card ---- */
+.surprise-card {
+  display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap;
+  width: 100%; margin-top: var(--s-3); padding: var(--s-3) var(--s-4);
+  border: 1px dashed var(--border-strong); border-radius: var(--r-md);
+  background: var(--surface-1);
+}
+.surprise-ctl { margin-left: auto; display: inline-flex; gap: var(--s-2); align-items: center; }
+.surprise-ctl .select { height: 32px; padding: 0 8px; font-size: var(--fs-sm); }

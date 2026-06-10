@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { WORKOUTS, validateWorkouts, adaptiveStartBpm } from './workouts.js'
+import { WORKOUTS, validateWorkouts, adaptiveStartBpm, generateWorkout } from './workouts.js'
 import { getCatalogExercises } from './catalogV2.js'
 
 describe('built-in workouts', () => {
@@ -38,5 +38,34 @@ describe('adaptiveStartBpm', () => {
   it('no ramp or no history -> null', () => {
     expect(adaptiveStartBpm({ settings: { bpm: 90 } }, { last: 120 })).toBe(null)
     expect(adaptiveStartBpm(block(90, 130), null)).toBe(null)
+  })
+})
+
+describe('generateWorkout (surprise me)', () => {
+  it('is deterministic by seed and valid against the catalog', () => {
+    const a = generateWorkout({ level: 'intermediate', minutes: 20, seed: 7 })
+    const b = generateWorkout({ level: 'intermediate', minutes: 20, seed: 7 })
+    expect(b).toEqual(a)
+    const ids = new Set(getCatalogExercises().map((e) => e.id))
+    a.blocks.forEach((blk) => expect(ids.has(blk.exerciseId)).toBe(true))
+    expect(a.blocks.reduce((t, blk) => t + blk.minutes, 0)).toBe(a.minutes)
+    expect(a.minutes).toBeGreaterThanOrEqual(18)
+    expect(a.minutes).toBeLessThanOrEqual(22)
+  })
+
+  it('shapes the session: warm-up first, ramped technique, gap-trainer last', () => {
+    for (const [level, minutes] of [['beginner', 10], ['intermediate', 15], ['advanced', 30]]) {
+      const w = generateWorkout({ level, minutes, seed: 3 })
+      expect(w.level).toBe(level)
+      expect(w.blocks[0].settings.tempoRamp?.enabled).toBe(true) // warm-up ramps
+      const last = w.blocks[w.blocks.length - 1]
+      expect(last.settings.gapTrainer?.enabled).toBe(true)
+      if (minutes >= 15) {
+        expect(w.blocks.some((blk) => blk.settings.countIn?.enabled)).toBe(true) // the fill block
+      }
+      // no duplicate exercises within one session
+      const seen = new Set(w.blocks.map((blk) => blk.exerciseId))
+      expect(seen.size).toBe(w.blocks.length)
+    }
   })
 })

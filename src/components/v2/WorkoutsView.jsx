@@ -92,8 +92,31 @@ function WorkoutCard({ t, w, onOpen, onEdit, onDelete }) {
   )
 }
 
+function SurpriseCard({ t, onSurprise }) {
+  const [level, setLevel] = useState('intermediate')
+  const [minutes, setMinutes] = useState(15)
+  return (
+    <div className="surprise-card">
+      <span className="daily-icon"><Icon name="play" className="ic" /></span>
+      <span className="daily-main">
+        <span className="daily-title">{t('genWkTitle')}</span>
+        <span className="daily-sub">{t('genWkSub')}</span>
+      </span>
+      <span className="surprise-ctl">
+        <select className="select" value={level} onChange={(e) => setLevel(e.target.value)} aria-label={t('levels')}>
+          {['beginner', 'intermediate', 'advanced'].map((lv) => <option key={lv} value={lv}>{t(`level_${lv}`)}</option>)}
+        </select>
+        <select className="select" value={minutes} onChange={(e) => setMinutes(Number(e.target.value))} aria-label={t('workoutMin')}>
+          {[10, 15, 20, 30].map((m) => <option key={m} value={m}>{m}′</option>)}
+        </select>
+        <Button size="sm" variant="accent" onClick={() => onSurprise(level, minutes)}>{t('genWkGo')}</Button>
+      </span>
+    </div>
+  )
+}
+
 export default function WorkoutsView({ t, lang, exercisesById, onOpenWorkout, myWorkouts = [], onNew, onEdit, onDelete, daily, onOpenDaily,
-  setlistItems = [], onSetlistStart, onSetlistRemove, onSetlistMove, onSetlistClear }) {
+  onSurprise, setlistItems = [], onSetlistStart, onSetlistRemove, onSetlistMove, onSetlistClear }) {
   const byLevel = (lv) => WORKOUTS.filter((w) => w.level === lv)
   return (
     <div className="lib2-home" data-screen-label="Workouts">
@@ -134,6 +157,7 @@ export default function WorkoutsView({ t, lang, exercisesById, onOpenWorkout, my
           </div>
         </div>
       )}
+      {onSurprise && <SurpriseCard t={t} onSurprise={onSurprise} />}
       <p className="wk-desc">{t('workoutsIntro')}</p>
 
       <div className="sec-row" style={{ marginTop: 'var(--s-4)' }}>

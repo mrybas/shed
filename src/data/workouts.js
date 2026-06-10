@@ -1,4 +1,6 @@
 import { downloadJSON } from '../model/exercise.js'
+import { getCatalogExercises, catOf, levelOf } from './catalogV2.js'
+import { mulberry32 } from './generator.js'
 
 // Built-in daily workouts: ordered blocks of catalog exercises with per-block
 // playback settings (tempo, speed/gap trainer, swing, count-in). Built on the
@@ -183,6 +185,77 @@ export function validateWorkouts(catalog) {
     if (!['beginner', 'intermediate', 'advanced'].includes(w.level)) problems.push(`${w.id}: bad level`)
   })
   return problems
+}
+
+// ---- "Surprise me": generate a session from the catalog -------------------
+// warm-up -> technique (ramped) -> groove -> optional fill -> timing test.
+const GEN_TECH = {
+  beginner: ['singles', 'doubles'],
+  intermediate: ['doubles', 'triples', 'paradiddle', 'rudiments'],
+  advanced: ['paradiddle', 'rudiments', 'rolls', 'flams', 'quads'],
+}
+const GEN_LEVELS = {
+  beginner: ['beginner'],
+  intermediate: ['beginner', 'intermediate'],
+  advanced: ['intermediate', 'advanced'],
+}
+
+export function generateWorkout({ level = 'intermediate', minutes = 15, seed = 1 } = {}) {
+  const rand = mulberry32(seed)
+  const all = getCatalogExercises()
+  const lvls = GEN_LEVELS[level] || GEN_LEVELS.intermediate
+  const pool = (cats) => {
+    const strict = all.filter((e) => cats.includes(catOf(e)) && lvls.includes(levelOf(e)))
+    return strict.length ? strict : all.filter((e) => cats.includes(catOf(e)))
+  }
+  const used = new Set()
+  const pick = (cats) => {
+    const arr = pool(cats)
+    const fresh = arr.filter((e) => !used.has(e.id))
+    const ex = (fresh.length ? fresh : arr)[Math.floor(rand() * (fresh.length ? fresh.length : arr.length))]
+    used.add(ex.id)
+    return ex
+  }
+  const ramp = (everyBars, stepBpm, maxBpm) => ({ tempoRamp: { enabled: true, everyBars, stepBpm, maxBpm } })
+
+  const withFill = minutes >= 15
+  const techCount = minutes >= 20 ? 3 : minutes >= 12 ? 2 : 1
+  // Fixed-size blocks first; the rest splits between technique and groove.
+  const warmMin = 2
+  const fillMin = withFill ? 2 : 0
+  const timeMin = 2
+  let rest = Math.max(2 + techCount * 2, minutes - warmMin - fillMin - timeMin)
+  const grooveMin = Math.max(2, Math.round(rest / (techCount + 1)))
+  const techMinEach = Math.max(2, Math.floor((rest - grooveMin) / techCount))
+  rest = rest - grooveMin - techMinEach * techCount // leftover goes to the groove
+
+  const warm = pick(level === 'beginner' ? ['firstSteps'] : ['singles'])
+  const blocks = [
+    { exerciseId: warm.id, minutes: warmMin, note: 'Warm-up. Relaxed hands, watch the rebound.', settings: { bpm: Math.max(50, warm.bpm - 10), ...ramp(4, 4, warm.bpm + 16) } },
+  ]
+  for (let i = 0; i < techCount; i++) {
+    const ex = pick(GEN_TECH[level] || GEN_TECH.intermediate)
+    blocks.push({ exerciseId: ex.id, minutes: techMinEach, note: 'Technique. Clean strokes before speed.', settings: { bpm: Math.max(50, ex.bpm - 6), ...ramp(4, 4, ex.bpm + 20) } })
+  }
+  const groove = pick(['grooves'])
+  blocks.push({ exerciseId: groove.id, minutes: grooveMin + rest, note: 'Groove. Make it feel good, not just correct.', settings: { bpm: groove.bpm } })
+  if (withFill) {
+    const fill = pick(['fills'])
+    blocks.push({ exerciseId: fill.id, minutes: fillMin, note: 'Fill. Think it through before each pass.', settings: { bpm: Math.max(50, fill.bpm - 6), countIn: { enabled: true, bars: 1, mode: 'phrase', feel: 'quarter' } } })
+  }
+  const timing = pick(['grooves', 'firstSteps'])
+  blocks.push({ exerciseId: timing.id, minutes: timeMin, note: 'Timing test: hold steady through the silent bars.', settings: { bpm: timing.bpm, gapTrainer: { enabled: true, onBars: 2, offBars: 2 } } })
+
+  const total = blocks.reduce((t, b) => t + b.minutes, 0)
+  return {
+    id: `wk_gen_${seed}`,
+    name: `Surprise session · ${total}′`,
+    level,
+    minutes: total,
+    description: 'Generated from the catalog: warm-up, technique with the speed trainer, a groove, and a timing test.',
+    generated: true,
+    blocks,
+  }
 }
 
 // Share/backup a single workout as a file.
