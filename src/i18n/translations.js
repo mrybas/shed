@@ -175,6 +175,7 @@ export const translations = {
     share: 'Share link',
     shared_ok: 'Link copied ✓',
     print: 'Print',
+    shareCopyManually: 'Copy this link:',
     subSwitcher: 'Subdivision switcher',
     subSwitcherHint: 'Rotate the click grid every few bars — train your inner clock to re-subdivide',
     polyrhythm: 'Polyrhythm',

@@ -157,3 +157,54 @@ test('export downloads a .drums.json file', async ({ page }) => {
   ])
   expect(download.suggestedFilename()).toContain('.drums.json')
 })
+
+test('share link copies via fallback (no clipboard API) and the URL opens the exercise', async ({ page }) => {
+  await page.locator('.side-parent-main').click()
+  await page.locator('.cat-card').first().click()
+  await page.locator('.exrow').first().click()
+  // Kill the async clipboard API (as on insecure LAN hosts) so the hidden
+  // textarea + execCommand fallback has to do the work; capture what it copies.
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, 'clipboard', { value: undefined })
+    window.__copied = null
+    document.execCommand = (cmd) => {
+      if (cmd !== 'copy') return false
+      window.__copied = document.activeElement?.value ?? null
+      return true
+    }
+  })
+  await page.locator('button:visible', { hasText: 'Share link' }).click()
+  await expect(page.locator('button:visible', { hasText: 'Link copied' })).toBeVisible()
+  const url = await page.evaluate(() => window.__copied)
+  expect(url).toContain('#x=')
+  // The copied link round-trips: opening it lands on the exercise.
+  await page.goto(url)
+  await expect(page.locator('.practice')).toBeVisible()
+  await expect(page.locator('.notation-wrap svg').first()).toBeVisible()
+})
+
+test('print relayouts notation to A4 width, then restores', async ({ page }) => {
+  await page.locator('.side-parent-main').click()
+  await page.locator('.cat-card').first().click()
+  await page.locator('.exrow').first().click()
+  await expect(page.locator('.notation-wrap .vf-line svg').first()).toBeVisible()
+  await page.evaluate(() => {
+    window.__printW = null
+    window.print = () => {
+      window.__printW = {
+        inner: document.querySelector('.notation-inner')?.style.width,
+        svg: document.querySelector('.vf-line svg')?.getAttribute('width'),
+      }
+    }
+  })
+  await page.locator('button:visible', { hasText: 'Print' }).click()
+  // By the time print() fires, the notation must be laid out at 660px.
+  await expect.poll(() => page.evaluate(() => window.__printW)).not.toBeNull()
+  const w = await page.evaluate(() => window.__printW)
+  expect(w.inner).toBe('660px')
+  expect(w.svg).toBe('660')
+  // …and the screen layout comes back afterwards.
+  await expect.poll(() => page.evaluate(
+    () => document.querySelector('.notation-inner')?.style.width,
+  )).not.toBe('660px')
+})

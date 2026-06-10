@@ -14,7 +14,7 @@ const COMFY_NOTE_PX = 30
 const CLEF_W = 42
 const TS_W = 30
 
-export default function NotationView({ exercise, currentStep, loopRange, onBarClick, barClickTitle }) {
+export default function NotationView({ exercise, currentStep, loopRange, onBarClick, barClickTitle, printWidth = 0 }) {
   const wrapRef = useRef(null)
   const hostRef = useRef(null)
   const [meta, setMeta] = useState([])
@@ -37,9 +37,11 @@ export default function NotationView({ exercise, currentStep, loopRange, onBarCl
     r: exercise.rows, s: exercise.sticking, t: exercise.timeSignature, d: exercise.subdivision, b: exercise.bars,
   })
 
+  const layoutWidth = printWidth || containerWidth
+
   useEffect(() => {
     const host = hostRef.current
-    if (!host || containerWidth === 0) return
+    if (!host || layoutWidth === 0) return
     host.innerHTML = ''
     setError('')
 
@@ -54,7 +56,7 @@ export default function NotationView({ exercise, currentStep, loopRange, onBarCl
       // Decide whether each bar restates the time signature (first bar or change).
       const showsTsFor = data.barsMeta.map((bm, i) => i === 0 || bm.timeSig !== data.barsMeta[i - 1].timeSig)
 
-      const avail = containerWidth - 16
+      const avail = layoutWidth - 16
       const lines = []
       let cur = []
       let curW = 0
@@ -69,10 +71,7 @@ export default function NotationView({ exercise, currentStep, loopRange, onBarCl
       })
       if (cur.length) lines.push(cur)
 
-      const width = containerWidth
-      const renderer = new Renderer(host, Renderer.Backends.SVG)
-      renderer.resize(width, lines.length * LINE_H + BOTTOM_PAD)
-      const ctx = renderer.getContext()
+      const width = layoutWidth
 
       const makeNote = (td) => {
         const sn = new StaveNote({ keys: td.keys, duration: td.rest ? td.durKind + 'r' : td.durKind, stemDirection: 1 })
@@ -121,15 +120,24 @@ export default function NotationView({ exercise, currentStep, loopRange, onBarCl
 
       lines.forEach((lineBars, line) => {
         const lineTop = line * LINE_H
+        // Each line is its own SVG block so print page breaks fall between
+        // lines instead of tearing a staff in half.
+        const lineDiv = document.createElement('div')
+        lineDiv.className = 'vf-line'
+        lineDiv.style.height = `${line === lines.length - 1 ? LINE_H + BOTTOM_PAD : LINE_H}px`
+        host.appendChild(lineDiv)
+        const renderer = new Renderer(lineDiv, Renderer.Backends.SVG)
+        renderer.resize(width, LINE_H + BOTTOM_PAD)
+        const ctx = renderer.getContext()
         const totalW = lineBars.reduce((t, x) => t + x.w, 0)
-        const scale = (containerWidth - 16) / totalW
+        const scale = (layoutWidth - 16) / totalW
         let x = 8
 
         lineBars.forEach((entry, idxInLine) => {
           const { bm, showsTs } = entry
           const firstOfLine = idxInLine === 0
           const staveW = entry.w * scale
-          const stave = new Stave(x, lineTop + STAFF_Y, staveW)
+          const stave = new Stave(x, STAFF_Y, staveW)
           if (firstOfLine) stave.addClef('percussion')
           if (showsTs) stave.addTimeSignature(bm.timeSig)
           stave.setContext(ctx).draw()
@@ -227,7 +235,7 @@ export default function NotationView({ exercise, currentStep, loopRange, onBarCl
       console.error('Notation render failed', e)
       setError(String(e?.message || e))
     }
-  }, [sig, containerWidth]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sig, layoutWidth]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const hl = currentStep >= 0 && currentStep < meta.length ? meta[currentStep] : null
   // Clickable bar zones (loop selection) only make sense with several bars.

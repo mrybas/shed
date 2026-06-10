@@ -226,13 +226,40 @@ export default function PracticeView({
   const tap = useTapTempo(useCallback((bpm) => setItem((p) => ({ ...p, bpm })), [setItem]))
 
   const [sharedFlash, setSharedFlash] = useState(false)
-  const shareLink = async () => {
+  // navigator.clipboard exists only in secure contexts (https/localhost) — over
+  // LAN http fall back to the execCommand trick, then to a copyable prompt.
+  const copyText = async (text) => {
+    try { await navigator.clipboard.writeText(text); return true } catch { /* no clipboard API */ }
     try {
-      const url = await shareUrlFor(item)
-      await navigator.clipboard.writeText(url)
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      const ok = document.execCommand('copy')
+      document.body.removeChild(ta)
+      return ok
+    } catch { return false }
+  }
+  const shareLink = async () => {
+    const url = await shareUrlFor(item)
+    if (await copyText(url)) {
       setSharedFlash(true)
       setTimeout(() => setSharedFlash(false), 1500)
-    } catch { /* clipboard denied */ }
+    } else {
+      window.prompt(t('shareCopyManually'), url)
+    }
+  }
+
+  // Print: relayout the notation to A4 width first, then open the dialog.
+  const [printing, setPrinting] = useState(false)
+  const printNotes = () => {
+    setPrinting(true)
+    setTimeout(() => {
+      window.print()
+      setTimeout(() => setPrinting(false), 300)
+    }, 350)
   }
 
   const localPlay = playing ? step : -1
@@ -446,14 +473,14 @@ export default function PracticeView({
               <Button size="sm" icon="clear" onClick={clearCells}>{t('clear')}</Button>
               <Button size="sm" icon="download" onClick={onExport}>{t('export')}</Button>
               <Button size="sm" icon="upload" variant={sharedFlash ? 'accent' : 'default'} onClick={shareLink}>{sharedFlash ? t('shared_ok') : t('share')}</Button>
-              {view === 'notes' && <Button size="sm" icon="notes" onClick={() => window.print()}>{t('print')}</Button>}
+              {view === 'notes' && <Button size="sm" icon="notes" onClick={printNotes}>{t('print')}</Button>}
               <Button size="sm" icon="save" variant={savedFlash ? 'accent' : 'default'} onClick={onSave}>{savedFlash ? t('saved_ok') : t('save')}</Button>
             </>
           ) : (
             <>
               <Button size="sm" icon="download" onClick={onExport}>{t('export')}</Button>
               <Button size="sm" icon="upload" variant={sharedFlash ? 'accent' : 'default'} onClick={shareLink}>{sharedFlash ? t('shared_ok') : t('share')}</Button>
-              {view === 'notes' && <Button size="sm" icon="notes" onClick={() => window.print()}>{t('print')}</Button>}
+              {view === 'notes' && <Button size="sm" icon="notes" onClick={printNotes}>{t('print')}</Button>}
               <Button size="sm" icon="copy" onClick={onDuplicate}>{t('duplicate')}</Button>
             </>
           )}
@@ -464,7 +491,7 @@ export default function PracticeView({
         <div ref={playAreaRef} className="print-area">
           <div className="print-head">{item.name} · {item.bpm} {t('bpm')} · {sig}</div>
           <div className="notation-wrap">
-            <NotationView exercise={item} currentStep={localPlay}
+            <NotationView exercise={item} currentStep={localPlay} printWidth={printing ? 660 : 0}
               loopRange={loopRange} onBarClick={toggleLoopBar} barClickTitle={t('loopBarTitle')} />
           </div>
           <div className="notation-hint">

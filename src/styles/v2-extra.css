@@ -14,6 +14,9 @@
 .notation-inner { position: relative; }
 .vf-host { position: relative; z-index: 1; }
 .vf-host svg { display: block; }
+/* One SVG per staff line; sticking letters may dip past the line box. */
+.vf-line { overflow: visible; }
+.vf-line svg { display: block; overflow: visible; }
 .note-playhead {
   position: absolute;
   background: color-mix(in oklab, var(--accent) 26%, transparent);
@@ -314,10 +317,20 @@
 /* ---- Print: only the notation + a small header reach paper ---- */
 .print-head { display: none; }
 @media print {
+  @page { size: A4 portrait; margin: 12mm; }
   body { background: #fff !important; }
-  body * { visibility: hidden; }
-  .print-area, .print-area * { visibility: visible; }
-  .print-area { position: absolute; left: 0; top: 0; width: 100%; }
+  /* Remove all chrome so only the notation flows onto paper. Keeping the
+     print area in normal flow (not absolute) lets Chromium paginate it —
+     absolutely-positioned content gets clipped after a few pages. */
+  .topbar, .sidebar, .playerbar, .bottomnav,
+  .practice > *:not(.print-area) { display: none !important; }
+  .shell { display: block !important; min-height: 0 !important; }
+  .main { padding: 0 !important; margin: 0 !important; max-width: none !important; }
+  /* Never split a staff line across pages. Natural (svg) height: a child
+     taller than its box confuses Chromium's fragmentation and drops lines. */
+  .vf-line { break-inside: avoid; page-break-inside: avoid; height: auto !important; }
+  .notation-inner { height: auto !important; }
+  .print-head { break-after: avoid; page-break-after: avoid; }
   .print-head {
     display: block; visibility: visible; color: #111;
     font-weight: 700; font-size: 14pt; margin-bottom: 8pt;
