@@ -1,11 +1,13 @@
 import { Icon, NoteGlyph } from '../ui.jsx'
 import { parseSig, SUB_MULT } from './util.js'
 
-export function BeatDots({ sig, sub, step, playing, compact }) {
+export function BeatDots({ sig, sub, step, playing, compact, accents, onToggleBeat }) {
   const { num } = parseSig(sig)
   const mult = SUB_MULT[sub] || 1
   const perBar = num * mult
   const local = step >= 0 ? step % perBar : -1
+  // Which beats are accented: an explicit pattern, or just the downbeat.
+  const isAccented = (b) => (accents && accents.length ? !!accents[b % accents.length] : b === 0)
   const dots = []
   for (let b = 0; b < num; b++) {
     for (let s = 0; s < mult; s++) {
@@ -13,16 +15,20 @@ export function BeatDots({ sig, sub, step, playing, compact }) {
       const isMain = s === 0
       const active = playing && local === idx
       if (compact && !isMain) continue
-      dots.push(
-        <span
-          key={idx}
-          className={['beat', isMain ? '' : 'sub', b === 0 && isMain ? 'is-down' : '',
-            active ? 'is-active' : '', active && b === 0 && isMain ? 'is-down' : ''].join(' ')}
-        />,
-      )
+      const cls = ['beat', isMain ? '' : 'sub', isMain && isAccented(b) ? 'is-down' : '',
+        active ? 'is-active' : ''].join(' ')
+      if (isMain && onToggleBeat) {
+        dots.push(
+          <button key={idx} type="button" className={cls + ' beat-btn'}
+            aria-label={`beat ${b + 1}`} aria-pressed={isAccented(b)}
+            onClick={() => onToggleBeat(b)} />,
+        )
+      } else {
+        dots.push(<span key={idx} className={cls} />)
+      }
     }
   }
-  return <div className="beats" aria-hidden="true">{dots}</div>
+  return <div className="beats" aria-hidden={onToggleBeat ? undefined : 'true'}>{dots}</div>
 }
 
 // Meter-aware dots for exercises: the current bar's beats, each with its own

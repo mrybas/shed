@@ -422,3 +422,24 @@ test('tempo goal: set on an exercise, progress shows in workouts panel', async (
   await expect(page.locator('.pr-goals')).toContainText('Stick Control #1')
   await expect(page.locator('.pr-goals')).toContainText('100/120')
 })
+
+test('metronome accent pattern: preset chips and tap-to-accent persist', async ({ page }) => {
+  await page.locator('.metroview select.select').selectOption('7/8')
+  await expect(page.locator('.accent-presets .fchip', { hasText: '2+2+3' })).toBeVisible()
+  await page.locator('.accent-presets .fchip', { hasText: '2+2+3' }).click()
+  // 2+2+3 accents beats 1, 3, 5
+  const dots = page.locator('.metro-bigbeats .beat-btn')
+  await expect(dots.nth(0)).toHaveClass(/is-down/)
+  await expect(dots.nth(2)).toHaveClass(/is-down/)
+  await expect(dots.nth(4)).toHaveClass(/is-down/)
+  await expect(dots.nth(1)).not.toHaveClass(/is-down/)
+  // tap beat 2 to add an accent
+  await dots.nth(1).click()
+  await expect(dots.nth(1)).toHaveClass(/is-down/)
+  // persists across reload
+  await page.reload()
+  await expect(page.locator('.metro-bigbeats .beat-btn').nth(1)).toHaveClass(/is-down/)
+  // reset returns to downbeat only
+  await page.locator('.accent-presets .fchip', { hasText: 'Reset accents' }).click()
+  await expect(page.locator('.metro-bigbeats .beat-btn.is-down')).toHaveCount(1)
+})

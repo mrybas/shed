@@ -26,7 +26,7 @@ import { generateRhythm, exerciseOfTheDay } from './data/generator.js'
 import { loadFavs, toggleFav } from './model/favs.js'
 import { decodeShare, shareFromHash } from './model/share.js'
 
-const APP_VERSION = 'v5.17' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v5.18' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -238,6 +238,7 @@ export default function App() {
       sched.setTimeSignature(sigToTimeSignature(metro.sig))
       sched.setSubdivision(metro.sub)
       sched.setAccentFirst(metro.accentOne)
+      sched.setAccentBeats(metro.accents)
       sched.setSoundSubdivisions(metro.soundSubs)
       sched.setMetronomeEnabled(true)
       sched.setMetronomeVolume(metro.vol / 100)
@@ -261,6 +262,7 @@ export default function App() {
       sched.setTimeSignature(item.timeSignature)
       sched.setSubdivision(item.subdivision)
       sched.setAccentFirst(options.accentOne)
+      sched.setAccentBeats(null)
       sched.setSoundSubdivisions(options.soundSubs)
       sched.setMetronomeEnabled(options.metroWith)
       sched.setMetronomeVolume(vols.metro / 100)

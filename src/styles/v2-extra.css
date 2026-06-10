@@ -479,3 +479,8 @@
 .goal-ok:hover, .goal-clear:hover { color: var(--text); border-color: var(--border-strong); }
 .pr-goal-track { flex: 1 1 60px; max-width: 120px; height: 5px; border-radius: 3px; background: var(--surface-inset); overflow: hidden; margin: 0 8px; }
 .pr-goal-fill { display: block; height: 100%; background: var(--accent); }
+
+/* ---- Metronome accent pattern ---- */
+.beat-btn { cursor: pointer; padding: 0; }
+.beat-btn:hover { border-color: var(--accent); }
+.accent-presets { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: var(--s-3); }

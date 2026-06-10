@@ -56,6 +56,7 @@ export class Scheduler {
     this.accentFirst = true
     this.metronomeEnabled = true
     this.soundSubdivisions = false // also click on non-beat steps
+    this.accentBeats = null // per-beat accent pattern (array of booleans) or null = downbeat only
     this.metronomeVolume = 1 // 0..2 multiplier for click loudness
     this.patternVolume = 1 // 0..2 multiplier for exercise (drum) loudness
     this.mixer = {} // per-instrument 0..2 multiplier (absent = 1; 0 mutes)
@@ -371,7 +372,12 @@ export class Scheduler {
     const muted = this.metronomeMuted()
     if (isBeat) {
       if (this.metronomeEnabled && !muted) {
-        const kind = isDownbeat && this.accentFirst ? 'accent' : 'normal'
+        let kind = 'normal'
+        if (this.accentBeats && this.accentBeats.length) {
+          kind = this.accentBeats[this._beatIndexInBar(step) % this.accentBeats.length] ? 'accent' : 'normal'
+        } else if (isDownbeat && this.accentFirst) {
+          kind = 'accent'
+        }
         click(ctx, time, master, kind, this.metronomeVolume)
       }
     } else if (this.soundSubdivisions && !muted) {
@@ -410,6 +416,17 @@ export class Scheduler {
     }
 
     this.notesInQueue.push({ step, time })
+  }
+
+  // Zero-based beat number within the bar that contains `step`.
+  _beatIndexInBar(step) {
+    const beatAt = (i) => (this._isBeat ? !!this._isBeat[i] : i % spbOf(this.subdivision) === 0)
+    const barStartAt = (i) => (this._isBarStart ? !!this._isBarStart[i] : i === 0)
+    let start = step
+    while (start > 0 && !barStartAt(start)) start--
+    let idx = 0
+    for (let i = start + 1; i <= step; i++) if (beatAt(i)) idx++
+    return idx
   }
 
   _anyOnset(step) {

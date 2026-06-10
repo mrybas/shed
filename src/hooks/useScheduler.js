@@ -106,6 +106,7 @@ export function useScheduler(initial = {}) {
   const setMetronomeVolume = useCallback((v) => { sched.metronomeVolume = v }, [sched])
   const setPatternVolume = useCallback((v) => { sched.patternVolume = v }, [sched])
   const setMixer = useCallback((v) => { sched.mixer = v || {} }, [sched])
+  const setAccentBeats = useCallback((v) => { sched.accentBeats = v && v.length ? v : null }, [sched])
 
   return {
     isPlaying,
@@ -134,6 +135,7 @@ export function useScheduler(initial = {}) {
     setMetronomeVolume,
     setPatternVolume,
     setMixer,
+    setAccentBeats,
     scheduler: sched,
   }
 }

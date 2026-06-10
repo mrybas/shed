@@ -106,6 +106,8 @@ export const translations = {
     goalTitle: 'Tempo goal',
     goalClear: 'Clear goal',
     prGoals: 'Tempo goals',
+    accentTapHint: 'Tap a beat to accent it',
+    accentReset: 'Reset accents',
     openExercise: 'Open exercise',
     closeExercise: 'Close exercise',
     viewOnly: 'View only — duplicate to edit',

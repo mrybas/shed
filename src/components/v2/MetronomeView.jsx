@@ -1,12 +1,39 @@
 import { useCallback } from 'react'
 import { Slider, NumberStepper, NotePicker, NoteGlyph, Switch, Button, Icon } from '../ui.jsx'
 import { BeatDots } from './PlayerBar.jsx'
-import { TIME_SIGS } from './util.js'
+import { TIME_SIGS, parseSig } from './util.js'
 import { useTapTempo } from '../../hooks/useTapTempo.js'
+
+// Beat groupings that make musical sense per meter (e.g. 8/8 as 3+3+2).
+const ACCENT_PRESETS = {
+  5: ['3+2', '2+3'],
+  6: ['3+3', '2+2+2'],
+  7: ['2+2+3', '3+2+2', '2+3+2'],
+  8: ['3+3+2', '2+3+3', '3+2+3'],
+  12: ['3+3+3+3', '4+4+4'],
+}
+const groupingToAccents = (g, beats) => {
+  const arr = Array.from({ length: beats }, () => false)
+  let i = 0
+  g.split('+').forEach((n) => { if (i < beats) arr[i] = true; i += Number(n) })
+  return arr
+}
 
 export default function MetronomeView({ t, metro, setMetro, playing, step, liveSub }) {
   const set = (patch) => setMetro((m) => ({ ...m, ...patch }))
   const tap = useTapTempo(useCallback((bpm) => setMetro((m) => ({ ...m, bpm })), [setMetro]))
+  const beats = parseSig(metro.sig).num
+  // Tap a beat dot to toggle its accent; the pattern starts from the plain
+  // "accent the downbeat" default.
+  const toggleAccent = (b) => setMetro((m) => {
+    const base = m.accents && m.accents.length === beats
+      ? [...m.accents]
+      : Array.from({ length: beats }, (_, i) => i === 0 && m.accentOne)
+    base[b] = !base[b]
+    return { ...m, accents: base }
+  })
+  const presets = ACCENT_PRESETS[beats] || []
+  const accentsEqual = (a, b) => a && b && a.length === b.length && a.every((v, i) => !!v === !!b[i])
 
   return (
     <div className="metroview" data-screen-label="Metronome">
@@ -18,8 +45,26 @@ export default function MetronomeView({ t, metro, setMetro, playing, step, liveS
           <span className="metro-bpm-unit">{t('bpm')}</span>
         </div>
         <div className="metro-bigbeats">
-          <BeatDots sig={metro.sig} sub={playing && liveSub ? liveSub : metro.sub} step={step} playing={playing} />
+          <BeatDots sig={metro.sig} sub={playing && liveSub ? liveSub : metro.sub} step={step} playing={playing}
+            accents={metro.accents && metro.accents.length === beats ? metro.accents : null}
+            onToggleBeat={toggleAccent} />
         </div>
+        {(presets.length > 0 || metro.accents) && (
+          <div className="accent-presets">
+            <span className="muted-line">{t('accentTapHint')}</span>
+            {presets.map((g) => {
+              const arr = groupingToAccents(g, beats)
+              const on = accentsEqual(metro.accents, arr)
+              return (
+                <button key={g} className={'fchip' + (on ? ' is-active' : '')}
+                  onClick={() => set({ accents: arr })}>{g}</button>
+              )
+            })}
+            {metro.accents && (
+              <button className="fchip" onClick={() => set({ accents: null })}>{t('accentReset')}</button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="card">
@@ -35,7 +80,7 @@ export default function MetronomeView({ t, metro, setMetro, playing, step, liveS
           <div className="meter-block">
             <div className="blk">
               <span className="field-label">{t('timeSig')}</span>
-              <select className="select" value={metro.sig} onChange={(e) => set({ sig: e.target.value })}>
+              <select className="select" value={metro.sig} onChange={(e) => set({ sig: e.target.value, accents: null })}>
                 {TIME_SIGS.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
@@ -98,7 +143,7 @@ export default function MetronomeView({ t, metro, setMetro, playing, step, liveS
           <div className="group col-7">
             <span className="field-label">{t('options')}</span>
             <div className="toggles">
-              <Switch checked={metro.accentOne} onChange={(v) => set({ accentOne: v })} label={t('accentFirst')} icon="accent" />
+              <Switch checked={metro.accentOne} onChange={(v) => set({ accentOne: v, accents: null })} label={t('accentFirst')} icon="accent" />
               <Switch checked={metro.soundSubs} onChange={(v) => set({ soundSubs: v })} label={t('countSubdivisions')} icon="notes" />
             </div>
           </div>

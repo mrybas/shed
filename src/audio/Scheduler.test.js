@@ -695,3 +695,46 @@ describe('roll stroke rate follows the tempo', () => {
     expect(drumRoll.mock.calls[0][7]).toBeCloseTo(16)
   })
 })
+
+describe('metronome accent patterns', () => {
+  beforeEach(() => { vi.clearAllMocks() })
+
+  it('accentBeats decides which beats click accented', () => {
+    const s = new Scheduler()
+    s.bpm = 120
+    s.timeSignature = { beats: 4, unit: 4 }
+    s.subdivision = 'quarter'
+    s.metronomeEnabled = true
+    s.accentFirst = true
+    s.accentBeats = [true, false, true, false]
+    s._recompute()
+    ;[0, 1, 2, 3].forEach((st, i) => s._scheduleStep(st, 1 + i))
+    expect(click.mock.calls.map((c) => c[3])).toEqual(['accent', 'normal', 'accent', 'normal'])
+  })
+
+  it('without a pattern, only the downbeat is accented (legacy)', () => {
+    const s = new Scheduler()
+    s.bpm = 120
+    s.timeSignature = { beats: 3, unit: 4 }
+    s.subdivision = 'quarter'
+    s.metronomeEnabled = true
+    s.accentFirst = true
+    s._recompute()
+    ;[0, 1, 2].forEach((st, i) => s._scheduleStep(st, 1 + i))
+    expect(click.mock.calls.map((c) => c[3])).toEqual(['accent', 'normal', 'normal'])
+  })
+
+  it('accent pattern works on subdivided grids (beat index, not step index)', () => {
+    const s = new Scheduler()
+    s.bpm = 120
+    s.timeSignature = { beats: 2, unit: 4 }
+    s.subdivision = 'eighth'
+    s.metronomeEnabled = true
+    s.accentBeats = [false, true]
+    s._recompute()
+    ;[0, 1, 2, 3].forEach((st, i) => s._scheduleStep(st, 1 + i))
+    // steps 0,2 are beats; step 2 (beat 2) accented; offbeats are no clicks
+    const kinds = click.mock.calls.map((c) => c[3])
+    expect(kinds).toEqual(['normal', 'accent'])
+  })
+})
