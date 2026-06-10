@@ -395,3 +395,22 @@
 .mix-label.is-muted { color: var(--accent); text-decoration: line-through; }
 .sheet-hint { display: flex; align-items: center; gap: 6px; margin-top: var(--s-3); }
 .sheet-hint .v-ic { width: 16px; height: 16px; flex: none; }
+
+/* ---- Player bar: tappable title (mini-player) + close button ---- */
+.pb-now-btn {
+  background: none; border: none; padding: 0; margin: 0;
+  font: inherit; color: inherit; text-align: left; cursor: pointer;
+  border-radius: var(--r-sm);
+}
+.pb-now-btn:hover .pb-title { color: var(--accent); }
+.pb-close {
+  flex: none; display: grid; place-items: center;
+  width: 32px; height: 32px; border-radius: var(--r-sm);
+  border: 1px solid var(--border); background: var(--surface-2);
+  color: var(--text-3); cursor: pointer;
+}
+.pb-close:hover { color: var(--text); border-color: var(--border-strong); }
+.pb-close .ic { width: 14px; height: 14px; }
+@media (max-width: 900px) {
+  .pb-close { width: 28px; height: 28px; }
+}

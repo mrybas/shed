@@ -93,6 +93,8 @@ export const translations = {
     mixerReset: 'Reset',
     mixerHint: 'Set an instrument to 0% to play that part yourself.',
     close: 'Close',
+    openExercise: 'Open exercise',
+    closeExercise: 'Close exercise',
     viewOnly: 'View only — duplicate to edit',
     saved_ok: 'Saved ✓',
     duplicate: 'Duplicate to edit',

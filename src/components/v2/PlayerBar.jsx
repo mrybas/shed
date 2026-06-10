@@ -59,10 +59,23 @@ function CompactSub({ value, onChange }) {
 
 const mmss = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`
 
+// The "now playing" block: a plain div normally, a button when tapping it
+// should reopen the current exercise.
+function NowBlock({ as, onOpenItem, t, children }) {
+  if (as === 'button') {
+    return (
+      <button type="button" className="pb-now pb-now-btn" onClick={onOpenItem} title={t('openExercise')}>
+        {children}
+      </button>
+    )
+  }
+  return <div className="pb-now">{children}</div>
+}
+
 export default function PlayerBar({
   t, mode, title, sourceLabel, cat, bpm, setBpm, sig, sub, setSub, showSub,
   soundSubs, onToggleSoundSubs, step, playing, onToggle, gapMuted, countingIn, barView, loopRange,
-  workout, onWorkoutSkip, onWorkoutStop,
+  workout, onWorkoutSkip, onWorkoutStop, onOpenItem, onClearItem,
 }) {
   const bars = barView ? barView.bars : 1
   const curBar = barView ? barView.barIndex + 1 : 0
@@ -98,7 +111,8 @@ export default function PlayerBar({
           <Icon name={playing ? 'stop' : 'play'} />
         </button>
 
-        <div className="pb-now">
+        {/* Tapping the title returns to the open exercise (mini-player pattern). */}
+        <NowBlock as={onOpenItem ? 'button' : 'div'} onOpenItem={onOpenItem} t={t}>
           <div className="pb-title-row">
             <span className="pb-eyebrow">{mode === 'metronome' ? t('metronome') : t('nowPlaying')}</span>
             {countingIn && <span className="pb-muted-pill">{t('countingInTag')}</span>}
@@ -107,7 +121,7 @@ export default function PlayerBar({
           </div>
           <div className="pb-title">{mode === 'metronome' ? `${sig} · ${bpm} ${t('bpm')}` : title}</div>
           {sourceLabel && <div className="pb-source">{sourceLabel}</div>}
-        </div>
+        </NowBlock>
 
         <div className="pb-beats">
           {loopRange && <span className="pb-muted-pill">{t('loopTag')} {loopRange.from + 1}–{loopRange.to + 1}</span>}
@@ -139,6 +153,12 @@ export default function PlayerBar({
           </div>
           <button className="pb-step" aria-label="+5 BPM" onClick={() => setBpm(Math.min(260, bpm + 5))}>+</button>
         </div>
+
+        {onClearItem && (
+          <button className="pb-close" onClick={onClearItem} title={t('closeExercise')} aria-label={t('closeExercise')}>
+            <Icon name="close" className="ic" />
+          </button>
+        )}
       </div>
     </div>
   )

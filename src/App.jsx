@@ -24,7 +24,7 @@ import {
 import { logPracticeSeconds, logTempo, flushJournal, exportJournal, mergeJournal, getTempoStats } from './model/progress.js'
 import { decodeShare, shareFromHash } from './model/share.js'
 
-const APP_VERSION = 'v5.7' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v5.8' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -297,6 +297,15 @@ export default function App() {
     setNav('practice')
   }
   const newExercise = () => { if (runRef.current) { setRun(null); restoreUserOptions() } setPracticeView('grid'); setItem(createEmptyExercise({ source: 'user', name: t('newExercise') })); setLoopRange(null); setNav('practice') }
+  // Fully close the exercise from the player bar: stop the transport and
+  // return the bar to plain-metronome duty.
+  const closeItem = () => {
+    if (runRef.current) { setRun(null); restoreUserOptions() }
+    sched.stop()
+    setItem(null)
+    setLoopRange(null)
+    if (nav === 'practice') setNav('library')
+  }
 
   // ---- Workout runner ----
   const restoreUserOptions = useCallback(() => {
@@ -619,7 +628,9 @@ export default function App() {
         onToggleSoundSubs={(v) => mode === 'metronome' ? setMetro((m) => ({ ...m, soundSubs: v })) : setOptions((o) => ({ ...o, soundSubs: v }))}
         step={step} playing={playing} onToggle={sched.toggle} gapMuted={sched.gapMuted} countingIn={sched.countingIn}
         barView={barView} loopRange={mode === 'practice' ? loopRange : null}
-        workout={runView} onWorkoutSkip={advanceWorkout} onWorkoutStop={stopWorkout} />
+        workout={runView} onWorkoutSkip={advanceWorkout} onWorkoutStop={stopWorkout}
+        onOpenItem={mode === 'practice' && nav !== 'practice' ? () => setNav('practice') : null}
+        onClearItem={mode === 'practice' ? closeItem : null} />
 
       <nav className="bottomnav">
         <button className={'bn-link' + (nav === 'metronome' ? ' is-active' : '')} onClick={() => navTo('metronome')}>

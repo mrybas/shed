@@ -265,3 +265,21 @@ test('navigating away from a playing exercise pauses it', async ({ page }) => {
   await expect(page.locator('.pb-play')).not.toHaveClass(/is-playing/)
   await expect(page.locator('.pb-now .pb-title')).not.toHaveText('')
 })
+
+test('player bar reopens the paused exercise; close clears it', async ({ page }) => {
+  await page.locator('.side-parent-main').click()
+  await page.locator('.cat-card').first().click()
+  await page.locator('.exrow').first().click()
+  const title = await page.locator('.pb-title').textContent()
+  // Leave the exercise — the bar keeps it and the title becomes a button.
+  await page.locator('.prac-back').click()
+  await expect(page.locator('.practice')).toHaveCount(0)
+  await page.locator('.pb-now-btn').click()
+  await expect(page.locator('.practice')).toBeVisible()
+  await expect(page.locator('.pb-title')).toHaveText(title)
+  // Close from the bar: transport reverts to plain metronome.
+  await page.locator('.pb-close').click()
+  await expect(page.locator('.practice')).toHaveCount(0)
+  await expect(page.locator('.pb-close')).toHaveCount(0)
+  await expect(page.locator('.pb-title')).toContainText('/')
+})
