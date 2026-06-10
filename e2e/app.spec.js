@@ -480,3 +480,16 @@ test('sections: label a bar, click loops the section, label shows in notes', asy
   await page.locator('.view-bar .seg-item', { hasText: 'Notes' }).click()
   await expect(page.locator('.note-seclabel', { hasText: 'Chorus' })).toBeVisible()
 })
+
+test('performance mode: fullscreen notation opens and closes', async ({ page }) => {
+  await page.locator('.side-parent-main').click()
+  await page.locator('.cat-card').first().click()
+  await page.locator('.exrow').first().click()
+  await page.getByRole('button', { name: 'Full screen' }).click()
+  await expect(page.locator('.perf-overlay')).toBeVisible()
+  await expect(page.locator('.perf-overlay .vf-line svg').first()).toBeVisible()
+  // the transport stays reachable (player bar above the overlay)
+  await expect(page.locator('.pb-play')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.perf-overlay')).toHaveCount(0)
+})

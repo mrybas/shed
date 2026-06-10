@@ -522,3 +522,29 @@
 @media print {
   .note-seclabel { border: none; background: none; color: #111; font-size: 9pt; }
 }
+
+/* ---- Performance mode: fullscreen notation over the app (player bar stays) ---- */
+.perf-overlay {
+  position: fixed; inset: 0; z-index: 45; /* below the player bar (50) */
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  padding-bottom: calc(var(--pb-h, 84px) + 12px);
+}
+.perf-head {
+  flex: none; display: flex; align-items: center; gap: var(--s-4);
+  padding: 12px clamp(16px, 3vw, 32px);
+  border-bottom: 1px solid var(--border-soft);
+}
+.perf-title { font-weight: 700; font-size: 1.05rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.perf-meta { color: var(--text-3); }
+.perf-close {
+  margin-left: auto; flex: none; width: 36px; height: 36px; border-radius: var(--r-sm);
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--text-2);
+  cursor: pointer; font-size: 15px;
+}
+.perf-close:hover { color: var(--text); border-color: var(--border-strong); }
+.perf-notes {
+  flex: 1 1 auto; overflow-y: auto; padding: var(--s-5) clamp(16px, 3vw, 32px);
+}
+.perf-notes .notation-inner { background: var(--notation-paper); border-radius: var(--r-md); }
+@media (max-width: 700px) { .perf-overlay { padding-bottom: calc(var(--pb-h, 84px) + var(--bn-h, 56px)); } }

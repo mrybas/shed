@@ -114,6 +114,7 @@ export const translations = {
     sectionEdit: 'Label section',
     sectionPlaceholder: 'Verse, Chorus, A…',
     sectionLoopTitle: 'Loop this section',
+    perform: 'Full screen',
     openExercise: 'Open exercise',
     closeExercise: 'Close exercise',
     viewOnly: 'View only — duplicate to edit',

@@ -14,7 +14,7 @@ const COMFY_NOTE_PX = 30
 const CLEF_W = 42
 const TS_W = 30
 
-export default function NotationView({ exercise, currentStep, loopRange, onBarClick, barClickTitle, onSectionClick, printWidth = 0 }) {
+export default function NotationView({ exercise, currentStep, loopRange, onBarClick, barClickTitle, onSectionClick, printWidth = 0, zoom = 1 }) {
   const wrapRef = useRef(null)
   const hostRef = useRef(null)
   const [meta, setMeta] = useState([])
@@ -39,9 +39,13 @@ export default function NotationView({ exercise, currentStep, loopRange, onBarCl
 
   // Print: lay out at a wider logical width, then scale the SVGs down to the
   // paper width — smaller engraved notes, two 16th-grid bars per line.
+  // `zoom` does the inverse (performance mode): narrower logical layout scaled
+  // up, so the engraved glyphs themselves get bigger.
   const PRINT_SCALE = 0.6
-  const outScale = printWidth ? PRINT_SCALE : 1
-  const layoutWidth = printWidth ? Math.round(printWidth / PRINT_SCALE) : containerWidth
+  const outScale = printWidth ? PRINT_SCALE : zoom
+  const layoutWidth = printWidth
+    ? Math.round(printWidth / PRINT_SCALE)
+    : (containerWidth ? Math.round(containerWidth / (zoom || 1)) : 0)
 
   useEffect(() => {
     const host = hostRef.current

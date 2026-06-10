@@ -312,6 +312,33 @@ export default function PracticeView({
     }
   }
 
+  // Performance mode: fullscreen notation for the music stand.
+  const [perfMode, setPerfMode] = useState(false)
+  const perfScrollRef = useRef(null)
+  useEffect(() => {
+    if (!perfMode) return
+    const onKey = (e) => { if (e.key === 'Escape') setPerfMode(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [perfMode])
+  useEffect(() => { setPerfMode(false) }, [item.id])
+  // Auto-scroll the fullscreen notation so the playhead's line stays visible.
+  const perfLineTopRef = useRef(-1)
+  useEffect(() => {
+    if (!perfMode || !playing) return
+    const box = perfScrollRef.current
+    const ph = box?.querySelector('.note-playhead')
+    if (!box || !ph) return
+    const top = ph.offsetTop
+    if (top === perfLineTopRef.current) return
+    perfLineTopRef.current = top
+    const view = box.getBoundingClientRect()
+    const phr = ph.getBoundingClientRect()
+    if (phr.top < view.top + 8 || phr.bottom > view.bottom - 40) {
+      ph.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    }
+  }, [perfMode, playing, step])
+
   // Global sound settings (kit + mixer) live in a bottom sheet.
   const [soundOpen, setSoundOpen] = useState(false)
   // Re-render hook for tempo-goal edits (journal is outside React state).
@@ -546,6 +573,7 @@ export default function PracticeView({
               <Button size="sm" icon="clear" onClick={clearCells}>{t('clear')}</Button>
               <Button size="sm" icon="download" onClick={onExport}>{t('export')}</Button>
               <Button size="sm" icon="upload" variant={sharedFlash ? 'accent' : 'default'} onClick={shareLink}>{sharedFlash ? t('shared_ok') : t('share')}</Button>
+              {view === 'notes' && <Button size="sm" icon="chevup" onClick={() => setPerfMode(true)}>{t('perform')}</Button>}
               {view === 'notes' && <Button size="sm" icon="notes" onClick={printNotes}>{t('print')}</Button>}
               <Button size="sm" icon="save" variant={savedFlash ? 'accent' : 'default'} onClick={onSave}>{savedFlash ? t('saved_ok') : t('save')}</Button>
             </>
@@ -556,6 +584,7 @@ export default function PracticeView({
               )}
               <Button size="sm" icon="download" onClick={onExport}>{t('export')}</Button>
               <Button size="sm" icon="upload" variant={sharedFlash ? 'accent' : 'default'} onClick={shareLink}>{sharedFlash ? t('shared_ok') : t('share')}</Button>
+              {view === 'notes' && <Button size="sm" icon="chevup" onClick={() => setPerfMode(true)}>{t('perform')}</Button>}
               {view === 'notes' && <Button size="sm" icon="notes" onClick={printNotes}>{t('print')}</Button>}
               <Button size="sm" icon="copy" onClick={onDuplicate}>{t('duplicate')}</Button>
             </>
@@ -752,6 +781,21 @@ export default function PracticeView({
         <span className="cl-item"><span className="cl-sw cell art">▲</span>{t('legendBell')}</span>
         <span className="cl-item"><span className="cl-rl">R / L</span>{t('legendSticking')}</span>
       </div>
+      )}
+
+      {perfMode && (
+        <div className="perf-overlay">
+          <div className="perf-head">
+            <span className="perf-title">{item.name}</span>
+            <span className="perf-meta num">{item.bpm} {t('bpm')} · {sig}</span>
+            <button className="perf-close" onClick={() => setPerfMode(false)} aria-label={t('close')}>✕</button>
+          </div>
+          <div className="perf-notes" ref={perfScrollRef}>
+            <NotationView exercise={item} currentStep={localPlay} zoom={1.5}
+              loopRange={loopRange} onBarClick={toggleLoopBar} barClickTitle={t('loopBarTitle')}
+              onSectionClick={loopSection} />
+          </div>
+        </div>
       )}
 
       <SoundSheet t={t} open={soundOpen} onClose={() => setSoundOpen(false)} vols={vols} setVols={setVols} />
