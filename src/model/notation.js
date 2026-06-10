@@ -81,6 +81,7 @@ export function buildNotationData(ex) {
       open: active.some((inst) => RENDER_INFO[inst]?.open),
       rim: active.some((inst) => inst === 'snare' && ex.rows[inst][step].art === 'rim'),
       roll: (active.find((inst) => ex.rows[inst][step].roll) && ex.rows[active[0]][step].roll) || 0,
+      tie: active.some((inst) => ex.rows[inst][step].roll && ex.rows[inst][step].tie),
       keys: active.map(renderFor).filter(Boolean).sort((a, b) => a.order - b.order).map((r) => r.key),
       sticking: ex.sticking[step] || '',
     }
@@ -109,7 +110,7 @@ export function buildNotationData(ex) {
           const info = stepInfo(gi)
           tickables.push({
             rest: !info.onset, keys: info.onset ? info.keys : ['b/4'], durKind: tDur, dots: 0,
-            accent: info.onset && info.accent, flam: info.onset && info.flam, ghost: info.onset && info.ghost, open: info.onset && info.open, rim: info.onset && info.rim, roll: info.onset ? info.roll : 0,
+            accent: info.onset && info.accent, flam: info.onset && info.flam, ghost: info.onset && info.ghost, open: info.onset && info.open, rim: info.onset && info.rim, roll: info.onset ? info.roll : 0, tie: info.onset && info.tie,
             sticking: info.onset ? info.sticking : '', startStep: gi, span: 1,
           })
         }
@@ -121,7 +122,7 @@ export function buildNotationData(ex) {
           const info = stepInfo(gi)
           tickables.push({
             rest: !info.onset, keys: info.onset ? info.keys : ['b/4'], durKind, dots: 0,
-            accent: info.onset && info.accent, flam: info.onset && info.flam, ghost: info.onset && info.ghost, open: info.onset && info.open, rim: info.onset && info.rim, roll: info.onset ? info.roll : 0,
+            accent: info.onset && info.accent, flam: info.onset && info.flam, ghost: info.onset && info.ghost, open: info.onset && info.open, rim: info.onset && info.rim, roll: info.onset ? info.roll : 0, tie: info.onset && info.tie,
             sticking: info.onset ? info.sticking : '', startStep: gi, span: 1,
           })
         }
@@ -138,7 +139,7 @@ export function buildNotationData(ex) {
           const durKind = shiftDur(baseDur, shift)
           tickables.push({
             rest: !info.onset, keys: info.onset ? info.keys : ['b/4'], durKind, dots,
-            accent: info.onset && info.accent, flam: info.onset && info.flam, ghost: info.onset && info.ghost, open: info.onset && info.open, rim: info.onset && info.rim, roll: info.onset ? info.roll : 0,
+            accent: info.onset && info.accent, flam: info.onset && info.flam, ghost: info.onset && info.ghost, open: info.onset && info.open, rim: info.onset && info.rim, roll: info.onset ? info.roll : 0, tie: info.onset && info.tie,
             sticking: info.onset ? info.sticking : '', startStep: gi, span,
           })
           p = q

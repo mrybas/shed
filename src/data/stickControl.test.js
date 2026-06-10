@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { getStickControlExercises } from './stickControl.js'
 import { barCount, getBars, exerciseTotalSteps } from '../model/exercise.js'
+import { buildNotationData } from '../model/notation.js'
 
 const list = getStickControlExercises()
 const single = list.filter((e) => e.section === 'single-beat')
@@ -143,5 +144,61 @@ describe('Stick Control — Flam Beats (pages 16–17)', () => {
     const m = marks(fb(48))
     expect(m.flams).toEqual([0, 4, 8, 10, 12, 14])
     expect(m.sticking).toBe('RLRLRLRRLLRRLL')
+  })
+})
+
+describe('Short Rolls and Triplets (pages 14-15)', () => {
+  const srt = getStickControlExercises().filter((e) => e.id.startsWith('sc_srt'))
+
+  it('has 24 exercises per page, two bars of cut time each', () => {
+    expect(srt).toHaveLength(48)
+    srt.forEach((ex) => {
+      expect(ex.bars).toHaveLength(2)
+      ex.bars.forEach((b) => expect(b.ts).toEqual({ beats: 2, unit: 2 }))
+      expect(ex.bars[1].beatSubs).toEqual(['sixteenth', 'sextuplet'])
+      expect(ex.section).toBe('rolls')
+      // bar 2 = 4 eighths + 6 triplet strokes, all onsets
+      const tail = ex.rows.snare.slice(-10)
+      expect(tail.every((c) => c.on)).toBe(true)
+    })
+  })
+
+  it('roll variants put a tied/untied half-note roll at the end of bar 1', () => {
+    const tied = srt.filter((e) => [9, 10, 21, 22].includes(e.number))
+    const untied = srt.filter((e) => [11, 12, 23, 24].includes(e.number))
+    expect(tied).toHaveLength(8)
+    expect(untied).toHaveLength(8)
+    tied.forEach((ex) => {
+      expect(ex.bars[0].beatSubs).toEqual(['sixteenth', 'quarter'])
+      const rollCell = ex.rows.snare[4]
+      expect(rollCell.roll).toBe('open')
+      expect(rollCell.tie).toBe(true)
+    })
+    untied.forEach((ex) => {
+      expect(ex.rows.snare[4].roll).toBe('open')
+      expect(ex.rows.snare[4].tie).toBeUndefined()
+    })
+  })
+
+  it('measured variants write 8 or 7 sixteenths; sticking matches the page', () => {
+    const ex1 = srt.find((e) => e.id === 'sc_srt14_1')
+    expect(ex1.sticking.join('')).toBe('RLRL' + 'RLRLRLRL' + 'RLRL' + 'RLRLRL')
+    const ex3 = srt.find((e) => e.id === 'sc_srt14_3')
+    expect(ex3.rows.snare[11].on).toBe(false) // the roll's release rest
+    const p15one = srt.find((e) => e.id === 'sc_srt15_1')
+    expect(p15one.sticking.join('')).toBe('RLRR' + 'LRLRLRLR' + 'LRLL' + 'RLRLRL')
+  })
+
+  it('renders to notation with the tie flag on the bar-final roll', () => {
+    const tied = getStickControlExercises().find((e) => e.id === 'sc_srt14_9')
+    const data = buildNotationData(tied)
+    const bar1Ticks = data.beatsData.filter((b) => b.bar === 0).flatMap((b) => b.tickables)
+    const last = bar1Ticks[bar1Ticks.length - 1]
+    expect(last.roll).toBe('open')
+    expect(last.tie).toBe(true)
+    const untied = getStickControlExercises().find((e) => e.id === 'sc_srt14_11')
+    const u = buildNotationData(untied)
+    const uTicks = u.beatsData.filter((b) => b.bar === 0).flatMap((b) => b.tickables)
+    expect(uTicks[uTicks.length - 1].tie).toBe(false)
   })
 })

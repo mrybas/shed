@@ -640,6 +640,8 @@ export default function PracticeView({
         </div>
       )}
 
+      {/* Legend explains the grid symbols — irrelevant on the notes view. */}
+      {view === 'grid' && (
       <div className="cell-legend">
         <span className="cl-title">{t('legendTitle')}</span>
         <span className="cl-item"><span className="cl-sw cell on" />{t('legendHit')}</span>
@@ -653,6 +655,7 @@ export default function PracticeView({
         <span className="cl-item"><span className="cl-sw cell art">▲</span>{t('legendBell')}</span>
         <span className="cl-item"><span className="cl-rl">R / L</span>{t('legendSticking')}</span>
       </div>
+      )}
 
       <SoundSheet t={t} open={soundOpen} onClose={() => setSoundOpen(false)} vols={vols} setVols={setVols} />
     </div>

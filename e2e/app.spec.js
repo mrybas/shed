@@ -359,3 +359,15 @@ test('ghost cells do not widen the grid', async ({ page }) => {
   await expect(cell).toHaveClass(/\bghost\b/)
   expect(Math.abs(await width() - before)).toBeLessThan(1)
 })
+
+test('legend shows in grid view only; tied roll exercise renders', async ({ page }) => {
+  await page.locator('.side-parent-main').click()
+  await page.locator('.side-subitem', { hasText: 'Rolls' }).click()
+  await page.locator('.exrow', { hasText: 'Short Rolls & Triplets 14.9' }).click()
+  // Notes view: notation renders, no legend.
+  await expect(page.locator('.notation-wrap .vf-line svg').first()).toBeVisible()
+  await expect(page.locator('.cell-legend')).toHaveCount(0)
+  // Grid view: legend present.
+  await page.locator('.view-bar .seg-item', { hasText: 'Grid' }).click()
+  await expect(page.locator('.cell-legend')).toBeVisible()
+})

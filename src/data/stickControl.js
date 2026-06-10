@@ -227,6 +227,105 @@ function getRollProgressions() {
   ]
 }
 
+// ---- Short Rolls and Triplets (pages 14–15, #1–24 each) -------------------
+// Two bars of cut time. Bar 1: four eighths (the single beat) + either a
+// measured roll (eight or seven 16ths) or a long roll written as a slashed
+// half note; bar 2: four eighths + two eighth-note triplet groups. The long
+// rolls come tied (resolving into bar 2's downbeat) and untied.
+//
+// spec.b2 is the bar-1 second half: 8 chars of 16ths ('.' = rest), or
+// { roll: true, tied } for the half-note roll.
+function shortRollTriplet(page, num, e1, b2, e2, trip) {
+  const bar2Subs = ['sixteenth', 'sextuplet']
+  const bar1Subs = ['sixteenth', typeof b2 === 'string' ? 'thirtysecond' : 'quarter']
+  const ex = createEmptyExercise({
+    id: `sc_srt${page}_${num}`,
+    name: `Short Rolls & Triplets ${page}.${num}`,
+    bpm: 66,
+    timeSignature: { beats: 2, unit: 2 },
+    bars: [
+      { ts: { beats: 2, unit: 2 }, beatSubs: bar1Subs },
+      { ts: { beats: 2, unit: 2 }, beatSubs: bar2Subs },
+    ],
+    source: 'stick-control', section: 'rolls', number: num, page, tags: ['roll'],
+  })
+  let i = 0
+  const put = (ch, extra = {}) => {
+    if (ch !== '.') {
+      ex.rows.snare[i] = { on: true, accent: false, roll: 0, ...extra }
+      if (ch !== '~') ex.sticking[i] = ch.toUpperCase()
+    }
+    i++
+  }
+  e1.split('').forEach((ch) => put(ch))
+  if (typeof b2 === 'string') b2.split('').forEach((ch) => put(ch))
+  else put('~', { roll: 'open', ...(b2.tied ? { tie: true } : {}) })
+  e2.split('').forEach((ch) => put(ch))
+  trip.replace(/\s+/g, '').split('').forEach((ch) => put(ch))
+  return ex
+}
+
+const ROLL_T = { roll: true, tied: true }
+const ROLL_U = { roll: true, tied: false }
+
+// Verified against 300dpi crops of the printed pages.
+function getShortRollsTriplets() {
+  const out = []
+  const add = (page, num, e1, b2, e2, trip) => out.push(shortRollTriplet(page, num, e1, b2, e2, trip))
+  // Page 14 — alternating singles (1–12) and doubles lead (13–24).
+  add(14, 1, 'RLRL', 'RLRLRLRL', 'RLRL', 'RLR LRL')
+  add(14, 2, 'LRLR', 'LRLRLRLR', 'LRLR', 'LRL RLR')
+  add(14, 3, 'RLRL', 'RLRLRLR.', 'RLRL', 'RLR LRL')
+  add(14, 4, 'LRLR', 'LRLRLRL.', 'LRLR', 'LRL RLR')
+  add(14, 5, 'RLRL', 'RRLLRRLL', 'RLRL', 'RLR LRL')
+  add(14, 6, 'LRLR', 'LLRRLLRR', 'LRLR', 'LRL RLR')
+  add(14, 7, 'RLRL', 'RRLLRRL.', 'RLRL', 'RLR LRL')
+  add(14, 8, 'LRLR', 'LLRRLLR.', 'LRLR', 'LRL RLR')
+  add(14, 9, 'RLRL', ROLL_T, 'RLRL', 'RLR LRL')
+  add(14, 10, 'LRLR', ROLL_T, 'LRLR', 'LRL RLR')
+  add(14, 11, 'RLRL', ROLL_U, 'RLRL', 'RLR LRL')
+  add(14, 12, 'LRLR', ROLL_U, 'LRLR', 'LRL RLR')
+  add(14, 13, 'RRLL', 'RLRLRLRL', 'RRLL', 'RRL RRL')
+  add(14, 14, 'LLRR', 'LRLRLRLR', 'LLRR', 'LLR LLR')
+  add(14, 15, 'RRLL', 'RLRLRLR.', 'RRLL', 'RRL RRL')
+  add(14, 16, 'LLRR', 'LRLRLRL.', 'LLRR', 'LLR LLR')
+  add(14, 17, 'RRLL', 'RRLLRRLL', 'RRLL', 'RRL RRL')
+  add(14, 18, 'LLRR', 'LLRRLLRR', 'LLRR', 'LLR LLR')
+  add(14, 19, 'RRLL', 'RRLLRRL.', 'RRLL', 'RRL RRL')
+  add(14, 20, 'LLRR', 'LLRRLLR.', 'LLRR', 'LLR LLR')
+  add(14, 21, 'RRLL', ROLL_T, 'RRLL', 'RRL RRL')
+  add(14, 22, 'LLRR', ROLL_T, 'LLRR', 'LLR LLR')
+  add(14, 23, 'RRLL', ROLL_U, 'RRLL', 'RRL RRL')
+  add(14, 24, 'LLRR', ROLL_U, 'LLRR', 'LLR LLR')
+  // Page 15 — paradiddle lead (1–12) and inward paradiddle lead (13–24);
+  // the lead hand flips between the two bars.
+  add(15, 1, 'RLRR', 'LRLRLRLR', 'LRLL', 'RLR LRL')
+  add(15, 2, 'LRLL', 'RLRLRLRL', 'RLRR', 'LRL RLR')
+  add(15, 3, 'RLRR', 'LRLRLRL.', 'LRLL', 'RLR LRL')
+  add(15, 4, 'LRLL', 'RLRLRLR.', 'RLRR', 'LRL RLR')
+  add(15, 5, 'RLRR', 'LLRRLLRR', 'LRLL', 'RLR LRL')
+  add(15, 6, 'LRLL', 'RRLLRRLL', 'RLRR', 'LRL RLR')
+  add(15, 7, 'RLRR', 'LLRRLLR.', 'LRLL', 'RLR LRL')
+  add(15, 8, 'LRLL', 'RRLLRRL.', 'RLRR', 'LRL RLR')
+  add(15, 9, 'RLRR', ROLL_T, 'LRLL', 'RLR LRL')
+  add(15, 10, 'LRLL', ROLL_T, 'RLRR', 'LRL RLR')
+  add(15, 11, 'RLRR', ROLL_U, 'LRLL', 'RLR LRL')
+  add(15, 12, 'LRLL', ROLL_U, 'RLRR', 'LRL RLR')
+  add(15, 13, 'RLLR', 'LRLRLRLR', 'LRRL', 'RRL RRL')
+  add(15, 14, 'LRRL', 'RLRLRLRL', 'RLLR', 'LLR LLR')
+  add(15, 15, 'RLLR', 'LRLRLRL.', 'LRRL', 'RRL RRL')
+  add(15, 16, 'LRRL', 'RLRLRLR.', 'RLLR', 'LLR LLR')
+  add(15, 17, 'RLLR', 'LLRRLLRR', 'LRRL', 'RRL RRL')
+  add(15, 18, 'LRRL', 'RRLLRRLL', 'RLLR', 'LLR LLR')
+  add(15, 19, 'RLLR', 'LLRRLLR.', 'LRRL', 'RRL RRL')
+  add(15, 20, 'LRRL', 'RRLLRRL.', 'RLLR', 'LLR LLR')
+  add(15, 21, 'RLLR', ROLL_T, 'LRRL', 'RRL RRL')
+  add(15, 22, 'LRRL', ROLL_T, 'RLLR', 'LLR LLR')
+  add(15, 23, 'RLLR', ROLL_U, 'LRRL', 'RRL RRL')
+  add(15, 24, 'LRRL', ROLL_U, 'RLLR', 'LLR LLR')
+  return out
+}
+
 // ---- Flam Beats (pages 16–17, #1–48) -------------------------------------
 // Each exercise: two bars of 2/4 on a 16th grid. Beat groups come in two
 // figures, exactly as printed: a 3-stroke group = eighth + two 16ths (strikes on
@@ -294,6 +393,7 @@ export function getStickControlExercises() {
   PAGE7.forEach((s, i) => out.push(singleBeat(i + 49, 7, s)))
   TRIPLET_BEAT1.forEach((b1, i) => out.push(triplet(i + 1, b1)))
   getRollExercises().forEach((ex) => out.push(ex))
+  getShortRollsTriplets().forEach((ex) => out.push(ex))
   getRollProgressions().forEach((ex) => out.push(ex))
   getFlamBeats().forEach((ex) => out.push(ex))
   return out

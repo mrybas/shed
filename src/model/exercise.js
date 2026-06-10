@@ -262,6 +262,7 @@ function copyCell(c) {
   if (c.flam) nc.flam = c.flam === 'drag' ? 'drag' : true
   if (c.ghost) nc.ghost = true
   if (c.art) nc.art = c.art // 'cross' | 'rim' | 'bell' (see ARTICULATIONS)
+  if (c.tie) nc.tie = true // roll resolves into the next onset (tied roll)
   return nc
 }
 

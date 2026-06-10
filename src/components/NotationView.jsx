@@ -136,6 +136,9 @@ export default function NotationView({ exercise, currentStep, loopRange, onBarCl
 
       const stepMeta = new Array(data.totalSteps)
       const boxes = []
+      // A tied roll at the end of a bar resolves into the next bar's first
+      // note: full tie within a line, partial tie hooks across a line break.
+      let pendingTie = null // { note, ctx }
 
       lines.forEach((lineBars, line) => {
         const lineTop = line * LINE_H
@@ -233,6 +236,23 @@ export default function NotationView({ exercise, currentStep, loopRange, onBarCl
           tuplets.forEach((tp) => tp.setContext(ctx).draw())
           ties.forEach((tie) => tie.setContext(ctx).draw())
 
+          // Resolve a tied roll left over from the previous bar.
+          if (pendingTie && notes.length) {
+            const target = tds[0].rest ? null : notes[0]
+            try {
+              if (target && pendingTie.ctx === ctx) {
+                new StaveTie({ first_note: pendingTie.note, last_note: target, first_indices: [0], last_indices: [0] }).setContext(ctx).draw()
+              } else if (target) {
+                // Line break: an out-hook on the roll, an in-hook on the target.
+                new StaveTie({ first_note: pendingTie.note, first_indices: [0] }).setContext(pendingTie.ctx).draw()
+                new StaveTie({ last_note: target, last_indices: [0] }).setContext(ctx).draw()
+              }
+            } catch { /* ignore */ }
+            pendingTie = null
+          }
+          const lastTd = tds[tds.length - 1]
+          if (lastTd && lastTd.roll && lastTd.tie) pendingTie = { note: notes[notes.length - 1], ctx }
+
           const staveRight = stave.getX() + stave.getWidth()
           const xs = notes.map((sn) => sn.getAbsoluteX())
           tds.forEach((td, idx) => {
@@ -264,6 +284,12 @@ export default function NotationView({ exercise, currentStep, loopRange, onBarCl
           }
         }
       })
+
+      // A tied roll on the very last bar wraps to the loop start — show the
+      // out-hook so the tie is visible.
+      if (pendingTie) {
+        try { new StaveTie({ first_note: pendingTie.note, first_indices: [0] }).setContext(pendingTie.ctx).draw() } catch { /* ignore */ }
+      }
 
       setBarBoxes(boxes)
       setMeta(stepMeta)
