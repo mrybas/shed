@@ -369,6 +369,20 @@ export function resizeExercise(ex, timeSignature, subdivision) {
   return rebuild(ex, timeSignature, beatSubs)
 }
 
+// Apply one subdivision to every beat of every bar, KEEPING each bar's own
+// time signature (unlike resizeExercise, which also rewrites the meter).
+export function setAllBeatSubs(ex, subdivision) {
+  const bars = getBars(ex)
+  let out = ex
+  for (let i = 0; i < bars.length; i++) {
+    out = replaceBar(out, i, {
+      ts: bars[i].ts,
+      beatSubs: Array.from({ length: bars[i].ts.beats }, () => subdivision),
+    })
+  }
+  return out
+}
+
 // Change the subdivision of a single beat (global beat index), keeping others.
 export function setBeatSub(ex, beatIndex, subdivision) {
   if (Array.isArray(ex.bars) && ex.bars.length) {

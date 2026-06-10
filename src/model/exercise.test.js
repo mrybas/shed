@@ -14,6 +14,7 @@ import {
   strokeTypeTag,
   beatRanges,
   setBeatSub,
+  setAllBeatSubs,
   exerciseTotalSteps,
   getBars,
   barCount,
@@ -144,6 +145,18 @@ describe('bars (multi-bar exercises)', () => {
     expect(layout.totalSteps).toBe(8)
     expect(layout.bars[1].startStep).toBe(4)
     expect(layout.bars[1].beats[0].globalBeat).toBe(2)
+  })
+
+  it('setAllBeatSubs applies one grid value everywhere but keeps per-bar meters', () => {
+    let ex = createEmptyExercise({ timeSignature: { beats: 4, unit: 4 }, subdivision: 'sixteenth' })
+    ex = addBar(ex)
+    ex = setBarTimeSignature(ex, 1, { beats: 3, unit: 4 })
+    ex = setBeatSub(ex, 1, 'triplet') // mixed beat to be overwritten
+    ex = setAllBeatSubs(ex, 'eighth')
+    expect(getBars(ex)[0].ts).toEqual({ beats: 4, unit: 4 })
+    expect(getBars(ex)[1].ts).toEqual({ beats: 3, unit: 4 }) // meter preserved
+    expect(getBars(ex)[0].beatSubs).toEqual(['eighth', 'eighth', 'eighth', 'eighth'])
+    expect(getBars(ex)[1].beatSubs).toEqual(['eighth', 'eighth', 'eighth'])
   })
 
   it('setBeatSub targets the right bar by global beat index', () => {

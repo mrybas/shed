@@ -93,12 +93,14 @@ test('new exercise: grid cell cycles off -> on -> accent -> flam -> roll -> off'
   await expect(cell).not.toHaveClass(/\broll\b/)
 })
 
-test('per-beat picker changes one beat to a triplet (grid resizes)', async ({ page }) => {
+test('ruler beat button cycles one beat to a triplet (grid resizes)', async ({ page }) => {
   await page.locator('.side-parent-main').click()
   await page.getByRole('button', { name: /New exercise/ }).click()
   const kickCells = page.locator('.seq-row').filter({ has: page.locator('.seq-rowlabel', { hasText: /^Kick$/ }) }).locator('.cell')
   await expect(kickCells).toHaveCount(16) // 4/4 sixteenth
-  await page.locator('.beat-feel-item').nth(1).locator('button[aria-label="triplet"]').click()
+  // click beat 2's ruler button: sixteenth -> quarter -> eighth -> triplet
+  const tick2 = page.locator('.tick-btn').nth(1)
+  await tick2.click(); await tick2.click(); await tick2.click()
   await expect(kickCells).toHaveCount(15) // 4 + 3 + 4 + 4
 })
 

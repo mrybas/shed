@@ -4,7 +4,7 @@ import { useTapTempo } from '../../hooks/useTapTempo.js'
 import NotationView from '../NotationView.jsx'
 import { TIME_SIGS } from './util.js'
 import { CAT, catOf, sigOf } from '../../data/catalogV2.js'
-import { INSTRUMENTS, resizeExercise, setBeatSub, barLayout, addBar, insertBar, duplicateBar, removeBar, setBarTimeSignature } from '../../model/exercise.js'
+import { INSTRUMENTS, resizeExercise, setBeatSub, setAllBeatSubs, barLayout, addBar, insertBar, duplicateBar, removeBar, setBarTimeSignature } from '../../model/exercise.js'
 import { sigToTimeSignature } from './util.js'
 
 const INSTR_COLORS = {
@@ -26,6 +26,14 @@ const STAMPS = {
   erase: () => ({ on: false, accent: false, roll: 0 }),
 }
 const TOOL_GLYPHS = { hit: '●', accent: '>', ghost: '( )', flam: 'f', drag: 'd', roll: 'z', erase: '⌫' }
+
+// Beat-value indicator in the ruler; click cycles through these four.
+const TICK_GLYPH = { quarter: '♩', eighth: '♪', triplet: '³', sixteenth: '♬', sextuplet: '⁶', thirtysecond: '⅛' }
+const TICK_CYCLE = ['quarter', 'eighth', 'triplet', 'sixteenth']
+// spb -> subdivision name, for the drag-merge gesture (binary targets only;
+// triplets are entered via the ruler cycle).
+const SPB_NAME = { 1: 'quarter', 2: 'eighth', 3: 'triplet', 4: 'sixteenth', 6: 'sextuplet', 8: 'thirtysecond' }
+const MERGE_TARGETS = [1, 2, 4, 8]
 
 export default function PracticeView({
   t, lang, item, setItem, options, setOptions, vols, setVols, playing, step,
@@ -89,6 +97,7 @@ export default function PracticeView({
   const beats = layout.bars.flatMap((b) => b.beats)
   const beatStartSet = new Set(beats.map((b) => b.start))
   const beatNumOfStart = new Map(beats.map((b) => [b.start, b.beatInBar + 1]))
+  const beatOfStart = new Map(beats.map((b) => [b.start, b]))
   const barStartSet = new Set(layout.bars.map((b) => b.startStep))
   const barNumOfStart = new Map(layout.bars.map((b) => [b.startStep, b.bar + 1]))
   const cat = CAT(catOf(item))
@@ -96,8 +105,13 @@ export default function PracticeView({
 
   const setBpm = (b) => setItem((p) => ({ ...p, bpm: b }))
   const setSig = (s) => mutate((p) => resizeExercise(p, sigToTimeSignature(s), p.subdivision))
-  const setSub = (s) => mutate((p) => resizeExercise(p, p.timeSignature, s))
+  // Global grid value ("whole song") — keeps each bar's own time signature.
+  const setSub = (s) => mutate((p) => setAllBeatSubs(p, s))
   const setOneBeatSub = (b, s) => mutate((p) => setBeatSub(p, b, s))
+  const cycleTick = (bt) => {
+    const next = TICK_CYCLE[(TICK_CYCLE.indexOf(bt.sub) + 1) % TICK_CYCLE.length]
+    setOneBeatSub(bt.globalBeat, next)
+  }
   // Loop range: click a bar number to loop that bar; click another to extend;
   // click inside the range to clear it.
   const inLoop = (i) => loopRange && i >= loopRange.from && i <= loopRange.to
@@ -118,7 +132,9 @@ export default function PracticeView({
   const rollType = hasClosed ? 'closed' : 'open'
 
   // off -> on -> accent -> flam -> roll -> off (plain click, no tool selected)
-  const cycleCell = (k, i) => mutate((prev) => {
+  const cycleCell = (k, i) => {
+    if (suppressClickRef.current) { suppressClickRef.current = false; return }
+    mutate((prev) => {
     const rows = { ...prev.rows, [k]: prev.rows[k].map((c, idx) => {
       if (idx !== i) return c
       if (!c.on) return { on: true, accent: false, roll: 0 }
@@ -128,7 +144,8 @@ export default function PracticeView({
       return { on: false, accent: false, roll: 0 }
     }) }
     return { ...prev, rows }
-  })
+    })
+  }
 
   // Apply the selected stamp to one cell (no history push — the paint gesture
   // pushes one snapshot at pointerdown).
@@ -150,25 +167,75 @@ export default function PracticeView({
     const btn = el && el.closest ? el.closest('[data-cellk]') : null
     return btn ? { k: btn.dataset.cellk, i: Number(btn.dataset.celli) } : null
   }
+
+  // DAW-style note-length gesture: with no tool selected, dragging across cells
+  // merges them — drag over two 16th cells and the beat becomes 8ths, over a
+  // whole beat and it becomes a quarter. (Splitting back / triplets: the ruler.)
+  const mergeRef = useRef(null) // { startI, lastI, moved }
+  const suppressClickRef = useRef(false)
+  const performMerge = (lo, hi) => {
+    const touched = beats.filter((b) => b.start <= hi && b.start + b.len - 1 >= lo)
+    if (!touched.length) return
+    // K = the widest span the gesture covers inside one beat = "K cells -> 1 note".
+    const K = Math.max(...touched.map((b) => Math.min(hi, b.start + b.len - 1) - Math.max(lo, b.start) + 1))
+    if (K < 2) return
+    mutate((p) => {
+      let out = p
+      touched.forEach((bt) => {
+        const raw = Math.max(1, Math.round(bt.len / K))
+        const target = MERGE_TARGETS.reduce((best, c) => (Math.abs(c - raw) < Math.abs(best - raw) ? c : best), MERGE_TARGETS[0])
+        if (target < bt.len) out = setBeatSubRaw(out, bt.globalBeat, SPB_NAME[target])
+      })
+      return out
+    })
+  }
+  // setBeatSub without its own history push (performMerge pushes once via mutate)
+  const setBeatSubRaw = (p, b, s) => setBeatSub(p, b, s)
+
   const onGridPointerDown = (e) => {
-    if (!editable || !tool) return
+    if (!editable) return
     const c = cellFromPoint(e.clientX, e.clientY)
     if (!c) return
-    e.preventDefault()
-    pushHistory() // one undo step per paint gesture
-    paintingRef.current = true
-    applyStamp(c.k, c.i)
+    if (tool) {
+      e.preventDefault()
+      pushHistory() // one undo step per paint gesture
+      paintingRef.current = true
+      applyStamp(c.k, c.i)
+    } else {
+      // Possible merge gesture; don't preventDefault so a plain click still cycles.
+      mergeRef.current = { startI: c.i, lastI: c.i, moved: false }
+    }
   }
   const onGridPointerMove = (e) => {
-    if (!paintingRef.current) return
-    const c = cellFromPoint(e.clientX, e.clientY)
-    if (c) applyStamp(c.k, c.i)
+    if (paintingRef.current) {
+      const c = cellFromPoint(e.clientX, e.clientY)
+      if (c) applyStamp(c.k, c.i)
+      return
+    }
+    const m = mergeRef.current
+    if (m) {
+      const c = cellFromPoint(e.clientX, e.clientY)
+      if (c && c.i !== m.lastI) { m.lastI = c.i; m.moved = true }
+    }
+  }
+  const mergeUpRef = useRef(() => {})
+  mergeUpRef.current = (cancelled) => {
+    paintingRef.current = false
+    const m = mergeRef.current
+    mergeRef.current = null
+    if (!m || !m.moved || cancelled) return
+    // A click can fire right after the drag's pointerup (same cell) — suppress
+    // it; clear on the next tick because a cross-cell drag fires no click at all.
+    suppressClickRef.current = true
+    setTimeout(() => { suppressClickRef.current = false }, 0)
+    performMerge(Math.min(m.startI, m.lastI), Math.max(m.startI, m.lastI))
   }
   useEffect(() => {
-    const up = () => { paintingRef.current = false }
+    const up = () => mergeUpRef.current(false)
+    const cancel = () => mergeUpRef.current(true)
     window.addEventListener('pointerup', up)
-    window.addEventListener('pointercancel', up)
-    return () => { window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up) }
+    window.addEventListener('pointercancel', cancel)
+    return () => { window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', cancel) }
   }, [])
 
   const toggleRollType = (closed) => mutate((prev) => {
@@ -245,12 +312,12 @@ export default function PracticeView({
                 ? <select className="select" value={sig} onChange={(e) => setSig(e.target.value)}>{TIME_SIGS.map((s) => <option key={s} value={s}>{s}</option>)}</select>
                 : <div className="static-field num">{layout.bars.length > 1 ? `${layout.bars.length} ${t('barsUnit')}` : sig}</div>}
             </div>
-            {layout.bars.length === 1 && (
-              <div className="blk">
-                <span className="field-label">{t('subdivision')}</span>
-                {editable ? <NotePicker value={item.subdivision} onChange={setSub} /> : <div className="static-field num">{t(item.subdivision)}</div>}
-              </div>
-            )}
+            <div className="blk">
+              <span className="field-label">{t('subdivision')}</span>
+              {/* Applies to every beat of every bar (per-bar meters untouched);
+                  fine-tune per beat via the ruler or by dragging across cells. */}
+              {editable ? <NotePicker value={item.subdivision} onChange={setSub} /> : <div className="static-field num">{t(item.subdivision)}</div>}
+            </div>
           </div>
         </div>
       </div>
@@ -414,7 +481,13 @@ export default function PracticeView({
           {editable && (
             <div className="bar-strip">
               {layout.bars.map((bar) => (
-                <div className={'bar-block' + (inLoop(bar.bar) ? ' is-loop' : '')} key={bar.bar}>
+                <div className="bar-slot" key={bar.bar}>
+                  {/* Insertion point: the new bar appears exactly where you click. */}
+                  <button className="bar-insert" onClick={() => insertBefore(bar.bar)}
+                    aria-label={t('insertBarHere')} title={t('insertBarHere')}>
+                    <Icon name="plus" className="ic-xs" />
+                  </button>
+                <div className={'bar-block' + (inLoop(bar.bar) ? ' is-loop' : '')}>
                   <div className="bar-block-head">
                     <button className={'bar-tag num' + (inLoop(bar.bar) ? ' is-loop' : '')}
                       onClick={() => toggleLoopBar(bar.bar)} title={t('loopBarTitle')}>
@@ -424,9 +497,6 @@ export default function PracticeView({
                       {TIME_SIGS.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
                     <span className="bar-acts">
-                      <button className="bar-act" onClick={() => insertBefore(bar.bar)} aria-label={t('insertBarBefore')} title={t('insertBarBefore')}>
-                        <Icon name="plus" className="ic-xs" />
-                      </button>
                       <button className="bar-act" onClick={() => dupBar(bar.bar)} aria-label={t('duplicateBar')} title={t('duplicateBar')}>
                         <Icon name="copy" className="ic-xs" />
                       </button>
@@ -437,14 +507,7 @@ export default function PracticeView({
                       )}
                     </span>
                   </div>
-                  <div className="beat-feel">
-                    {bar.beats.map((bt) => (
-                      <div className="beat-feel-item" key={bt.globalBeat}>
-                        <span className="beat-feel-label num">{bt.beatInBar + 1}</span>
-                        <NotePicker value={bt.sub} onChange={(s) => setOneBeatSub(bt.globalBeat, s)} />
-                      </div>
-                    ))}
-                  </div>
+                </div>
                 </div>
               ))}
               <button className="bar-add" onClick={addBarBtn}><Icon name="plus" className="ic" />{t('addBar')}</button>
@@ -466,12 +529,20 @@ export default function PracticeView({
             </div>
           )}
           <div className="seq-ruler"><div />
-            <div className="ticks">{Array.from({ length: per }).map((_, i) => (
-              <div key={i} className={'tick' + (beatStartSet.has(i) ? ' beat' : '') + (barStartSet.has(i) ? ' bar-start' : '') + (localPlay === i ? ' play' : '')}>
-                {barStartSet.has(i) ? <span className="tick-bar num">{t('bar')} {barNumOfStart.get(i)}</span> : null}
-                {beatStartSet.has(i) ? beatNumOfStart.get(i) : '·'}
-              </div>
-            ))}</div>
+            <div className="ticks">{Array.from({ length: per }).map((_, i) => {
+              const cls = 'tick' + (beatStartSet.has(i) ? ' beat' : '') + (barStartSet.has(i) ? ' bar-start' : '') + (localPlay === i ? ' play' : '')
+              const barTag = barStartSet.has(i) ? <span className="tick-bar num">{t('bar')} {barNumOfStart.get(i)}</span> : null
+              const bt = beatOfStart.get(i)
+              if (bt && editable) {
+                return (
+                  <button key={i} type="button" className={cls + ' tick-btn'} title={t('tickTitle')}
+                    onClick={() => cycleTick(bt)}>
+                    {barTag}{bt.beatInBar + 1}<span className="tick-glyph">{TICK_GLYPH[bt.sub] || ''}</span>
+                  </button>
+                )
+              }
+              return <div key={i} className={cls}>{barTag}{bt ? beatNumOfStart.get(i) : '·'}</div>
+            })}</div>
           </div>
           <div className="seq-grid" onPointerDown={onGridPointerDown} onPointerMove={onGridPointerMove}
             style={{ touchAction: tool ? 'none' : undefined }}>
