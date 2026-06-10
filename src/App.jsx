@@ -9,6 +9,7 @@ import PlayerBar from './components/v2/PlayerBar.jsx'
 import LibraryView from './components/v2/LibraryView.jsx'
 import PracticeView from './components/v2/PracticeView.jsx'
 import WorkoutView from './components/v2/WorkoutView.jsx'
+import WorkoutsView from './components/v2/WorkoutsView.jsx'
 import { sigToTimeSignature } from './components/v2/util.js'
 import { CATEGORIES, sigOf, getCatalogExercises } from './data/catalogV2.js'
 import { WORKOUTS } from './data/workouts.js'
@@ -17,7 +18,7 @@ import {
   loadLibrary, saveToLibrary, deleteFromLibrary, genId, barLayout,
 } from './model/exercise.js'
 
-const APP_VERSION = 'v4.3' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v4.4' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -73,7 +74,8 @@ function BrandMark({ size = 20 }) {
 export default function App() {
   const { t, lang } = useI18n()
   const [tw, setTw] = useState(() => ({ ...TW_DEFAULT, ...loadJSON(TW_KEY, {}) }))
-  const [nav, setNav] = useState('metronome') // metronome | library | practice
+  const [nav, setNav] = useState('metronome') // metronome | workouts | library | practice
+  const [wkId, setWkId] = useState(null) // selected workout in the Workouts tab
   const [item, setItem] = useState(null)
   const [saved, setSaved] = useState(() => loadLibrary())
   const [progressMap, setProgressMap] = useState(() => loadJSON(PROG_KEY, {}))
@@ -241,18 +243,24 @@ export default function App() {
   const stopWorkout = useCallback(() => { setRun(null); sched.stop() }, [sched])
 
   // Block timer — ticks only while playing, so pausing the player pauses the
-  // workout (the minutes count actual practice).
+  // workout (the minutes count actual practice). The effect must depend ONLY on
+  // whether a run is active: `sched` is a fresh object every render, and the
+  // playhead re-renders constantly during playback — depending on it would
+  // reset the interval before it ever fires.
   const runActive = !!run && !run.done
+  const advanceRef = useRef(advanceWorkout)
+  advanceRef.current = advanceWorkout
   useEffect(() => {
     if (!runActive) return undefined
+    const scheduler = sched.scheduler // stable instance for the run's lifetime
     const id = setInterval(() => {
       const r = runRef.current
-      if (!r || r.done || !sched.scheduler.isPlaying) return
+      if (!r || r.done || !scheduler.isPlaying) return
       if (r.secLeft > 1) setRun({ ...r, secLeft: r.secLeft - 1 })
-      else advanceWorkout()
+      else advanceRef.current()
     }, 1000)
     return () => clearInterval(id)
-  }, [runActive, sched, advanceWorkout])
+  }, [runActive]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // What PracticeView shows in the workout banner.
   const runView = useMemo(() => {
@@ -404,9 +412,6 @@ export default function App() {
                     <span className="side-dot" style={{ background: c.hue }} />{c.label[lang] || c.label.en}
                   </button>
                 ))}
-                <button className={'side-subitem' + (libActive && (libTarget.section === 'workouts' || libTarget.section === 'workout') ? ' is-active' : '')} onClick={() => goLib({ section: 'workouts', cat: null })}>
-                  <Icon name="star" className="ic-xs side-subic" />{t('workouts')}
-                </button>
                 <button className={'side-subitem' + (libActive && libTarget.section === 'saved' ? ' is-active' : '')} onClick={() => goLib({ section: 'saved', cat: null })}>
                   <Icon name="bookmark" className="ic-xs side-subic" />{t('saved')}
                   {saved.length > 0 && <span className="side-badge num">{saved.length}</span>}
@@ -414,6 +419,9 @@ export default function App() {
               </div>
             )}
           </div>
+          <button className={'side-link' + (nav === 'workouts' ? ' is-active' : '')} onClick={() => setNav('workouts')}>
+            <Icon name="star" className="ic" /><span>{t('workouts')}</span>
+          </button>
         </nav>
         <div className="side-stat">
           <Icon name="star" className="ic-xs" /><span className="num">{masteredCount}</span> <span>{t('mastered')}</span>
@@ -429,23 +437,25 @@ export default function App() {
 
       <main className="main">
         {nav === 'metronome' && <MetronomeView t={t} metro={metro} setMetro={setMetro} playing={playing && mode === 'metronome'} step={step} />}
-        {nav === 'library' && (libTarget.section === 'workout' ? (
-          <WorkoutView t={t} workout={workoutById(libTarget.wk)} exercisesById={exById}
+        {nav === 'workouts' && (wkId ? (
+          <WorkoutView t={t} workout={workoutById(wkId)} exercisesById={exById}
             onStart={startWorkout} onOpenExercise={openItem}
-            onBack={() => setLibTarget({ section: 'workouts', cat: null })} />
+            onBack={() => setWkId(null)} />
         ) : (
+          <WorkoutsView t={t} onOpenWorkout={setWkId} />
+        ))}
+        {nav === 'library' && (
           <LibraryView t={t} lang={lang} saved={saved} progressMap={progressMap} onOpen={openItem}
             onNew={newExercise} onImport={importFile} onExportItem={exportExercise} onExportAll={exportLibraryFile}
-            onDeleteSaved={deleteSaved} onOpenWorkout={(id) => setLibTarget({ section: 'workout', cat: null, wk: id })}
-            route={libTarget} onRoute={setLibTarget} />
-        ))}
+            onDeleteSaved={deleteSaved} route={libTarget} onRoute={setLibTarget} />
+        )}
         {nav === 'practice' && item && (
           <PracticeView t={t} lang={lang} item={item} setItem={setItem} options={options} setOptions={setOptions}
             vols={vols} setVols={setVols} playing={playing && mode === 'practice'} step={step}
             loopRange={loopRange} onLoopRange={setLoopRange}
             workoutRun={runView} onWorkoutSkip={advanceWorkout} onWorkoutStop={stopWorkout}
             progress={progressMap[item.id] || 'none'} onProgress={setProgress} onDuplicate={duplicate}
-            onBack={() => { if (runRef.current) stopWorkout(); setNav('library') }} onSave={saveCurrent} onExport={() => exportExercise(item)}
+            onBack={() => { if (runRef.current) { stopWorkout(); setNav('workouts') } else setNav('library') }} onSave={saveCurrent} onExport={() => exportExercise(item)}
             onNew={newExercise} savedFlash={savedFlash} />
         )}
       </main>
@@ -465,6 +475,9 @@ export default function App() {
         </button>
         <button className={'bn-link' + (libActive ? ' is-active' : '')} onClick={() => goLib({ section: 'home', cat: null })}>
           <Icon name="library" className="ic" /><span>{t('library')}</span>
+        </button>
+        <button className={'bn-link' + (nav === 'workouts' ? ' is-active' : '')} onClick={() => setNav('workouts')}>
+          <Icon name="star" className="ic" /><span>{t('workouts')}</span>
         </button>
       </nav>
     </div>

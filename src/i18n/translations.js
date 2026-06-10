@@ -150,6 +150,7 @@ export const translations = {
     level_intermediate: 'Intermediate',
     level_advanced: 'Advanced',
     workouts: 'Workouts',
+    workoutsIntro: 'Guided daily routines: pick your level and length — each block opens its exercise with the right tempo and trainers, and moves on automatically.',
     workoutStart: 'Start workout',
     workoutBlocks: 'blocks',
     workoutMin: 'min',
