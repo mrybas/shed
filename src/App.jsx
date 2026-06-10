@@ -242,6 +242,13 @@ export default function App() {
 
   const stopWorkout = useCallback(() => { setRun(null); sched.stop() }, [sched])
 
+  // Navigating anywhere away from the workout's practice page ends the workout —
+  // the player-bar strip exists only while a routine is actually running.
+  const navTo = useCallback((dest) => {
+    if (runRef.current) { setRun(null); sched.stop() }
+    setNav(dest)
+  }, [sched])
+
   // Block timer — ticks only while playing, so pausing the player pauses the
   // workout (the minutes count actual practice). The effect must depend ONLY on
   // whether a run is active: `sched` is a fresh object every render, and the
@@ -376,7 +383,7 @@ export default function App() {
   // While a workout runs, the open practice page belongs to Workouts, not Library.
   const libActive = nav === 'library' || (nav === 'practice' && !run)
   const wkActive = nav === 'workouts' || (nav === 'practice' && !!run)
-  const goLib = (target) => { setLibTarget(target); setNav('library'); if (!libOpen) setLibOpen(true) }
+  const goLib = (target) => { setLibTarget(target); navTo('library'); if (!libOpen) setLibOpen(true) }
 
   const accentPicker = (
     <div className="accent-picker" role="group" aria-label={t('theme')}>
@@ -397,7 +404,7 @@ export default function App() {
       <aside className="sidebar">
         <div className="side-brand"><BrandMark /><span className="brand-name">{t('appName')}</span></div>
         <nav className="side-nav">
-          <button className={'side-link' + (nav === 'metronome' ? ' is-active' : '')} onClick={() => setNav('metronome')}>
+          <button className={'side-link' + (nav === 'metronome' ? ' is-active' : '')} onClick={() => navTo('metronome')}>
             <Icon name="metro" className="ic" /><span>{t('tabMetronome')}</span>
           </button>
           <div className="side-tree">
@@ -423,7 +430,7 @@ export default function App() {
               </div>
             )}
           </div>
-          <button className={'side-link' + (wkActive ? ' is-active' : '')} onClick={() => setNav('workouts')}>
+          <button className={'side-link' + (wkActive ? ' is-active' : '')} onClick={() => { setWkId(null); navTo('workouts') }}>
             <Icon name="star" className="ic" /><span>{t('workouts')}</span>
           </button>
         </nav>
@@ -474,13 +481,13 @@ export default function App() {
         workout={runView} onWorkoutSkip={advanceWorkout} onWorkoutStop={stopWorkout} />
 
       <nav className="bottomnav">
-        <button className={'bn-link' + (nav === 'metronome' ? ' is-active' : '')} onClick={() => setNav('metronome')}>
+        <button className={'bn-link' + (nav === 'metronome' ? ' is-active' : '')} onClick={() => navTo('metronome')}>
           <Icon name="metro" className="ic" /><span>{t('tabMetronome')}</span>
         </button>
         <button className={'bn-link' + (libActive ? ' is-active' : '')} onClick={() => goLib({ section: 'home', cat: null })}>
           <Icon name="library" className="ic" /><span>{t('library')}</span>
         </button>
-        <button className={'bn-link' + (wkActive ? ' is-active' : '')} onClick={() => setNav('workouts')}>
+        <button className={'bn-link' + (wkActive ? ' is-active' : '')} onClick={() => { setWkId(null); navTo('workouts') }}>
           <Icon name="star" className="ic" /><span>{t('workouts')}</span>
         </button>
       </nav>
