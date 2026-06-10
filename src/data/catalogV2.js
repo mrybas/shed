@@ -4,6 +4,7 @@ import { getStickControlExercises } from './stickControl.js'
 import { getFirstStepsExercises } from './firstSteps.js'
 import { getGroovesPack } from './groovesPack.js'
 import { getFillsPack } from './fillsPack.js'
+import { getRudimentsPack } from './rudimentsPack.js'
 
 // Technique categories (id, colored hue, icon from our Icon set, bilingual label).
 export const CATEGORIES = [
@@ -66,7 +67,7 @@ export function levelOf(ex) {
 // number is preserved separately as `sourceNumber` for reference.
 export function getCatalogExercises() {
   const order = new Map(CATEGORIES.map((c, i) => [c.id, i]))
-  const all = [...getFirstStepsExercises(), ...getBuiltinExercises(), ...getGroovesPack(), ...getFillsPack(), ...getStickControlExercises()].map((ex) => ({ ...ex, cat: catOf(ex) }))
+  const all = [...getFirstStepsExercises(), ...getBuiltinExercises(), ...getRudimentsPack(), ...getGroovesPack(), ...getFillsPack(), ...getStickControlExercises()].map((ex) => ({ ...ex, cat: catOf(ex) }))
   // Stable sort (preserves each category's source order) by category position.
   all.sort((a, b) => (order.get(a.cat) ?? 999) - (order.get(b.cat) ?? 999))
   return all.map((ex, i) => ({ ...ex, sourceNumber: ex.number ?? null, number: i + 1 }))
