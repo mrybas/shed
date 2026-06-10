@@ -310,3 +310,18 @@
 .wk-card-acts { position: absolute; top: 8px; right: 8px; display: none; gap: 4px; }
 .wk-card:hover .wk-card-acts { display: inline-flex; }
 .wkv-acts { display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: center; }
+
+/* ---- Print: only the notation + a small header reach paper ---- */
+.print-head { display: none; }
+@media print {
+  body { background: #fff !important; }
+  body * { visibility: hidden; }
+  .print-area, .print-area * { visibility: visible; }
+  .print-area { position: absolute; left: 0; top: 0; width: 100%; }
+  .print-head {
+    display: block; visibility: visible; color: #111;
+    font-weight: 700; font-size: 14pt; margin-bottom: 8pt;
+  }
+  .notation-wrap { box-shadow: none !important; border: none !important; padding: 0 !important; background: #fff !important; }
+  .notation-hint, .note-playhead, .note-barzone { display: none !important; }
+}

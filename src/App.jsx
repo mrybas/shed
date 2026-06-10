@@ -22,8 +22,9 @@ import {
   loadLibrary, saveToLibrary, deleteFromLibrary, genId, barLayout,
 } from './model/exercise.js'
 import { logPracticeSeconds, logTempo, flushJournal, exportJournal, mergeJournal, getTempoStats } from './model/progress.js'
+import { decodeShare, shareFromHash } from './model/share.js'
 
-const APP_VERSION = 'v4.8' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v4.9' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -157,6 +158,19 @@ export default function App() {
     }
     maxBpmRef.current = 0
   }, [sched.isPlaying, sched.liveBpm])
+
+  // Open an exercise shared via URL (#x=...): decode, normalize, show.
+  useEffect(() => {
+    const payload = shareFromHash()
+    if (!payload) return
+    decodeShare(payload)
+      .then((obj) => {
+        const ex = parseImported(JSON.stringify(obj))
+        if (ex && ex.rows) { ex.source = 'user'; setItem(ex); setNav('practice') }
+      })
+      .catch(() => { /* malformed link — ignore */ })
+    history.replaceState(null, '', location.pathname)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const setTweak = (k, v) => setTw((p) => ({ ...p, [k]: v }))
 

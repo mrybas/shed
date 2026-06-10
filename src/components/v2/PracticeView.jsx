@@ -5,6 +5,7 @@ import NotationView from '../NotationView.jsx'
 import { TIME_SIGS } from './util.js'
 import { CAT, catOf, sigOf, levelOf } from '../../data/catalogV2.js'
 import { getTempoStats } from '../../model/progress.js'
+import { shareUrlFor } from '../../model/share.js'
 
 // Tiny tempo-history graph for the exercise meta area.
 function Sparkline({ history }) {
@@ -224,6 +225,16 @@ export default function PracticeView({
 
   const tap = useTapTempo(useCallback((bpm) => setItem((p) => ({ ...p, bpm })), [setItem]))
 
+  const [sharedFlash, setSharedFlash] = useState(false)
+  const shareLink = async () => {
+    try {
+      const url = await shareUrlFor(item)
+      await navigator.clipboard.writeText(url)
+      setSharedFlash(true)
+      setTimeout(() => setSharedFlash(false), 1500)
+    } catch { /* clipboard denied */ }
+  }
+
   const localPlay = playing ? step : -1
 
   // Bring the notation/grid into view when playback starts, so the playhead is
@@ -434,11 +445,15 @@ export default function PracticeView({
               <Button size="sm" icon="plus" onClick={onNew}>{t('newExercise')}</Button>
               <Button size="sm" icon="clear" onClick={clearCells}>{t('clear')}</Button>
               <Button size="sm" icon="download" onClick={onExport}>{t('export')}</Button>
+              <Button size="sm" icon="upload" variant={sharedFlash ? 'accent' : 'default'} onClick={shareLink}>{sharedFlash ? t('shared_ok') : t('share')}</Button>
+              {view === 'notes' && <Button size="sm" icon="notes" onClick={() => window.print()}>{t('print')}</Button>}
               <Button size="sm" icon="save" variant={savedFlash ? 'accent' : 'default'} onClick={onSave}>{savedFlash ? t('saved_ok') : t('save')}</Button>
             </>
           ) : (
             <>
               <Button size="sm" icon="download" onClick={onExport}>{t('export')}</Button>
+              <Button size="sm" icon="upload" variant={sharedFlash ? 'accent' : 'default'} onClick={shareLink}>{sharedFlash ? t('shared_ok') : t('share')}</Button>
+              {view === 'notes' && <Button size="sm" icon="notes" onClick={() => window.print()}>{t('print')}</Button>}
               <Button size="sm" icon="copy" onClick={onDuplicate}>{t('duplicate')}</Button>
             </>
           )}
@@ -446,7 +461,8 @@ export default function PracticeView({
       </div>
 
       {(view === 'notes') ? (
-        <div ref={playAreaRef}>
+        <div ref={playAreaRef} className="print-area">
+          <div className="print-head">{item.name} · {item.bpm} {t('bpm')} · {sig}</div>
           <div className="notation-wrap">
             <NotationView exercise={item} currentStep={localPlay}
               loopRange={loopRange} onBarClick={toggleLoopBar} barClickTitle={t('loopBarTitle')} />
