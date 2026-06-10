@@ -2,6 +2,8 @@
 import { getBuiltinExercises } from './builtinExercises.js'
 import { getStickControlExercises } from './stickControl.js'
 import { getFirstStepsExercises } from './firstSteps.js'
+import { getGroovesPack } from './groovesPack.js'
+import { getFillsPack } from './fillsPack.js'
 
 // Technique categories (id, colored hue, icon from our Icon set, bilingual label).
 export const CATEGORIES = [
@@ -16,6 +18,7 @@ export const CATEGORIES = [
   { id: 'triplets', hue: 'oklch(0.70 0.14 30)', icon: 'notes', label: { en: 'Triplets', uk: 'Тріолі' } },
   { id: 'rolls', hue: 'oklch(0.66 0.14 280)', icon: 'grid', label: { en: 'Rolls', uk: 'Роли' } },
   { id: 'flams', hue: 'oklch(0.74 0.13 130)', icon: 'accent', label: { en: 'Flams', uk: 'Флеми' } },
+  { id: 'fills', hue: 'oklch(0.7 0.14 220)', icon: 'notes', label: { en: 'Fills', uk: 'Філи' } },
 ]
 
 export function CAT(id) {
@@ -29,6 +32,7 @@ export function catOf(ex) {
   if (ex.section === 'triplets') return 'triplets'
   if (ex.section === 'rolls') return 'rolls'
   if (ex.section === 'flams') return 'flams'
+  if (ex.section === 'fills') return 'fills'
   if (ex.section === 'paradiddle') return 'paradiddle'
   if (ex.section === 'grooves') return 'grooves'
   if (ex.section === 'rudiments') return 'rudiments'
@@ -62,7 +66,7 @@ export function levelOf(ex) {
 // number is preserved separately as `sourceNumber` for reference.
 export function getCatalogExercises() {
   const order = new Map(CATEGORIES.map((c, i) => [c.id, i]))
-  const all = [...getFirstStepsExercises(), ...getBuiltinExercises(), ...getStickControlExercises()].map((ex) => ({ ...ex, cat: catOf(ex) }))
+  const all = [...getFirstStepsExercises(), ...getBuiltinExercises(), ...getGroovesPack(), ...getFillsPack(), ...getStickControlExercises()].map((ex) => ({ ...ex, cat: catOf(ex) }))
   // Stable sort (preserves each category's source order) by category position.
   all.sort((a, b) => (order.get(a.cat) ?? 999) - (order.get(b.cat) ?? 999))
   return all.map((ex, i) => ({ ...ex, sourceNumber: ex.number ?? null, number: i + 1 }))
