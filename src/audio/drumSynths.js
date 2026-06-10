@@ -58,14 +58,29 @@ function hihat(ctx, time, destination, gain, decay) {
   src.connect(hp).connect(amp).connect(destination)
   src.start(time)
   src.stop(time + decay + 0.02)
+  return amp
 }
 
+// Open hats currently ringing — a closed hat chokes them (like a real pedal).
+let openHats = []
+
 export function hihatClosed(ctx, time, destination, { gain = 1 } = {}) {
+  openHats = openHats.filter((h) => h.start + 0.5 > time) // drop fully-decayed ones
+  openHats.forEach((h) => {
+    if (h.start < time) {
+      try {
+        h.amp.gain.cancelScheduledValues(time)
+        h.amp.gain.setTargetAtTime(0.0001, time, 0.008)
+      } catch { /* ignore */ }
+    }
+  })
   hihat(ctx, time, destination, gain, 0.05)
 }
 
 export function hihatOpen(ctx, time, destination, { gain = 1 } = {}) {
-  hihat(ctx, time, destination, gain, 0.4)
+  const amp = hihat(ctx, time, destination, gain, 0.4)
+  openHats.push({ amp, start: time })
+  if (openHats.length > 8) openHats.shift()
 }
 
 // Metallic voice: a cluster of inharmonic square oscillators + noise sheen.

@@ -90,6 +90,8 @@ export function useScheduler(initial = {}) {
   }, [sched])
   const setGapTrainer = useCallback((v) => { sched.gapTrainer = { ...sched.gapTrainer, ...v } }, [sched])
   const setCountIn = useCallback((v) => { sched.countIn = { ...sched.countIn, ...v } }, [sched])
+  const setLoopRange = useCallback((v) => { sched.loopRange = v }, [sched])
+  const setSwing = useCallback((v) => { sched.swing = v }, [sched])
   const setTimeSignature = useCallback((v) => { sched.timeSignature = v }, [sched])
   const setSubdivision = useCallback((v) => { sched.subdivision = v }, [sched])
   const setPattern = useCallback((v) => { sched.pattern = v }, [sched])
@@ -111,6 +113,8 @@ export function useScheduler(initial = {}) {
     setBpm,
     setTempoRamp,
     setGapTrainer,
+    setLoopRange,
+    setSwing,
     setCountIn,
     setTimeSignature,
     setSubdivision,

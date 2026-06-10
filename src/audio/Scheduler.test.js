@@ -236,6 +236,45 @@ describe('Scheduler timing math', () => {
     expect(s.currentStep).toBe(0)
   })
 
+  it('loopRange keeps the playhead inside the selected bars', () => {
+    const s = new Scheduler()
+    let ex = createEmptyExercise({ timeSignature: { beats: 2, unit: 4 }, subdivision: 'quarter' }) // 2 steps/bar
+    ex = addBar(ex); ex = addBar(ex); ex = addBar(ex) // 4 bars, steps 0..7
+    s.pattern = ex
+    s.loopRange = { from: 1, to: 2 } // steps 2..5
+    s._recompute()
+    s.isPlaying = true
+    s.currentStep = 2
+    const seen = []
+    for (let i = 0; i < 6; i++) { s._advance(); seen.push(s.currentStep) }
+    expect(seen).toEqual([3, 4, 5, 2, 3, 4]) // wraps 5 -> 2, never leaves 2..5
+  })
+
+  it('loopRange covering the whole phrase behaves like no loop', () => {
+    const s = new Scheduler()
+    let ex = createEmptyExercise({ timeSignature: { beats: 2, unit: 4 }, subdivision: 'quarter' })
+    ex = addBar(ex)
+    s.pattern = ex
+    s.loopRange = { from: 0, to: 1 }
+    s._recompute()
+    expect(s._loopClamped()).toBeNull()
+  })
+
+  it('swing lengthens on-steps and shortens off-steps on straight grids only', () => {
+    const s = new Scheduler()
+    s.bpm = 60 // beat = 1s
+    s.timeSignature = { beats: 2, unit: 4 }
+    s.pattern = createEmptyExercise({ timeSignature: { beats: 2, unit: 4 }, beatSubs: ['eighth', 'triplet'] })
+    s._recompute()
+    s.swing = 1 / 3 // full triplet feel
+    // eighth beat: pair 0.5s±1/3 -> 0.666 / 0.333
+    expect(s._secondsPerStepAt(0)).toBeCloseTo(0.5 * (4 / 3))
+    expect(s._secondsPerStepAt(1)).toBeCloseTo(0.5 * (2 / 3))
+    // triplet beat unswung: 1/3s each
+    expect(s._secondsPerStepAt(2)).toBeCloseTo(1 / 3)
+    expect(s._secondsPerStepAt(3)).toBeCloseTo(1 / 3)
+  })
+
   it('wraps currentStep at the bar boundary on advance', () => {
     const s = new Scheduler()
     s.timeSignature = { beats: 4, unit: 4 }

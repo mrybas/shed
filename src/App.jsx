@@ -15,20 +15,22 @@ import {
   loadLibrary, saveToLibrary, deleteFromLibrary, genId, barLayout,
 } from './model/exercise.js'
 
-const APP_VERSION = 'v3.6' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v3.7' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
 const METRO_KEY = 'drums2_metro'
 const TEMPO_KEY = 'drums2_tempo' // chosen bpm per catalog exercise id
 const TW_DEFAULT = { theme: 'dark', accent: 'coral', density: 'regular' }
-const METRO_DEFAULT = { bpm: 100, sig: '4/4', sub: 'quarter', accentOne: true, soundSubs: true, vol: 120 }
+const METRO_DEFAULT = { bpm: 100, sig: '4/4', sub: 'quarter', accentOne: true, soundSubs: true, vol: 120, swing: 0 }
 const OPTIONS_DEFAULT = {
-  metroWith: true, accentOne: true, soundSubs: false,
+  metroWith: true, accentOne: true, soundSubs: false, swing: 0,
   tempoRamp: { enabled: false, everyBars: 4, stepBpm: 5, maxBpm: 0 },
   gapTrainer: { enabled: false, onBars: 2, offBars: 2 },
   countIn: { enabled: false, bars: 1, mode: 'loop', feel: 'quarter' },
 }
+// UI swing is 0..100%; 100% = full triplet feel (long:short = 2:1).
+const swingFraction = (pct) => Math.max(0, Math.min(100, pct || 0)) / 300
 const clone = (x) => JSON.parse(JSON.stringify(x))
 
 // Merge saved options over defaults, per nested block — older saves may be
@@ -81,6 +83,7 @@ export default function App() {
   const [options, setOptions] = useState(() => mergeOptions(loadJSON(OPTS_KEY, null)?.options))
   const [vols, setVols] = useState(() => ({ ex: 100, metro: 120, ...loadJSON(OPTS_KEY, null)?.vols }))
   const [tempoMap, setTempoMap] = useState(() => loadJSON(TEMPO_KEY, {}))
+  const [loopRange, setLoopRange] = useState(null) // {from,to} bar indices, per opened exercise
 
   const sched = useScheduler({ pattern: null, metronomeEnabled: true })
   useSpacebar(sched.toggle)
@@ -133,11 +136,15 @@ export default function App() {
       sched.setTempoRamp({ enabled: false })
       sched.setGapTrainer({ enabled: false })
       sched.setCountIn({ enabled: false })
+      sched.setLoopRange(null)
+      sched.setSwing(swingFraction(metro.swing))
     } else if (item) {
       sched.setPattern(item)
       sched.setTempoRamp(options.tempoRamp)
       sched.setGapTrainer(options.gapTrainer)
       sched.setCountIn(options.countIn)
+      sched.setLoopRange(loopRange)
+      sched.setSwing(swingFraction(options.swing))
       sched.setBpm(item.bpm)
       sched.setTimeSignature(item.timeSignature)
       sched.setSubdivision(item.subdivision)
@@ -147,7 +154,7 @@ export default function App() {
       sched.setMetronomeVolume(vols.metro / 100)
       sched.setPatternVolume(vols.ex / 100)
     }
-  }, [mode, metro, item, options, vols, sched])
+  }, [mode, metro, item, options, vols, loopRange, sched])
 
   // Stop playback when switching transport context.
   useEffect(() => { sched.stop() }, [mode]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -162,9 +169,10 @@ export default function App() {
     // Restore the user's working tempo for catalog exercises.
     if (it.source !== 'user' && tempoMap[it.id]) it.bpm = tempoMap[it.id]
     setItem(it)
+    setLoopRange(null) // loop ranges are per practice session
     setNav('practice')
   }
-  const newExercise = () => { setItem(createEmptyExercise({ source: 'user', name: t('newExercise') })); setNav('practice') }
+  const newExercise = () => { setItem(createEmptyExercise({ source: 'user', name: t('newExercise') })); setLoopRange(null); setNav('practice') }
 
   const setProgress = (state) => {
     if (!item) return
@@ -314,6 +322,7 @@ export default function App() {
         {nav === 'practice' && item && (
           <PracticeView t={t} lang={lang} item={item} setItem={setItem} options={options} setOptions={setOptions}
             vols={vols} setVols={setVols} playing={playing && mode === 'practice'} step={step}
+            loopRange={loopRange} onLoopRange={setLoopRange}
             progress={progressMap[item.id] || 'none'} onProgress={setProgress} onDuplicate={duplicate}
             onBack={() => setNav('library')} onSave={saveCurrent} onExport={() => exportExercise(item)}
             onNew={newExercise} savedFlash={savedFlash} />
@@ -326,7 +335,8 @@ export default function App() {
         setSub={(s) => setMetro((m) => ({ ...m, sub: s }))} showSub={mode === 'metronome'}
         soundSubs={mode === 'metronome' ? metro.soundSubs : options.soundSubs}
         onToggleSoundSubs={(v) => mode === 'metronome' ? setMetro((m) => ({ ...m, soundSubs: v })) : setOptions((o) => ({ ...o, soundSubs: v }))}
-        step={step} playing={playing} onToggle={sched.toggle} gapMuted={sched.gapMuted} countingIn={sched.countingIn} barView={barView} />
+        step={step} playing={playing} onToggle={sched.toggle} gapMuted={sched.gapMuted} countingIn={sched.countingIn}
+        barView={barView} loopRange={mode === 'practice' ? loopRange : null} />
 
       <nav className="bottomnav">
         <button className={'bn-link' + (nav === 'metronome' ? ' is-active' : '')} onClick={() => setNav('metronome')}>

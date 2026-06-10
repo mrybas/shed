@@ -139,5 +139,8 @@ export const translations = {
     paintHint: 'Tap or drag across cells to paint',
     cycleHint: 'Pick a tool to paint, or click cells to cycle',
     undo: 'Undo',
+    swing: 'Swing',
+    loopTag: 'loop',
+    loopBarTitle: 'Loop this bar — click another bar to extend, click again to clear',
   },
 }

@@ -52,7 +52,7 @@ function CompactSub({ value, onChange }) {
 
 export default function PlayerBar({
   t, mode, title, sourceLabel, cat, bpm, setBpm, sig, sub, setSub, showSub,
-  soundSubs, onToggleSoundSubs, step, playing, onToggle, gapMuted, countingIn, barView,
+  soundSubs, onToggleSoundSubs, step, playing, onToggle, gapMuted, countingIn, barView, loopRange,
 }) {
   const bars = barView ? barView.bars : 1
   const curBar = barView ? barView.barIndex + 1 : 0
@@ -75,6 +75,7 @@ export default function PlayerBar({
         </div>
 
         <div className="pb-beats">
+          {loopRange && <span className="pb-muted-pill">{t('loopTag')} {loopRange.from + 1}–{loopRange.to + 1}</span>}
           {bars > 1 && <span className="pb-barcount num">{t('bar')} {curBar || 1}/{bars}</span>}
           {barView
             ? <BarBeats beatsInBar={barView.beatsInBar} beatInBar={barView.beatInBar} playing={playing} />

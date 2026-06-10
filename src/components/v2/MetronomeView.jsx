@@ -63,6 +63,12 @@ export default function MetronomeView({ t, metro, setMetro, playing, step }) {
               <Slider value={metro.vol} min={0} max={200} onChange={(v) => set({ vol: v })} aria-label={t('metronomeVolume')} />
               <span className="v-val num">{metro.vol}%</span>
             </div>
+            <span className="field-label" style={{ marginTop: 'var(--s-3)' }}>{t('swing')}</span>
+            <div className="volume-row">
+              <Icon name="notes" className="v-ic" />
+              <Slider value={metro.swing || 0} min={0} max={100} onChange={(v) => set({ swing: v })} aria-label={t('swing')} />
+              <span className="v-val num">{metro.swing || 0}%</span>
+            </div>
           </div>
         </div>
       </div>

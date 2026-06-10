@@ -34,6 +34,11 @@ export class Scheduler {
     // 'eighth' (all 8ths), 'sixteenth' (all 16ths).
     this.countIn = { enabled: false, bars: 1, mode: 'loop', feel: 'quarter' }
     this._countInPlan = [] // [{ dur, accent }] built per run
+    // Loop a sub-range of bars: { from, to } inclusive bar indices, or null.
+    this.loopRange = null
+    // Swing: 0..~0.33 fraction — long/short pairs on eighth/sixteenth grids
+    // (0.33 ≈ triplet feel). Tuplet beats are never swung.
+    this.swing = 0
     this._phase = 'pattern' // 'countin' | 'pattern'
     this._countInStep = 0
     this._countInBeats = 4 // beats per count-in bar (first bar of the pattern)
@@ -75,19 +80,25 @@ export class Scheduler {
     const divisor = []
     const isBeat = []
     const isBarStart = []
+    const posInBeat = []
+    const barStartStep = []
     bars.forEach((bar) => {
+      barStartStep.push(divisor.length)
       bar.beatSubs.forEach((sub, beatInBar) => {
         const spb = spbOf(sub)
         for (let s = 0; s < spb; s++) {
           divisor.push(spb)
           isBeat.push(s === 0)
           isBarStart.push(s === 0 && beatInBar === 0)
+          posInBeat.push(s)
         }
       })
     })
     this._divisor = divisor
     this._isBeat = isBeat
     this._isBarStart = isBarStart
+    this._posInBeat = posInBeat
+    this._barStartStep = barStartStep
     this._total = divisor.length || 1
     this._countInBeats = bars[0]?.beatSubs.length || this.timeSignature.beats
     // _recompute runs every tick — only rebuild the count-in plan when one of
@@ -135,7 +146,25 @@ export class Scheduler {
 
   _secondsPerStepAt(step) {
     const div = (this._divisor && this._divisor[step]) || spbOf(this.subdivision)
-    return 60.0 / this.bpm / div
+    let dur = 60.0 / this.bpm / div
+    // Swing: stretch the on-step and shrink the off-step of each pair on
+    // straight eighth/sixteenth grids (triplets etc. keep even spacing).
+    if (this.swing > 0 && (div === 2 || div === 4)) {
+      const pos = this._posInBeat ? this._posInBeat[step] || 0 : 0
+      dur *= pos % 2 === 0 ? 1 + this.swing : 1 - this.swing
+    }
+    return dur
+  }
+
+  // The loop range clamped to the current bar count, or null when inactive.
+  _loopClamped() {
+    const lr = this.loopRange
+    if (!lr || !this._barStartStep || this._barStartStep.length < 2) return null
+    const last = this._barStartStep.length - 1
+    const from = Math.max(0, Math.min(lr.from ?? 0, last))
+    const to = Math.max(from, Math.min(lr.to ?? from, last))
+    if (from === 0 && to === last) return null // whole phrase = no loop needed
+    return { from, to }
   }
 
   // The effective tempo given the base tempo and how many bars have elapsed.
@@ -167,7 +196,10 @@ export class Scheduler {
     const ctx = getAudioContext()
     this._recompute()
     this.isPlaying = true
-    this.currentStep = 0
+    // Start inside the looped range when one is set.
+    const lr = this._loopClamped()
+    this.currentStep = lr ? this._barStartStep[lr.from] : 0
+    this._resumeStep = this.currentStep
     this._bars = 0
     this.bpm = this.baseBpm // start each run from the base tempo
     this._countInStep = 0
@@ -186,6 +218,7 @@ export class Scheduler {
     this.bpm = this.baseBpm
     this._phase = 'pattern'
     this._countInStep = 0
+    this._resumeStep = 0
   }
 
   // Drive _tick from a Worker interval when possible (background-tab safe);
@@ -250,13 +283,24 @@ export class Scheduler {
     this._countInStep += 1
     if (this._countInStep >= this._countInLen()) {
       this._phase = 'pattern'
-      this.currentStep = 0
+      this.currentStep = this._resumeStep || 0
     }
   }
 
   _advance() {
     this.nextNoteTime += this._secondsPerStepAt(this.currentStep)
-    const next = (this.currentStep + 1) % this._totalSteps()
+    let next = this.currentStep + 1
+    let wrapped = false
+    const lr = this._loopClamped()
+    if (lr) {
+      // Loop a bar range: wrap (or pull a stray playhead) back to the range start.
+      const s0 = this._barStartStep[lr.from]
+      const s1 = lr.to + 1 < this._barStartStep.length ? this._barStartStep[lr.to + 1] : this._totalSteps()
+      if (next >= s1 || next >= this._totalSteps() || next < s0) { next = s0; wrapped = true }
+    } else if (next >= this._totalSteps()) {
+      next = 0
+      wrapped = true
+    }
     // Count musical bars (each bar-start), not just full-phrase wraps, so the
     // speed/gap trainers step per bar in multi-bar exercises. Step 0 is always a
     // bar start, so single-bar exercises behave exactly as before.
@@ -265,12 +309,13 @@ export class Scheduler {
       this._bars += 1
       this.bpm = this.rampedBpm()
     }
-    // "Count-in each pass" mode: at the end of a full pass, count in again
-    // before replaying the phrase.
-    if (next === 0 && this.countIn && this.countIn.enabled && this.countIn.mode === 'phrase' && this._countInLen() > 0) {
+    // "Count-in each pass" mode: at the end of a pass (full phrase, or the
+    // looped range), count in again before replaying.
+    if (wrapped && this.countIn && this.countIn.enabled && this.countIn.mode === 'phrase' && this._countInLen() > 0) {
       this._phase = 'countin'
       this._countInStep = 0
-      this.currentStep = 0
+      this._resumeStep = next
+      this.currentStep = next
       return
     }
     this.currentStep = next

@@ -28,6 +28,7 @@ const TOOL_GLYPHS = { hit: '●', accent: '>', ghost: '( )', flam: 'f', roll: 'z
 
 export default function PracticeView({
   t, lang, item, setItem, options, setOptions, vols, setVols, playing, step,
+  loopRange, onLoopRange,
   progress, onProgress, onDuplicate, onBack, onSave, onExport, onNew, savedFlash,
 }) {
   const editable = item.source === 'user'
@@ -96,6 +97,15 @@ export default function PracticeView({
   const setSig = (s) => mutate((p) => resizeExercise(p, sigToTimeSignature(s), p.subdivision))
   const setSub = (s) => mutate((p) => resizeExercise(p, p.timeSignature, s))
   const setOneBeatSub = (b, s) => mutate((p) => setBeatSub(p, b, s))
+  // Loop range: click a bar number to loop that bar; click another to extend;
+  // click inside the range to clear it.
+  const inLoop = (i) => loopRange && i >= loopRange.from && i <= loopRange.to
+  const toggleLoopBar = (i) => onLoopRange?.((lr) => {
+    if (!lr) return { from: i, to: i }
+    if (i >= lr.from && i <= lr.to) return null
+    return { from: Math.min(lr.from, i), to: Math.max(lr.to, i) }
+  })
+
   const addBarBtn = () => mutate((p) => addBar(p))
   const insertBefore = (i) => mutate((p) => insertBar(p, i))
   const dupBar = (i) => mutate((p) => duplicateBar(p, i))
@@ -252,6 +262,14 @@ export default function PracticeView({
           <Switch checked={options.soundSubs} onChange={(v) => setOptions((o) => ({ ...o, soundSubs: v }))} label={t('countSubdivisions')} icon="notes" />
           {editable && <Switch checked={rollType === 'closed'} onChange={toggleRollType} label={t('closedRolls')} icon="grid" />}
         </div>
+        <div style={{ marginTop: 'var(--s-4)', maxWidth: 420 }}>
+          <div className="muted-line" style={{ marginBottom: 6 }}>{t('swing')}</div>
+          <div className="volume-row">
+            <Icon name="notes" className="v-ic" />
+            <Slider value={options.swing || 0} min={0} max={100} onChange={(v) => setOptions((o) => ({ ...o, swing: v }))} aria-label={t('swing')} />
+            <span className="v-val num">{options.swing || 0}%</span>
+          </div>
+        </div>
 
         <hr className="divider" style={{ margin: 'var(--s-5) 0' }} />
         {(() => {
@@ -390,9 +408,12 @@ export default function PracticeView({
           {editable && (
             <div className="bar-strip">
               {layout.bars.map((bar) => (
-                <div className="bar-block" key={bar.bar}>
+                <div className={'bar-block' + (inLoop(bar.bar) ? ' is-loop' : '')} key={bar.bar}>
                   <div className="bar-block-head">
-                    <span className="bar-tag num">{t('bar')} {bar.bar + 1}</span>
+                    <button className={'bar-tag num' + (inLoop(bar.bar) ? ' is-loop' : '')}
+                      onClick={() => toggleLoopBar(bar.bar)} title={t('loopBarTitle')}>
+                      {t('bar')} {bar.bar + 1}
+                    </button>
                     <select className="select bar-ts" value={`${bar.ts.beats}/${bar.ts.unit}`} onChange={(e) => setBarTS(bar.bar, e.target.value)}>
                       {TIME_SIGS.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
