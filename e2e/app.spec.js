@@ -401,3 +401,24 @@ test('recently practiced shelf appears from journal data', async ({ page }) => {
   await expect(page.locator('.sec-label', { hasText: 'Recently practiced' })).toBeVisible()
   await expect(page.locator('.ex-list.shelf .exrow-name', { hasText: 'Stick Control #1' })).toBeVisible()
 })
+
+test('tempo goal: set on an exercise, progress shows in workouts panel', async ({ page }) => {
+  // Seed a best tempo so the bar has something to show.
+  await page.addInitScript(() => {
+    localStorage.setItem('drums2_journal', JSON.stringify({
+      days: {}, tempo: { sc_sb_1: { best: 100, last: 100, history: [{ d: '2026-06-01', bpm: 100 }] } },
+    }))
+  })
+  await page.reload()
+  await page.locator('.side-parent-main').click()
+  await page.locator('.lib2-search input').fill('Stick Control #1')
+  await page.locator('.exrow', { hasText: 'Stick Control #1' }).first().click()
+  await page.locator('.chip-goal-add').click()
+  // stepper default 120 -> confirm
+  await page.locator('.chip-goal-edit .goal-ok').click()
+  await expect(page.locator('.chip-goal')).toContainText('120')
+  // panel on workouts lists the goal with progress 100/120
+  await page.locator('.side-link', { hasText: 'Workouts' }).click()
+  await expect(page.locator('.pr-goals')).toContainText('Stick Control #1')
+  await expect(page.locator('.pr-goals')).toContainText('100/120')
+})

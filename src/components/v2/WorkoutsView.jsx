@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Button, Icon } from '../ui.jsx'
 import { WORKOUTS } from '../../data/workouts.js'
-import { getStreak, getWeekMinutes, getDayMap, getRecentExercises } from '../../model/progress.js'
+import { getStreak, getWeekMinutes, getDayMap, getRecentExercises, getTempoGoals } from '../../model/progress.js'
 
 const LEVEL_HUES = {
   beginner: 'oklch(0.72 0.17 150)',
@@ -32,6 +32,7 @@ function ProgressPanel({ t, exercisesById }) {
   const week = getWeekMinutes()
   const days = getDayMap(12)
   const recent = getRecentExercises(7).slice(0, 5)
+  const goals = getTempoGoals().filter((g) => g.best < g.goal).slice(0, 5)
   const nameOf = (id) => (id === 'metronome' ? t('metronome') : exercisesById?.get(id)?.name || id)
   return (
     <div className="pr-panel">
@@ -40,6 +41,18 @@ function ProgressPanel({ t, exercisesById }) {
         <div className="pr-stat"><span className="pr-num num">{week}</span><span className="pr-cap">{t('prWeek')}</span></div>
       </div>
       <Heatmap days={days} />
+      {goals.length > 0 && (
+        <div className="pr-recent pr-goals">
+          <span className="pr-cap">{t('prGoals')}</span>
+          {goals.map((g) => (
+            <span key={g.exId} className="pr-recent-row">
+              <span className="pr-recent-name">{nameOf(g.exId)}</span>
+              <span className="pr-goal-track"><span className="pr-goal-fill" style={{ width: `${Math.min(100, (g.best / g.goal) * 100)}%` }} /></span>
+              <span className="num">{g.best || 0}/{g.goal}</span>
+            </span>
+          ))}
+        </div>
+      )}
       {recent.length > 0 && (
         <div className="pr-recent">
           <span className="pr-cap">{t('prRecent')}</span>

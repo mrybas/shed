@@ -462,3 +462,20 @@
 .rowact.star.is-on { color: var(--accent); }
 .prog-btn.prog-fav.is-on { color: var(--accent); border-color: var(--accent); }
 .ex-list.shelf { margin-bottom: var(--s-4); }
+
+/* ---- Tempo goals ---- */
+.chip-goal-add { cursor: pointer; color: var(--text-3); }
+.chip-goal-add:hover { color: var(--text); border-color: var(--border-strong); }
+.chip-goal { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.chip-goal.is-reached { color: var(--play-green); border-color: var(--play-green); }
+.goal-bar { width: 56px; height: 5px; border-radius: 3px; background: var(--surface-inset); overflow: hidden; }
+.goal-fill { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+.chip-goal-edit { display: inline-flex; align-items: center; gap: 6px; }
+.chip-goal-edit .stepper { width: 96px; }
+.goal-clear, .goal-ok {
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--text-2);
+  border-radius: var(--r-sm); height: 24px; padding: 0 8px; cursor: pointer; font-size: 11px;
+}
+.goal-ok:hover, .goal-clear:hover { color: var(--text); border-color: var(--border-strong); }
+.pr-goal-track { flex: 1 1 60px; max-width: 120px; height: 5px; border-radius: 3px; background: var(--surface-inset); overflow: hidden; margin: 0 8px; }
+.pr-goal-fill { display: block; height: 100%; background: var(--accent); }

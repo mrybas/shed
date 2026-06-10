@@ -26,7 +26,7 @@ import { generateRhythm, exerciseOfTheDay } from './data/generator.js'
 import { loadFavs, toggleFav } from './model/favs.js'
 import { decodeShare, shareFromHash } from './model/share.js'
 
-const APP_VERSION = 'v5.16' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v5.17' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'

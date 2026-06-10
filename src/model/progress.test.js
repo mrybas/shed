@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
   logPracticeSeconds, logTempo, flushJournal, dayKey,
-  getStreak, getWeekMinutes, getDayMap, getRecentExercises, getTempoStats,
+  getStreak, getWeekMinutes, getDayMap, getRecentExercises, getTempoStats, setTempoGoal, getTempoGoals,
   exportJournal, mergeJournal, _resetJournalCache,
 } from './progress.js'
 
@@ -85,5 +85,26 @@ describe('practice journal', () => {
 
   it('dayKey uses the local timezone', () => {
     expect(dayKey(D('2026-06-10'))).toBe('2026-06-10')
+  })
+})
+
+describe('tempo goals', () => {
+  beforeEach(() => { localStorage.clear(); _resetJournalCache() })
+
+  it('sets, lists and clears goals; merge keeps the local goal', () => {
+    setTempoGoal('ex1', 140)
+    logTempo('ex1', 100)
+    setTempoGoal('ex2', 90)
+    expect(getTempoStats('ex1').goal).toBe(140)
+    expect(getTempoGoals()).toEqual([
+      { exId: 'ex1', goal: 140, best: 100 },
+      { exId: 'ex2', goal: 90, best: 0 },
+    ])
+    setTempoGoal('ex2', 0)
+    expect(getTempoGoals()).toHaveLength(1)
+    // merge: imported goal fills a missing one but does not override ours
+    mergeJournal({ days: {}, tempo: { ex1: { best: 50, goal: 200 }, ex3: { best: 10, goal: 80 } } })
+    expect(getTempoStats('ex1').goal).toBe(140)
+    expect(getTempoStats('ex3').goal).toBe(80)
   })
 })

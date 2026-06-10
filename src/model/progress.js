@@ -65,6 +65,24 @@ export function getTempoStats(exId) {
   return load().tempo[exId] || null
 }
 
+// Tempo goal: a target bpm the player is working toward (0/null clears it).
+export function setTempoGoal(exId, bpm) {
+  if (!exId) return
+  const j = load()
+  const t = j.tempo[exId] || (j.tempo[exId] = { best: 0, last: 0, history: [] })
+  if (bpm > 0) t.goal = bpm
+  else delete t.goal
+  dirty = true
+  flushJournal()
+}
+
+export function getTempoGoals() {
+  const j = load()
+  return Object.entries(j.tempo)
+    .filter(([, t]) => t.goal > 0)
+    .map(([exId, t]) => ({ exId, goal: t.goal, best: t.best || 0 }))
+}
+
 // Consecutive practice days ending today (or yesterday, if today not yet played).
 export function getStreak(now = new Date()) {
   const j = load()
@@ -136,6 +154,7 @@ export function mergeJournal(imported) {
     const cur = j.tempo[exId] || (j.tempo[exId] = { best: 0, last: 0, history: [] })
     cur.best = Math.max(cur.best, t.best || 0)
     if (!cur.last) cur.last = t.last || 0
+    if (t.goal > 0 && !(cur.goal > 0)) cur.goal = t.goal
     const byDate = new Map(cur.history.map((h) => [h.d, h.bpm]))
     ;(t.history || []).forEach((h) => byDate.set(h.d, Math.max(byDate.get(h.d) || 0, h.bpm)))
     cur.history = [...byDate.entries()].map(([d, bpm]) => ({ d, bpm })).sort((a, b) => (a.d < b.d ? -1 : 1)).slice(-HISTORY_CAP)

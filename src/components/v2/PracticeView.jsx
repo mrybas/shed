@@ -5,7 +5,7 @@ import NotationView from '../NotationView.jsx'
 import SoundSheet from './SoundSheet.jsx'
 import { TIME_SIGS } from './util.js'
 import { CAT, catOf, sigOf, levelOf } from '../../data/catalogV2.js'
-import { getTempoStats } from '../../model/progress.js'
+import { getTempoStats, setTempoGoal } from '../../model/progress.js'
 import { shareUrlFor } from '../../model/share.js'
 
 // Tiny tempo-history graph for the exercise meta area.
@@ -56,6 +56,43 @@ const ART_TOOL_ROWS = { cross: 'snare', rim: 'snare', bell: 'ride' }
 
 // Beat-value button in the ruler; click cycles through these four.
 const TICK_CYCLE = ['quarter', 'eighth', 'triplet', 'sixteenth']
+
+// Tempo goal: target bpm with a progress bar from the current best.
+function GoalChip({ t, exId, journalVer, onChange }) {
+  const stats = getTempoStats(exId)
+  const goal = stats?.goal || 0
+  const best = stats?.best || 0
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(goal || 120)
+  const reached = goal > 0 && best >= goal
+  const openEdit = () => { setDraft(goal || 120); setEditing(true) }
+  if (!editing) {
+    if (!goal) {
+      return (
+        <button className="chip chip-goal-add" onClick={openEdit}>🎯 {t('goalSet')}</button>
+      )
+    }
+    return (
+      <button className={'chip chip-goal num' + (reached ? ' is-reached' : '')} onClick={openEdit}
+        title={t('goalTitle')}>
+        🎯 {goal} {t('bpm')} {reached && '✓'}
+        {!reached && (
+          <span className="goal-bar"><span className="goal-fill" style={{ width: `${Math.min(100, (best / goal) * 100)}%` }} /></span>
+        )}
+      </button>
+    )
+  }
+  return (
+    <span className="chip chip-goal-edit">
+      🎯
+      <NumberStepper value={draft} min={30} max={260} step={5}
+        onChange={setDraft} aria-label={t('goalTitle')} />
+      <button className="goal-clear" title={t('goalClear')}
+        onClick={() => { setTempoGoal(exId, 0); setEditing(false); onChange() }}>✕</button>
+      <button className="goal-ok" onClick={() => { setTempoGoal(exId, draft); setEditing(false); onChange() }}>OK</button>
+    </span>
+  )
+}
 
 export default function PracticeView({
   t, lang, item, setItem, options, setOptions, vols, setVols, playing, step,
@@ -266,6 +303,9 @@ export default function PracticeView({
 
   // Global sound settings (kit + mixer) live in a bottom sheet.
   const [soundOpen, setSoundOpen] = useState(false)
+  // Re-render hook for tempo-goal edits (journal is outside React state).
+  const [goalVer, setGoalVer] = useState(0)
+  const bumpGoalVer = () => setGoalVer((v) => v + 1)
 
   // Print: relayout the notation to A4 width first, then open the dialog.
   const [printing, setPrinting] = useState(false)
@@ -311,6 +351,7 @@ export default function PracticeView({
                 </span>
               )
             })()}
+            <GoalChip t={t} exId={item.id} journalVer={goalVer} onChange={bumpGoalVer} />
             {item.number != null && <span className="chip chip-source"><Icon name="bookmark" className="ic-xs" />#{item.number}</span>}
             {(item.tags || []).map((tg) => <span key={tg} className="chip chip-tag">#{t(`tag_${tg}`)}</span>)}
           </div>
