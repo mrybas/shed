@@ -266,3 +266,30 @@
 }
 .pb-wkbtn:hover { color: var(--text); border-color: var(--border-strong); }
 .pb-wkbtn .ic { width: 14px; height: 14px; }
+
+/* ---- Practice progress (Workouts tab) ---- */
+.pr-panel {
+  display: grid; gap: var(--s-3);
+  padding: var(--s-4); margin-bottom: var(--s-4);
+  border: 1px solid var(--border-soft); border-radius: var(--r-lg); background: var(--surface-1);
+}
+.pr-stats { display: flex; gap: var(--s-6); }
+.pr-stat { display: grid; gap: 2px; }
+.pr-num { font-size: 1.5rem; font-weight: 700; letter-spacing: -.02em; }
+.pr-cap { font-size: var(--fs-xs); color: var(--text-3); text-transform: uppercase; letter-spacing: .04em; font-weight: 700; }
+.pr-heatmap {
+  display: grid; grid-template-rows: repeat(7, 10px); grid-auto-flow: column;
+  grid-auto-columns: 10px; gap: 3px; overflow-x: auto; padding-bottom: 2px;
+}
+.pr-cell { width: 10px; height: 10px; border-radius: 2px; background: var(--surface-2); }
+.pr-cell.l1 { background: color-mix(in oklab, var(--accent) 25%, var(--surface-2)); }
+.pr-cell.l2 { background: color-mix(in oklab, var(--accent) 50%, var(--surface-2)); }
+.pr-cell.l3 { background: color-mix(in oklab, var(--accent) 75%, var(--surface-2)); }
+.pr-cell.l4 { background: var(--accent); }
+.pr-recent { display: grid; gap: 4px; }
+.pr-recent-row { display: flex; justify-content: space-between; gap: var(--s-4); font-size: var(--fs-sm); color: var(--text-2); }
+.pr-recent-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Best-tempo chip + sparkline in the exercise meta. */
+.chip-best { color: var(--accent); display: inline-flex; align-items: center; gap: 8px; }
+.tempo-spark { color: var(--accent); opacity: .8; }

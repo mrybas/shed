@@ -17,8 +17,9 @@ import {
   createEmptyExercise, exportExercise, exportLibraryFile, parseImported,
   loadLibrary, saveToLibrary, deleteFromLibrary, genId, barLayout,
 } from './model/exercise.js'
+import { logPracticeSeconds, logTempo, flushJournal, exportJournal, mergeJournal } from './model/progress.js'
 
-const APP_VERSION = 'v4.6' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v4.7' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -96,6 +97,10 @@ export default function App() {
   const exById = useMemo(() => new Map(getCatalogExercises().map((e) => [e.id, e])), [])
   const workoutById = (id) => WORKOUTS.find((w) => w.id === id)
 
+  // ---- Practice journal collectors ----
+  const modeRef = useRef('metronome')
+  const itemIdRef = useRef(null)
+
   const sched = useScheduler({ pattern: null, metronomeEnabled: true })
   useSpacebar(sched.toggle)
 
@@ -108,6 +113,44 @@ export default function App() {
     window.addEventListener('touchend', unlock, opts)
     return () => { window.removeEventListener('pointerdown', unlock); window.removeEventListener('touchend', unlock) }
   }, [])
+
+  // Practice-seconds collector: 1s tick while actually playing (no count-in);
+  // metronome time logs under 'metronome'. Journal flushes are batched.
+  useEffect(() => {
+    const scheduler = sched.scheduler // stable instance
+    const tick = setInterval(() => {
+      if (!scheduler.isPlaying || scheduler.inCountIn()) return
+      const exId = modeRef.current === 'metronome' ? 'metronome' : itemIdRef.current
+      if (exId) logPracticeSeconds(exId, 1)
+    }, 1000)
+    const flush = setInterval(flushJournal, 10000)
+    const onHide = () => flushJournal()
+    document.addEventListener('visibilitychange', onHide)
+    window.addEventListener('beforeunload', onHide)
+    return () => {
+      clearInterval(tick); clearInterval(flush)
+      document.removeEventListener('visibilitychange', onHide)
+      window.removeEventListener('beforeunload', onHide)
+      flushJournal()
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Tempo records: remember the session's highest (ramped) bpm per exercise.
+  const maxBpmRef = useRef(0)
+  const [, bumpJournalVer] = useState(0)
+  useEffect(() => {
+    if (sched.isPlaying) {
+      if (sched.liveBpm > maxBpmRef.current) maxBpmRef.current = sched.liveBpm
+      return
+    }
+    const exId = modeRef.current === 'practice' ? itemIdRef.current : null
+    if (exId && maxBpmRef.current) {
+      logTempo(exId, maxBpmRef.current)
+      flushJournal()
+      bumpJournalVer((v) => v + 1) // let the open exercise show its new record
+    }
+    maxBpmRef.current = 0
+  }, [sched.isPlaying, sched.liveBpm])
 
   const setTweak = (k, v) => setTw((p) => ({ ...p, [k]: v }))
 
@@ -138,6 +181,8 @@ export default function App() {
   }, [item])
 
   const mode = nav === 'metronome' ? 'metronome' : (item ? 'practice' : 'metronome')
+  modeRef.current = mode
+  itemIdRef.current = item?.id || null
 
   // A workout block writes its settings INTO the live options, so the panels
   // show exactly what's playing (speed trainer on, with its values) and remain
@@ -347,6 +392,7 @@ export default function App() {
             saveToLibrary(ex)
             added += 1
           })
+          if (parsed.journal) mergeJournal(parsed.journal)
           refreshSaved()
           setLibTarget({ section: 'saved', cat: null })
           setNav('library')
@@ -465,11 +511,11 @@ export default function App() {
             onStart={startWorkout} onOpenExercise={openItem}
             onBack={() => setWkId(null)} />
         ) : (
-          <WorkoutsView t={t} onOpenWorkout={setWkId} />
+          <WorkoutsView t={t} exercisesById={exById} onOpenWorkout={setWkId} />
         ))}
         {nav === 'library' && (
           <LibraryView t={t} lang={lang} saved={saved} progressMap={progressMap} onOpen={openItem}
-            onNew={newExercise} onImport={importFile} onExportItem={exportExercise} onExportAll={exportLibraryFile}
+            onNew={newExercise} onImport={importFile} onExportItem={exportExercise} onExportAll={() => exportLibraryFile({ journal: exportJournal() })}
             onDeleteSaved={deleteSaved} route={libTarget} onRoute={setLibTarget} />
         )}
         {nav === 'practice' && item && (

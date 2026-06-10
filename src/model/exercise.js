@@ -420,11 +420,12 @@ export function exportExercise(ex) {
   downloadJSON(JSON.stringify(ex, null, 2), `${safe}.drums.json`)
 }
 
-// Back up the whole saved library as one file.
-export function exportLibraryFile() {
+// Back up the whole saved library (plus optional extras, e.g. the practice
+// journal) as one file.
+export function exportLibraryFile(extra = {}) {
   const lib = loadLibrary()
   downloadJSON(
-    JSON.stringify({ app: 'drums', type: 'library', version: 1, exercises: lib }, null, 2),
+    JSON.stringify({ app: 'drums', type: 'library', version: 1, exercises: lib, ...extra }, null, 2),
     'shed-library.drums.json',
   )
   return lib.length
@@ -441,7 +442,7 @@ export function parseImported(text) {
     throw new Error('Invalid JSON')
   }
   if (obj && obj.app === 'drums' && obj.type === 'library' && Array.isArray(obj.exercises)) {
-    return { type: 'library', exercises: obj.exercises.map(parseOne) }
+    return { type: 'library', exercises: obj.exercises.map(parseOne), journal: obj.journal || null }
   }
   return parseOne(obj)
 }

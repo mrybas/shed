@@ -4,6 +4,26 @@ import { useTapTempo } from '../../hooks/useTapTempo.js'
 import NotationView from '../NotationView.jsx'
 import { TIME_SIGS } from './util.js'
 import { CAT, catOf, sigOf, levelOf } from '../../data/catalogV2.js'
+import { getTempoStats } from '../../model/progress.js'
+
+// Tiny tempo-history graph for the exercise meta area.
+function Sparkline({ history }) {
+  if (!history || history.length < 2) return null
+  const w = 120; const h = 26; const pad = 2
+  const vals = history.map((p) => p.bpm)
+  const min = Math.min(...vals); const max = Math.max(...vals)
+  const span = Math.max(1, max - min)
+  const pts = vals.map((v, i) => {
+    const x = pad + (i * (w - pad * 2)) / (vals.length - 1)
+    const y = h - pad - ((v - min) * (h - pad * 2)) / span
+    return `${x.toFixed(1)},${y.toFixed(1)}`
+  }).join(' ')
+  return (
+    <svg className="tempo-spark" width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden="true">
+      <polyline points={pts} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  )
+}
 import { INSTRUMENTS, resizeExercise, setBeatSub, setAllBeatSubs, barLayout, addBar, insertBar, duplicateBar, removeBar, setBarTimeSignature } from '../../model/exercise.js'
 import { sigToTimeSignature } from './util.js'
 
@@ -228,6 +248,16 @@ export default function PracticeView({
             {cat && <span className="chip"><span className="chip-dot" style={{ background: cat.hue }} />{cat.label[lang] || cat.label.en}</span>}
             <span className="chip">{t(`level_${levelOf(item)}`)}</span>
             <span className="chip num">{sig}</span>
+            {(() => {
+              const stats = getTempoStats(item.id)
+              if (!stats?.best) return null
+              return (
+                <span className="chip chip-best num" title={t('prBestTitle')}>
+                  ★ {stats.best} {t('bpm')}
+                  <Sparkline history={stats.history} />
+                </span>
+              )
+            })()}
             {item.number != null && <span className="chip chip-source"><Icon name="bookmark" className="ic-xs" />#{item.number}</span>}
             {(item.tags || []).map((tg) => <span key={tg} className="chip chip-tag">#{t(`tag_${tg}`)}</span>)}
           </div>
