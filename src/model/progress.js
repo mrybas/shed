@@ -76,6 +76,16 @@ export function setTempoGoal(exId, bpm) {
   flushJournal()
 }
 
+// Tempo histories with enough points to chart, longest first.
+export function getTempoHistories(limit = 3) {
+  const j = load()
+  return Object.entries(j.tempo)
+    .filter(([, t]) => (t.history || []).length >= 2)
+    .map(([exId, t]) => ({ exId, best: t.best || 0, history: t.history }))
+    .sort((a, b) => b.history.length - a.history.length)
+    .slice(0, limit)
+}
+
 export function getTempoGoals() {
   const j = load()
   return Object.entries(j.tempo)

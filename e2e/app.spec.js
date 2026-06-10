@@ -493,3 +493,27 @@ test('performance mode: fullscreen notation opens and closes', async ({ page }) 
   await page.keyboard.press('Escape')
   await expect(page.locator('.perf-overlay')).toHaveCount(0)
 })
+
+test('stats sheet: daily bars, categories and tempo history render', async ({ page }) => {
+  await page.addInitScript(() => {
+    const d = new Date()
+    const key = (off) => {
+      const x = new Date(d.getTime() - off * 864e5)
+      return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`
+    }
+    localStorage.setItem('drums2_journal', JSON.stringify({
+      days: {
+        [key(0)]: { seconds: 600, byExercise: { sc_sb_1: 600 } },
+        [key(1)]: { seconds: 300, byExercise: { gv_disco: 300 } },
+      },
+      tempo: { sc_sb_1: { best: 120, last: 118, history: [{ d: key(3), bpm: 100 }, { d: key(1), bpm: 110 }, { d: key(0), bpm: 120 }] } },
+    }))
+  })
+  await page.reload()
+  await page.locator('.side-link', { hasText: 'Workouts' }).click()
+  await page.getByRole('button', { name: 'Stats' }).click()
+  await expect(page.locator('.stats-sheet')).toBeVisible()
+  await expect(page.locator('.st-chart').first()).toBeVisible()
+  await expect(page.locator('.st-cat-row')).not.toHaveCount(0)
+  await expect(page.locator('.st-tempo-name')).toContainText('Stick Control #1')
+})

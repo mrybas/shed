@@ -26,7 +26,7 @@ import { generateRhythm, exerciseOfTheDay } from './data/generator.js'
 import { loadFavs, toggleFav } from './model/favs.js'
 import { decodeShare, shareFromHash } from './model/share.js'
 
-const APP_VERSION = 'v5.21' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v5.22' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -617,7 +617,7 @@ export default function App() {
             onExport={exportWorkoutFile}
             onBack={() => setWkId(null)} />
         ) : (
-          <WorkoutsView t={t} exercisesById={exById} onOpenWorkout={setWkId}
+          <WorkoutsView t={t} lang={lang} exercisesById={exById} onOpenWorkout={setWkId}
             myWorkouts={myWk} onNew={() => setWkEdit(emptyWorkout())}
             onEdit={(w) => setWkEdit(w)} onDelete={deleteWk}
             daily={daily} onOpenDaily={() => openItem(daily)} />

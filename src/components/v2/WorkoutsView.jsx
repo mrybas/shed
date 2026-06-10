@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Button, Icon } from '../ui.jsx'
 import { WORKOUTS } from '../../data/workouts.js'
 import { getStreak, getWeekMinutes, getDayMap, getRecentExercises, getTempoGoals } from '../../model/progress.js'
+import StatsSheet from './StatsSheet.jsx'
 
 const LEVEL_HUES = {
   beginner: 'oklch(0.72 0.17 150)',
@@ -21,7 +22,8 @@ function Heatmap({ days }) {
   )
 }
 
-function ProgressPanel({ t, exercisesById }) {
+function ProgressPanel({ t, lang, exercisesById }) {
+  const [statsOpen, setStatsOpen] = useState(false)
   // Journal lives outside React — refresh the panel every few seconds.
   const [, setTick] = useState(0)
   useEffect(() => {
@@ -39,7 +41,9 @@ function ProgressPanel({ t, exercisesById }) {
       <div className="pr-stats">
         <div className="pr-stat"><span className="pr-num num">🔥 {streak}</span><span className="pr-cap">{t('prStreak')}</span></div>
         <div className="pr-stat"><span className="pr-num num">{week}</span><span className="pr-cap">{t('prWeek')}</span></div>
+        <Button size="sm" icon="grid" onClick={() => setStatsOpen(true)} style={{ marginLeft: 'auto', alignSelf: 'center' }}>{t('stTitle')}</Button>
       </div>
+      <StatsSheet t={t} lang={lang} open={statsOpen} onClose={() => setStatsOpen(false)} exercisesById={exercisesById} />
       <Heatmap days={days} />
       {goals.length > 0 && (
         <div className="pr-recent pr-goals">
@@ -88,12 +92,12 @@ function WorkoutCard({ t, w, onOpen, onEdit, onDelete }) {
   )
 }
 
-export default function WorkoutsView({ t, exercisesById, onOpenWorkout, myWorkouts = [], onNew, onEdit, onDelete, daily, onOpenDaily }) {
+export default function WorkoutsView({ t, lang, exercisesById, onOpenWorkout, myWorkouts = [], onNew, onEdit, onDelete, daily, onOpenDaily }) {
   const byLevel = (lv) => WORKOUTS.filter((w) => w.level === lv)
   return (
     <div className="lib2-home" data-screen-label="Workouts">
       <h1 className="page-title">{t('workouts')}</h1>
-      <ProgressPanel t={t} exercisesById={exercisesById} />
+      <ProgressPanel t={t} lang={lang} exercisesById={exercisesById} />
       {daily && (
         <button className="daily-card" onClick={onOpenDaily}>
           <span className="daily-icon"><Icon name="star" className="ic" /></span>

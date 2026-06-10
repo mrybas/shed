@@ -548,3 +548,17 @@
 }
 .perf-notes .notation-inner { background: var(--notation-paper); border-radius: var(--r-md); }
 @media (max-width: 700px) { .perf-overlay { padding-bottom: calc(var(--pb-h, 84px) + var(--bn-h, 56px)); } }
+
+/* ---- Stats sheet ---- */
+.stats-sheet .st-chart { width: 100%; height: auto; display: block; margin: 6px 0 var(--s-4); }
+.st-axis { fill: var(--text-3); font-size: 9px; font-family: var(--num-font); }
+.st-cats { display: grid; gap: 6px; margin: 6px 0 var(--s-4); }
+.st-cat-row { display: grid; grid-template-columns: 110px 1fr 44px; align-items: center; gap: var(--s-2); }
+.st-cat-name { font-size: var(--fs-xs); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-cat-track { height: 8px; border-radius: 4px; background: var(--surface-inset); overflow: hidden; }
+.st-cat-fill { display: block; height: 100%; border-radius: 4px; }
+.st-cat-min { text-align: right; font-size: var(--fs-xs); color: var(--text-2); }
+.st-tempo { margin-bottom: var(--s-3); }
+.st-tempo-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-3); }
+.st-tempo-name { font-size: var(--fs-sm); font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-tempo-best { color: var(--text-3); font-size: var(--fs-xs); }
