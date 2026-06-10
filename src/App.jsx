@@ -24,7 +24,7 @@ import {
 import { logPracticeSeconds, logTempo, flushJournal, exportJournal, mergeJournal, getTempoStats } from './model/progress.js'
 import { decodeShare, shareFromHash } from './model/share.js'
 
-const APP_VERSION = 'v5.6' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v5.7' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -269,6 +269,14 @@ export default function App() {
 
   // Stop playback when switching transport context.
   useEffect(() => { sched.stop() }, [mode]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Leaving the practice screen pauses the exercise — it shouldn't keep
+  // playing while you browse. The player bar still shows it and can resume.
+  const prevNavRef = useRef(nav)
+  useEffect(() => {
+    if (prevNavRef.current === 'practice' && nav !== 'practice') sched.stop()
+    prevNavRef.current = nav
+  }, [nav]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const playing = sched.isPlaying
   const step = sched.currentStep

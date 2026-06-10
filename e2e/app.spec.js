@@ -253,3 +253,15 @@ test('sound sheet: kit choice persists, mixer mute persists', async ({ page }) =
   await page.locator('.sheet').getByRole('button', { name: 'Reset' }).click()
   await expect(page.locator('.mix-label.is-muted')).toHaveCount(0)
 })
+
+test('navigating away from a playing exercise pauses it', async ({ page }) => {
+  await page.locator('.side-parent-main').click()
+  await page.locator('.cat-card').first().click()
+  await page.locator('.exrow').first().click()
+  await page.locator('.pb-play').click()
+  await expect(page.locator('.pb-play')).toHaveClass(/is-playing/)
+  // Go back to the library — playback must pause, the item stays in the bar.
+  await page.locator('.prac-back').click()
+  await expect(page.locator('.pb-play')).not.toHaveClass(/is-playing/)
+  await expect(page.locator('.pb-now .pb-title')).not.toHaveText('')
+})
