@@ -25,7 +25,7 @@ import { logPracticeSeconds, logTempo, flushJournal, exportJournal, mergeJournal
 import { generateRhythm, exerciseOfTheDay } from './data/generator.js'
 import { decodeShare, shareFromHash } from './model/share.js'
 
-const APP_VERSION = 'v5.11' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v5.12' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -547,12 +547,16 @@ export default function App() {
   return (
     <div className="shell" data-mode={mode}>
       <header className="topbar">
-        <div className="side-brand"><BrandMark size={18} /><span className="brand-name">{t('appName')}</span><span className="app-version num">{APP_VERSION}</span></div>
+        <button className="side-brand brand-btn" onClick={() => navTo('metronome')} aria-label={t('tabMetronome')}>
+          <BrandMark size={18} /><span className="brand-name">{t('appName')}</span><span className="app-version num">{APP_VERSION}</span>
+        </button>
         <IconButton icon={themeIcon} label={t('theme')} onClick={toggleTheme} />
       </header>
 
       <aside className="sidebar">
-        <div className="side-brand"><BrandMark /><span className="brand-name">{t('appName')}</span></div>
+        <button className="side-brand brand-btn" onClick={() => navTo('metronome')} aria-label={t('tabMetronome')}>
+          <BrandMark /><span className="brand-name">{t('appName')}</span>
+        </button>
         <nav className="side-nav">
           <button className={'side-link' + (nav === 'metronome' ? ' is-active' : '')} onClick={() => navTo('metronome')}>
             <Icon name="metro" className="ic" /><span>{t('tabMetronome')}</span>

@@ -616,7 +616,12 @@ export default function PracticeView({
                     <button key={i} disabled={!editable} aria-label={t(k) + ' ' + (i + 1)}
                       data-cellk={k} data-celli={i}
                       className={['cell', cell.roll ? 'roll' : cell.flam ? 'flam' : cell.art ? 'art' : cell.ghost ? 'ghost' : cell.accent ? 'accent' : cell.on ? 'on' : '', beatStartSet.has(i) ? 'beat-start' : '', barStartSet.has(i) ? 'bar-start' : '', localPlay === i ? 'play-col' : '', !editable ? 'ro' : ''].join(' ')}
-                      onClick={() => editable && !tool && cycleCell(k, i)}>{cell.roll ? 'z' : cell.flam === 'drag' ? 'd' : cell.flam ? 'f' : cell.art === 'cross' ? '×' : cell.art === 'rim' ? 'rs' : cell.art === 'bell' ? '▲' : cell.ghost ? '()' : ''}</button>
+                      onClick={() => editable && !tool && cycleCell(k, i)}>{(() => {
+                        const mark = cell.roll ? 'z' : cell.flam === 'drag' ? 'd' : cell.flam ? 'f' : cell.art === 'cross' ? '×' : cell.art === 'rim' ? 'rs' : cell.art === 'bell' ? '▲' : cell.ghost ? '()' : ''
+                        // Absolutely positioned so the text can never widen the
+                        // cell's grid track (the row is sized max-content).
+                        return mark ? <span className="cell-mark">{mark}</span> : null
+                      })()}</button>
                   ))}
                 </div>
               </div>

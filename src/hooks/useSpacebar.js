@@ -10,10 +10,12 @@ export function useSpacebar(onToggle) {
       const el = document.activeElement
       const tag = el?.tagName
       const type = (el?.getAttribute && el.getAttribute('type')) || ''
+      // An <input> with no type attribute IS a text field — list the
+      // non-typing kinds instead of trying to enumerate every text-ish type.
       const isTextField =
         tag === 'TEXTAREA' ||
         el?.isContentEditable ||
-        (tag === 'INPUT' && ['text', 'number', 'search', 'email', 'tel', 'url', 'password'].includes(type))
+        (tag === 'INPUT' && !['button', 'checkbox', 'radio', 'range', 'submit', 'reset', 'file', 'color'].includes(type))
       if (isTextField) return
       e.preventDefault()
       if (el && typeof el.blur === 'function') el.blur()

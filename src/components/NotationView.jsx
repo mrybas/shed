@@ -61,19 +61,27 @@ export default function NotationView({ exercise, currentStep, loopRange, onBarCl
       const showsTsFor = data.barsMeta.map((bm, i) => i === 0 || bm.timeSig !== data.barsMeta[i - 1].timeSig)
 
       const avail = layoutWidth - 16
-      const lines = []
-      let cur = []
-      let curW = 0
-      data.barsMeta.forEach((bm, i) => {
-        const firstOfLine = cur.length === 0
-        const w = barWidth(bm, firstOfLine, showsTsFor[i])
-        if (cur.length && curW + w > avail) { lines.push(cur); cur = []; curW = 0 }
-        const firstNow = cur.length === 0
-        const w2 = barWidth(bm, firstNow, showsTsFor[i])
-        cur.push({ bm, showsTs: showsTsFor[i], w: w2 })
-        curW += w2
-      })
-      if (cur.length) lines.push(cur)
+      const packLines = (maxPerLine) => {
+        const out = []
+        let cur = []
+        let curW = 0
+        data.barsMeta.forEach((bm, i) => {
+          const w = barWidth(bm, cur.length === 0, showsTsFor[i])
+          if (cur.length && (curW + w > avail || cur.length >= maxPerLine)) { out.push(cur); cur = []; curW = 0 }
+          const w2 = barWidth(bm, cur.length === 0, showsTsFor[i])
+          cur.push({ bm, showsTs: showsTsFor[i], w: w2 })
+          curW += w2
+        })
+        if (cur.length) out.push(cur)
+        return out
+      }
+      // Greedy first, then balance: 4 equal bars at 3-per-line should read as
+      // 2+2, not 3+1. Keep the balanced packing only if it needs no extra line.
+      let lines = packLines(Infinity)
+      if (lines.length > 1) {
+        const balanced = packLines(Math.ceil(data.barsMeta.length / lines.length))
+        if (balanced.length === lines.length) lines = balanced
+      }
 
       const width = layoutWidth
 

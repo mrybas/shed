@@ -330,3 +330,32 @@ test('sight reading: generate, regenerate, and the daily exercise', async ({ pag
   await expect(page.locator('.pb-title')).toContainText('Exercise of the day')
   expect(before).toBeTruthy()
 })
+
+test('typing a space in the exercise name does not toggle playback', async ({ page }) => {
+  await page.locator('.side-parent-main').click()
+  await page.getByRole('button', { name: /New exercise/ }).click()
+  const name = page.locator('.prac-name-input')
+  await name.click()
+  await name.fill('')
+  await name.pressSequentially('My new beat')
+  await expect(name).toHaveValue('My new beat')
+  await expect(page.locator('.pb-play')).not.toHaveClass(/is-playing/)
+})
+
+test('clicking the brand goes to the metronome', async ({ page }) => {
+  await page.locator('.side-parent-main').click()
+  await expect(page.locator('.cat-card').first()).toBeVisible()
+  await page.locator('.sidebar .brand-btn').click()
+  await expect(page.locator('.metroview')).toBeVisible()
+})
+
+test('ghost cells do not widen the grid', async ({ page }) => {
+  await page.locator('.side-parent-main').click()
+  await page.getByRole('button', { name: /New exercise/ }).click()
+  const cell = page.locator('.seq-row').filter({ has: page.locator('.seq-rowlabel', { hasText: /^Kick$/ }) }).locator('.cell').first()
+  const width = () => page.evaluate(() => document.querySelector('.seq-cells').getBoundingClientRect().width)
+  const before = await width()
+  await cell.click(); await cell.click(); await cell.click() // hit -> accent -> ghost
+  await expect(cell).toHaveClass(/\bghost\b/)
+  expect(Math.abs(await width() - before)).toBeLessThan(1)
+})
