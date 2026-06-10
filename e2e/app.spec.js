@@ -208,3 +208,15 @@ test('print relayouts notation to A4 width, then restores', async ({ page }) => 
     () => document.querySelector('.notation-inner')?.style.width,
   )).not.toBe('660px')
 })
+
+test('new exercise opens in grid; reopening a saved one opens in notes', async ({ page }) => {
+  await page.locator('.side-parent-main').click()
+  await page.getByRole('button', { name: /New exercise/ }).click()
+  await expect(page.locator('.seq')).toBeVisible() // fresh exercise -> grid editor
+  await page.locator('.prac-name-input').fill('Reopen test')
+  await page.locator('.seq-row').filter({ has: page.locator('.seq-rowlabel', { hasText: /^Kick$/ }) }).locator('.cell').first().click()
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await page.locator('.side-subitem', { hasText: 'Saved' }).click()
+  await page.locator('.exrow', { hasText: 'Reopen test' }).click()
+  await expect(page.locator('.notation-wrap .vf-line svg').first()).toBeVisible() // saved -> notes
+})

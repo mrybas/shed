@@ -24,7 +24,7 @@ import {
 import { logPracticeSeconds, logTempo, flushJournal, exportJournal, mergeJournal, getTempoStats } from './model/progress.js'
 import { decodeShare, shareFromHash } from './model/share.js'
 
-const APP_VERSION = 'v5.3' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v5.4' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -170,7 +170,7 @@ export default function App() {
     decodeShare(payload)
       .then((obj) => {
         const ex = parseImported(JSON.stringify(obj))
-        if (ex && ex.rows) { ex.source = 'user'; setItem(ex); setNav('practice') }
+        if (ex && ex.rows) { ex.source = 'user'; setPracticeView('notes'); setItem(ex); setNav('practice') }
       })
       .catch(() => { /* malformed link — ignore */ })
     history.replaceState(null, '', location.pathname)
@@ -272,16 +272,20 @@ export default function App() {
 
   // ---- handlers ----
   const refreshSaved = useCallback(() => setSaved(loadLibrary()), [])
+  // Which view practice opens in: existing exercises land on notes, a brand
+  // new (or freshly duplicated) one goes straight to the grid for editing.
+  const [practiceView, setPracticeView] = useState('notes')
   const openItem = (ex) => {
     if (runRef.current) { setRun(null); restoreUserOptions() } // manual open ends a workout
     const it = clone(ex)
     // Restore the user's working tempo for catalog exercises.
     if (it.source !== 'user' && tempoMap[it.id]) it.bpm = tempoMap[it.id]
+    setPracticeView('notes')
     setItem(it)
     setLoopRange(null) // loop ranges are per practice session
     setNav('practice')
   }
-  const newExercise = () => { if (runRef.current) { setRun(null); restoreUserOptions() } setItem(createEmptyExercise({ source: 'user', name: t('newExercise') })); setLoopRange(null); setNav('practice') }
+  const newExercise = () => { if (runRef.current) { setRun(null); restoreUserOptions() } setPracticeView('grid'); setItem(createEmptyExercise({ source: 'user', name: t('newExercise') })); setLoopRange(null); setNav('practice') }
 
   // ---- Workout runner ----
   const restoreUserOptions = useCallback(() => {
@@ -297,6 +301,7 @@ export default function App() {
     // Adaptive progression: resume ramped blocks near the last reached tempo.
     const resumed = adaptiveStartBpm(block, getTempoStats(block.exerciseId))
     if (resumed) it.bpm = resumed
+    setPracticeView('notes')
     setItem(it)
     setOptions((cur) => blockOptions(block, cur))
     setLoopRange(null)
@@ -415,7 +420,7 @@ export default function App() {
     if (!item) return
     const copy = { ...asUserCopy(item), name: item.name + ' (copy)' }
     if (!saveToLibrary(copy)) alert('Could not save — browser storage is full.')
-    refreshSaved(); setItem(copy); setNav('practice')
+    refreshSaved(); setPracticeView('grid'); setItem(copy); setNav('practice')
   }
 
   const deleteSaved = (id) => { deleteFromLibrary(id); refreshSaved(); if (item && item.id === id) setNav('library') }
@@ -458,7 +463,7 @@ export default function App() {
           if (list) { setMyWk(list); setWkEdit(null); setWkId(w.id); navTo('workouts') }
         } else {
           parsed.source = 'user'
-          saveToLibrary(parsed); refreshSaved(); setItem(parsed); setNav('practice')
+          saveToLibrary(parsed); refreshSaved(); setPracticeView('notes'); setItem(parsed); setNav('practice')
         }
       } catch {
         alert('Could not import this file.')
@@ -586,6 +591,7 @@ export default function App() {
         )}
         {nav === 'practice' && item && (
           <PracticeView t={t} lang={lang} item={item} setItem={setItem} options={options} setOptions={setOptions}
+            initialView={practiceView}
             vols={vols} setVols={setVols} playing={playing && mode === 'practice'} step={step}
             loopRange={loopRange} onLoopRange={setLoopRange}
             progress={progressMap[item.id] || 'none'} onProgress={setProgress} onDuplicate={duplicate}

@@ -55,10 +55,14 @@ export default function PracticeView({
   t, lang, item, setItem, options, setOptions, vols, setVols, playing, step,
   loopRange, onLoopRange,
   progress, onProgress, onDuplicate, onBack, onSave, onExport, onNew, savedFlash,
+  initialView = 'notes',
 }) {
   const editable = item.source === 'user'
-  const [view, setView] = useState(editable ? 'grid' : 'notes')
-  useEffect(() => { setView(editable ? 'grid' : 'notes') }, [item.id, editable])
+  // Catalog items have no grid editing to land on; user items open in the
+  // view the app asked for (grid when just created, notes when reopened).
+  const startView = editable ? initialView : 'notes'
+  const [view, setView] = useState(startView)
+  useEffect(() => { setView(startView) }, [item.id, startView]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- Edit history (structural edits only; bpm/name are continuous) ----
   const histRef = useRef({ undo: [], redo: [] })
