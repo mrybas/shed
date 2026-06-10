@@ -130,5 +130,69 @@ export function getGroovesPack() {
       },
       accents: { snare: [4], hihatClosed: [1, 3, 5, 7] },
     }),
+    groove({
+      id: 'gv_jazz_swing', name: 'Jazz ride (spang-a-lang)', bpm: 132, level: 'intermediate',
+      subdivision: 'triplet', // 12 steps: ride skip pattern + hats on 2 & 4
+      hits: {
+        ride: [0, 3, 5, 6, 9, 11], // 1, 2, let-of-2, 3, 4, let-of-4
+        hihatPedal: [3, 9], // feet keep 2 and 4
+      },
+      accents: { ride: [3, 9] },
+    }),
+    groove({
+      id: 'gv_blues128', name: '12/8 slow blues', bpm: 56, level: 'beginner',
+      subdivision: 'triplet', // every triplet partial on the hat
+      hits: {
+        hihatClosed: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+        snare: [3, 9],
+        kick: [0, 6],
+      },
+      accents: { snare: [3, 9], hihatClosed: [0, 3, 6, 9] },
+    }),
+    groove({
+      id: 'gv_secondline', name: 'Second line (street beat)', bpm: 96, level: 'advanced',
+      bars: [
+        { ts: { beats: 4, unit: 4 }, beatSubs: ['eighth', 'eighth', 'eighth', 'eighth'] },
+        { ts: { beats: 4, unit: 4 }, beatSubs: ['eighth', 'eighth', 'eighth', 'eighth'] },
+      ],
+      hits: {
+        snare: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+        kick: [0, 4, 8, 12],
+        hihatPedal: [2, 6, 10, 14],
+      },
+      // 3-2 son clave accents over running eighths; everything else ghosted.
+      accents: { snare: [0, 3, 6, 10, 12] },
+      ghosts: { snare: [1, 2, 4, 5, 7, 8, 9, 11, 13, 14, 15] },
+      sticking: 'RLRLRLRLRLRLRLRL',
+    }),
+    groove({
+      id: 'gv_doubletime', name: 'Double-time punk', bpm: 100, level: 'intermediate',
+      subdivision: 'eighth',
+      hits: {
+        hihatClosed: [0, 1, 2, 3, 4, 5, 6, 7],
+        snare: [1, 3, 5, 7], // backbeat on every "and" — the double-time feel
+        kick: [0, 2, 4, 6],
+      },
+      accents: { snare: [1, 3, 5, 7] },
+    }),
+    groove({
+      id: 'gv_jazz_waltz', name: 'Jazz waltz', bpm: 120, level: 'advanced',
+      beats: 3, subdivision: 'triplet', // 9 steps
+      hits: {
+        ride: [0, 3, 5, 6], // 1, 2, let-of-2, 3
+        hihatPedal: [3],
+      },
+      accents: { ride: [3] },
+    }),
+    groove({
+      id: 'gv_tomgroove', name: 'Floor-tom groove', bpm: 92, level: 'intermediate',
+      subdivision: 'eighth',
+      hits: {
+        floorTom: [0, 1, 2, 3, 4, 5, 6, 7],
+        snare: [2, 6],
+        kick: [0, 4],
+      },
+      accents: { floorTom: [0, 4], snare: [2, 6] },
+    }),
   ]
 }

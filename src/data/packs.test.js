@@ -63,3 +63,39 @@ describe('fills pack', () => {
     expect(f.rows.floorTom[20].on).toBe(true)
   })
 })
+
+describe('grooves pack — second wave', () => {
+  const list = getGroovesPack()
+  const byId = (id) => list.find((e) => e.id === id)
+
+  it('contains the six new grooves with valid structure', () => {
+    const ids = ['gv_jazz_swing', 'gv_blues128', 'gv_secondline', 'gv_doubletime', 'gv_jazz_waltz', 'gv_tomgroove']
+    ids.forEach((id) => {
+      const ex = byId(id)
+      expect(ex, id).toBeTruthy()
+      expect(exerciseTotalSteps(ex)).toBe(ex.rows.snare.length)
+      const data = buildNotationData(ex)
+      expect(data.totalSteps).toBeGreaterThan(0)
+    })
+  })
+
+  it('jazz ride keeps the skip pattern with feet on 2 and 4', () => {
+    const ex = byId('gv_jazz_swing')
+    const ons = (k) => ex.rows[k].map((c, i) => (c.on ? i : -1)).filter((i) => i >= 0)
+    expect(ons('ride')).toEqual([0, 3, 5, 6, 9, 11])
+    expect(ons('hihatPedal')).toEqual([3, 9])
+  })
+
+  it('second line ghosts everything except the clave accents', () => {
+    const ex = byId('gv_secondline')
+    const accents = ex.rows.snare.map((c, i) => (c.accent ? i : -1)).filter((i) => i >= 0)
+    expect(accents).toEqual([0, 3, 6, 10, 12])
+    expect(ex.rows.snare[1].ghost).toBe(true)
+  })
+
+  it('jazz waltz is in 3/4', () => {
+    const ex = byId('gv_jazz_waltz')
+    expect(ex.timeSignature).toEqual({ beats: 3, unit: 4 })
+    expect(exerciseTotalSteps(ex)).toBe(9)
+  })
+})
