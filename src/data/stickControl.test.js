@@ -29,8 +29,9 @@ describe('Stick Control — Single Beat Combinations (pages 5–7)', () => {
   })
 
   it('triplets are cut-time bars (4 eighths + an eighth-triplet sextuplet)', () => {
-    expect(triplets).toHaveLength(12)
-    triplets.forEach((ex) => {
+    expect(triplets.filter((e) => e.page === 8)).toHaveLength(12)
+    expect(triplets).toHaveLength(36) // + page 9
+    triplets.filter((e) => e.page === 8).forEach((ex) => {
       expect(ex.section).toBe('triplets')
       expect(ex.beatSubs).toEqual(['sixteenth', 'sextuplet'])
       expect(ex.timeSignature).toEqual({ beats: 2, unit: 2 })
@@ -176,7 +177,7 @@ describe('Short Rolls and Triplets (pages 14-15)', () => {
     })
     untied.forEach((ex) => {
       expect(ex.rows.snare[4].roll).toBe('open')
-      expect(ex.rows.snare[4].tie).toBeUndefined()
+      expect(ex.rows.snare[4].tie).toBe(false)
     })
   })
 
@@ -200,5 +201,54 @@ describe('Short Rolls and Triplets (pages 14-15)', () => {
     const u = buildNotationData(untied)
     const uTicks = u.beatsData.filter((b) => b.bar === 0).flatMap((b) => b.tickables)
     expect(uTicks[uTicks.length - 1].tie).toBe(false)
+  })
+})
+
+describe('pages 9 + 11-13 (triplets and short-roll combinations)', () => {
+  const all = getStickControlExercises()
+  const page = (n) => all.filter((e) => e.page === n && e.id.startsWith('sc_p'))
+
+  it('has the right counts: 24 + 24 + 12 + 24', () => {
+    expect(page(9)).toHaveLength(24)
+    expect(page(11)).toHaveLength(24)
+    expect(page(12)).toHaveLength(12)
+    expect(page(13)).toHaveLength(24)
+    page(9).forEach((e) => expect(e.section).toBe('triplets'))
+    ;[11, 12, 13].forEach((p) => page(p).forEach((e) => expect(e.section).toBe('rolls')))
+  })
+
+  it('spot checks match the printed pages', () => {
+    const byId = (id) => all.find((e) => e.id === id)
+    // p9 #1: RLRL + RLR LRL twice (4+6+4+6 = 20 steps)
+    const p9one = byId('sc_p9_1')
+    expect(p9one.sticking.join('')).toBe('RLRL' + 'RLRLRL' + 'RLRL' + 'RLRLRL')
+    // p9 #5: paradiddle lead flips between bars
+    expect(byId('sc_p9_5').sticking.join('')).toBe('RLRR' + 'LRLRLR' + 'LRLL' + 'RLRLRL')
+    // p9 #17 (right column): bar2 is all triplets
+    expect(byId('sc_p9_17').sticking.join('')).toBe('RLRR' + 'LRLRLR' + 'LRLRLR' + 'LRLRLR')
+    // p11 #1: doubles roll written out; #13 = 7-stroke variant with the rest
+    expect(byId('sc_p11_1').sticking.join('')).toBe('RLRL' + 'RRLLRRLL' + 'RLRL' + 'RRLLRRLL')
+    const p11thirteen = byId('sc_p11_13')
+    expect(p11thirteen.rows.snare[11].on).toBe(false) // the release rest
+    expect(p11thirteen.sticking.join('')).toBe('RLRL' + 'RRLLRRL' + 'RLRL' + 'RRLLRRL')
+    // p11 #12: RRRR/LLLL lead
+    expect(byId('sc_p11_12').sticking.join('')).toBe('RRRR' + 'LLRRLLRR' + 'LLLL' + 'RRLLRRLL')
+    // p12: closed rolls, tied
+    const p12one = byId('sc_p12_1')
+    expect(p12one.rows.snare[4]).toMatchObject({ roll: 'closed', tie: true })
+    expect(p12one.rows.snare[9]).toMatchObject({ roll: 'closed', tie: true })
+    // p13 #11: untied closed roll (explicit tie: false)
+    expect(byId('sc_p13_11').rows.snare[4]).toMatchObject({ roll: 'closed', tie: false })
+    // p13 #21: bar 2 = two tied rolls
+    const p1321 = byId('sc_p13_21')
+    expect(p1321.rows.snare[5]).toMatchObject({ roll: 'closed', tie: true })
+    expect(p1321.rows.snare[6]).toMatchObject({ roll: 'closed', tie: true })
+  })
+
+  it('all of them render to notation', () => {
+    ;[9, 11, 12, 13].forEach((p) => page(p).forEach((ex) => {
+      const data = buildNotationData(ex)
+      expect(data.barsMeta).toHaveLength(2)
+    }))
   })
 })

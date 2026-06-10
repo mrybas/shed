@@ -226,7 +226,9 @@ export default function NotationView({ exercise, currentStep, loopRange, onBarCl
 
           const ties = []
           tds.forEach((td, idx) => {
-            if (td.roll && idx + 1 < notes.length) {
+            // In-bar roll resolution tie; an explicit tie:false (untied roll)
+            // suppresses it.
+            if (td.roll && td.tie !== false && idx + 1 < notes.length && !tds[idx + 1].rest) {
               ties.push(new StaveTie({ first_note: notes[idx], last_note: notes[idx + 1], first_indices: [0], last_indices: [0] }))
             }
           })

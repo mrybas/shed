@@ -227,6 +227,170 @@ function getRollProgressions() {
   ]
 }
 
+// ---- Triplets p.9 + Short Roll Combinations pp.11–13 ----------------------
+// Generic two-bar cut-time line. Each bar is two half-note slots; a slot spec:
+//   'e:RLRL'      four eighths            (beatSub 'sixteenth')
+//   's:RRLLRRL.'  eight 16ths, '.' rest   (beatSub 'thirtysecond')
+//   't:RLRLRL'    six triplet strokes     (beatSub 'sextuplet')
+//   'r:t' / 'r:u' closed half-note roll, tied / untied
+const SLOT_SUB = { e: 'sixteenth', s: 'thirtysecond', t: 'sextuplet', r: 'quarter' }
+function srLine({ page, num, name, section, bpm, slots }) {
+  const bars = []
+  for (let b = 0; b < 2; b++) {
+    bars.push({
+      ts: { beats: 2, unit: 2 },
+      beatSubs: [SLOT_SUB[slots[b * 2][0]], SLOT_SUB[slots[b * 2 + 1][0]]],
+    })
+  }
+  const ex = createEmptyExercise({
+    id: `sc_p${page}_${num}`,
+    name: `${name} ${page}.${num}`,
+    bpm,
+    timeSignature: { beats: 2, unit: 2 },
+    bars,
+    source: 'stick-control', section, number: num, page, tags: section === 'rolls' ? ['roll'] : [],
+  })
+  let i = 0
+  slots.forEach((slot) => {
+    const [kind, body] = [slot[0], slot.slice(2)]
+    if (kind === 'r') {
+      ex.rows.snare[i] = { on: true, accent: false, roll: 'closed', tie: body === 't' }
+      i += 1
+      return
+    }
+    body.split('').forEach((ch) => {
+      if (ch !== '.') {
+        ex.rows.snare[i] = { on: true, accent: false, roll: 0 }
+        ex.sticking[i] = ch.toUpperCase()
+      }
+      i += 1
+    })
+  })
+  return ex
+}
+
+// Alternating singles stream of `n` strokes starting opposite to `prev`.
+const altFrom = (prev, n) => {
+  let h = prev === 'R' ? 'L' : 'R'
+  let out = ''
+  for (let k = 0; k < n; k++) { out += h; h = h === 'R' ? 'L' : 'R' }
+  return out
+}
+// Page 9 — Triplets (verified against 300dpi crops). Left column #1–12:
+// bar = 4 eighths + 2 triplet groups, twice; right #13–24: bar2 goes all
+// triplets. Triplets are alternating singles starting opposite the last
+// eighth-note hand.
+const P9_E = [
+  ['RLRL', 'RLRL'], ['LRLR', 'LRLR'], ['RRLL', 'RRLL'], ['LLRR', 'LLRR'],
+  ['RLRR', 'LRLL'], ['LRLL', 'RLRR'], ['RLLR', 'LRRL'], ['LRRL', 'RLLR'],
+  ['RRLR', 'LLRL'], ['LLRL', 'RRLR'], ['RLLL', 'RLLL'], ['LRRR', 'LRRR'],
+]
+function getTripletsPage9() {
+  const out = []
+  P9_E.forEach(([e1, e2], idx) => {
+    const t1 = altFrom(e1[3], 6)
+    const t2 = altFrom(e2[3], 6)
+    out.push(srLine({
+      page: 9, num: idx + 1, name: 'Triplets', section: 'triplets', bpm: 76,
+      slots: [`e:${e1}`, `t:${t1}`, `e:${e2}`, `t:${t2}`],
+    }))
+  })
+  P9_E.forEach(([e1], idx) => {
+    const t1 = altFrom(e1[3], 6)
+    const t2 = altFrom(t1[5], 6)
+    const t3 = altFrom(t2[5], 6)
+    out.push(srLine({
+      page: 9, num: idx + 13, name: 'Triplets', section: 'triplets', bpm: 76,
+      slots: [`e:${e1}`, `t:${t1}`, `t:${t2}`, `t:${t3}`],
+    }))
+  })
+  return out
+}
+
+// Pages 11–12 share one lead sequence (verified per line).
+const P11_E = [
+  ['RLRL', 'RLRL'], ['LRLR', 'LRLR'], ['RRLL', 'RRLL'], ['LLRR', 'LLRR'],
+  ['RLRR', 'LRLL'], ['RLLR', 'LRRL'], ['RRLR', 'LLRL'], ['RRRL', 'RRRL'],
+  ['LLLR', 'LLLR'], ['RLLL', 'RLLL'], ['LRRR', 'LRRR'], ['RRRR', 'LLLL'],
+]
+// Doubles stream after a lead: opposite hand, doubled (RRLLRRLL…).
+const doublesAfter = (prev, n) => {
+  let h = prev === 'R' ? 'L' : 'R'
+  let out = ''
+  for (let k = 0; k < n; k++) {
+    out += h
+    if (k % 2 === 1) h = h === 'R' ? 'L' : 'R'
+  }
+  return out
+}
+function getShortRolls11() {
+  const out = []
+  P11_E.forEach(([e1, e2], idx) => {
+    const s1 = doublesAfter(e1[3], 8)
+    const s2 = doublesAfter(e2[3], 8)
+    out.push(srLine({
+      page: 11, num: idx + 1, name: 'Short Rolls', section: 'rolls', bpm: 66,
+      slots: [`e:${e1}`, `s:${s1}`, `e:${e2}`, `s:${s2}`],
+    }))
+  })
+  P11_E.forEach(([e1, e2], idx) => {
+    const s1 = doublesAfter(e1[3], 7) + '.'
+    const s2 = doublesAfter(e2[3], 7) + '.'
+    out.push(srLine({
+      page: 11, num: idx + 13, name: 'Short Rolls', section: 'rolls', bpm: 66,
+      slots: [`e:${e1}`, `s:${s1}`, `e:${e2}`, `s:${s2}`],
+    }))
+  })
+  return out
+}
+
+// Page 12 — closed (buzz) rolls, every roll tied into the next downbeat.
+// The right column repeats the same lines as "7-stroke closed" with identical
+// notation, so only the left column is transcribed.
+function getShortRolls12() {
+  return P11_E.map(([e1, e2], idx) => srLine({
+    page: 12, num: idx + 1, name: 'Closed Rolls', section: 'rolls', bpm: 63,
+    slots: [`e:${e1}`, 'r:t', `e:${e2}`, 'r:t'],
+  }))
+}
+
+// Page 13 — review: singles, doubles, 7-stroke and closed-roll lines
+// (verified per line; #11–12 and #23–24 are the untied rolls).
+function getRollReview13() {
+  const L = [
+    ['e:RLRL', 's:RLRLRLRL', 'e:RLRL', 's:RLRLRLRL'],
+    ['e:LRLR', 's:LRLRLRLR', 'e:LRLR', 's:LRLRLRLR'],
+    ['e:RLRL', 's:RLRLRLR.', 'e:RLRL', 's:RLRLRLR.'],
+    ['e:LRLR', 's:LRLRLRL.', 'e:LRLR', 's:LRLRLRL.'],
+    ['e:RLRL', 's:RRLLRRLL', 'e:RLRL', 's:RRLLRRLL'],
+    ['e:LRLR', 's:LLRRLLRR', 'e:LRLR', 's:LLRRLLRR'],
+    ['e:RLRL', 's:RRLLRRL.', 'e:RLRL', 's:RRLLRRL.'],
+    ['e:LRLR', 's:LLRRLLR.', 'e:LRLR', 's:LLRRLLR.'],
+    ['e:RLRL', 'r:t', 'e:RLRL', 'r:t'],
+    ['e:LRLR', 'r:t', 'e:LRLR', 'r:t'],
+    ['e:RLRL', 'r:u', 'e:RLRL', 'r:u'],
+    ['e:LRLR', 'r:u', 'e:LRLR', 'r:u'],
+  ]
+  const R = [
+    ['e:RLRL', 's:RLRLRLRL', 's:RLRLRLRL', 's:RLRLRLRL'],
+    ['e:LRLR', 's:LRLRLRLR', 's:LRLRLRLR', 's:LRLRLRLR'],
+    ['e:RLRL', 's:RLRLRLR.', 's:RLRLRLR.', 's:RLRLRLR.'],
+    ['e:LRLR', 's:LRLRLRL.', 's:LRLRLRL.', 's:LRLRLRL.'],
+    ['e:RLRL', 's:RRLLRRLL', 's:RRLLRRLL', 's:RRLLRRLL'],
+    ['e:LRLR', 's:LLRRLLRR', 's:LLRRLLRR', 's:LLRRLLRR'],
+    ['e:RLRL', 's:RRLLRRL.', 's:RRLLRRL.', 's:RRLLRRL.'],
+    ['e:LRLR', 's:LLRRLLR.', 's:LLRRLLR.', 's:LLRRLLR.'],
+    ['e:RLRL', 'r:t', 'r:t', 'r:t'],
+    ['e:LRLR', 'r:t', 'r:t', 'r:t'],
+    ['e:RLRL', 'r:u', 'r:u', 'r:u'],
+    ['e:LRLR', 'r:u', 'r:u', 'r:u'],
+  ]
+  return [
+    ...L.map((slots, i) => srLine({ page: 13, num: i + 1, name: 'Roll Review', section: 'rolls', bpm: 66, slots })),
+    ...R.map((slots, i) => srLine({ page: 13, num: i + 13, name: 'Roll Review', section: 'rolls', bpm: 66, slots })),
+  ]
+}
+
 // ---- Short Rolls and Triplets (pages 14–15, #1–24 each) -------------------
 // Two bars of cut time. Bar 1: four eighths (the single beat) + either a
 // measured roll (eight or seven 16ths) or a long roll written as a slashed
@@ -259,7 +423,7 @@ function shortRollTriplet(page, num, e1, b2, e2, trip) {
   }
   e1.split('').forEach((ch) => put(ch))
   if (typeof b2 === 'string') b2.split('').forEach((ch) => put(ch))
-  else put('~', { roll: 'open', ...(b2.tied ? { tie: true } : {}) })
+  else put('~', { roll: 'open', tie: !!b2.tied })
   e2.split('').forEach((ch) => put(ch))
   trip.replace(/\s+/g, '').split('').forEach((ch) => put(ch))
   return ex
@@ -392,7 +556,11 @@ export function getStickControlExercises() {
   PAGE6.forEach((s, i) => out.push(singleBeat(i + 25, 6, s)))
   PAGE7.forEach((s, i) => out.push(singleBeat(i + 49, 7, s)))
   TRIPLET_BEAT1.forEach((b1, i) => out.push(triplet(i + 1, b1)))
+  getTripletsPage9().forEach((ex) => out.push(ex))
   getRollExercises().forEach((ex) => out.push(ex))
+  getShortRolls11().forEach((ex) => out.push(ex))
+  getShortRolls12().forEach((ex) => out.push(ex))
+  getRollReview13().forEach((ex) => out.push(ex))
   getShortRollsTriplets().forEach((ex) => out.push(ex))
   getRollProgressions().forEach((ex) => out.push(ex))
   getFlamBeats().forEach((ex) => out.push(ex))

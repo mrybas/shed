@@ -82,7 +82,12 @@ export function buildNotationData(ex) {
       open: active.some((inst) => RENDER_INFO[inst]?.open),
       rim: active.some((inst) => inst === 'snare' && ex.rows[inst][step].art === 'rim'),
       roll: (active.find((inst) => ex.rows[inst][step].roll) && ex.rows[active[0]][step].roll) || 0,
-      tie: active.some((inst) => ex.rows[inst][step].roll && ex.rows[inst][step].tie),
+      // Tri-state: true = tie into the next onset, false = explicit release,
+      // undefined = legacy default (in-bar ties stay on).
+      tie: (() => {
+        const inst = active.find((k) => ex.rows[k][step].roll)
+        return inst ? ex.rows[inst][step].tie : undefined
+      })(),
       keys: active.map(renderFor).filter(Boolean).sort((a, b) => a.order - b.order).map((r) => r.key),
       sticking: ex.sticking[step] || '',
     }
