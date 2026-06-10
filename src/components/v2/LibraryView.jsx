@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from 'react'
 import { Icon, Button } from '../ui.jsx'
 import { CATEGORIES, CAT, catOf, sigOf, levelOf, LEVELS, getCatalogExercises } from '../../data/catalogV2.js'
+import { WORKOUTS } from '../../data/workouts.js'
 
 const LEVEL_HUES = {
   beginner: 'oklch(0.72 0.17 150)',
@@ -61,7 +62,21 @@ function FilterChip({ active, onClick, children }) {
 
 const TAG_FILTERS = ['singles', 'doubles', 'triples', 'quads', 'rudiment', 'groove']
 
-export default function LibraryView({ t, lang, saved, progressMap, onOpen, onNew, onImport, onExportItem, onExportAll, onDeleteSaved, route, onRoute }) {
+function WorkoutCard({ t, w, onOpen }) {
+  return (
+    <button className="wk-card" onClick={() => onOpen(w.id)}>
+      <span className="wk-card-head">
+        <span className="level-dot" style={{ background: LEVEL_HUES[w.level] }} />
+        <span className="wk-card-name">{w.name}</span>
+        <span className="wk-card-min num">{w.minutes}′</span>
+      </span>
+      <span className="wk-card-desc">{w.description}</span>
+      <span className="wk-card-meta num">{w.blocks.length} {t('workoutBlocks')} · {t(`level_${w.level}`)}</span>
+    </button>
+  )
+}
+
+export default function LibraryView({ t, lang, saved, progressMap, onOpen, onNew, onImport, onExportItem, onExportAll, onDeleteSaved, onOpenWorkout, route, onRoute }) {
   const section = route?.section || 'home'
   const activeCat = route?.cat || null
   const go = (s, c = null) => onRoute?.({ section: s, cat: c })
@@ -126,9 +141,22 @@ export default function LibraryView({ t, lang, saved, progressMap, onOpen, onNew
         {anyFilter ? <button className="clear-filters" onClick={clearAll}><Icon name="close" className="ic-xs" />{t('clearFilters')}</button> : null}
       </div>
 
+      {section === 'workouts' && (
+        <div className="lib2-home">
+          <div className="sec-label">{t('workouts')}</div>
+          <div className="wk-grid">
+            {WORKOUTS.map((w) => <WorkoutCard key={w.id} t={t} w={w} onOpen={onOpenWorkout} />)}
+          </div>
+        </div>
+      )}
+
       {section === 'home' && !anyFilter && (
         <div className="lib2-home">
-          <div className="sec-label">{t('catBrowse')}</div>
+          <div className="sec-label">{t('workouts')}</div>
+          <div className="wk-grid">
+            {WORKOUTS.map((w) => <WorkoutCard key={w.id} t={t} w={w} onOpen={onOpenWorkout} />)}
+          </div>
+          <div className="sec-label" style={{ marginTop: 'var(--s-6)' }}>{t('catBrowse')}</div>
           <div className="cat-grid">
             {CATEGORIES.map((c) => (
               <button key={c.id} className="cat-card" onClick={() => go('cat', c.id)}>

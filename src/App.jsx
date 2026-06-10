@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useI18n } from './i18n/I18nContext.jsx'
 import { useScheduler } from './hooks/useScheduler.js'
 import { useSpacebar } from './hooks/useSpacebar.js'
@@ -8,14 +8,16 @@ import MetronomeView from './components/v2/MetronomeView.jsx'
 import PlayerBar from './components/v2/PlayerBar.jsx'
 import LibraryView from './components/v2/LibraryView.jsx'
 import PracticeView from './components/v2/PracticeView.jsx'
+import WorkoutView from './components/v2/WorkoutView.jsx'
 import { sigToTimeSignature } from './components/v2/util.js'
-import { CATEGORIES, sigOf } from './data/catalogV2.js'
+import { CATEGORIES, sigOf, getCatalogExercises } from './data/catalogV2.js'
+import { WORKOUTS } from './data/workouts.js'
 import {
   createEmptyExercise, exportExercise, exportLibraryFile, parseImported,
   loadLibrary, saveToLibrary, deleteFromLibrary, genId, barLayout,
 } from './model/exercise.js'
 
-const APP_VERSION = 'v4.2' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v4.3' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -85,6 +87,13 @@ export default function App() {
   const [tempoMap, setTempoMap] = useState(() => loadJSON(TEMPO_KEY, {}))
   const [loopRange, setLoopRange] = useState(null) // {from,to} bar indices, per opened exercise
 
+  // ---- Workout runner: { wId, blockIdx, secLeft, done } while a routine runs.
+  const [run, setRun] = useState(null)
+  const runRef = useRef(run)
+  runRef.current = run
+  const exById = useMemo(() => new Map(getCatalogExercises().map((e) => [e.id, e])), [])
+  const workoutById = (id) => WORKOUTS.find((w) => w.id === id)
+
   const sched = useScheduler({ pattern: null, metronomeEnabled: true })
   useSpacebar(sched.toggle)
 
@@ -115,12 +124,31 @@ export default function App() {
 
   // Remember the chosen tempo per catalog exercise (user exercises carry their
   // bpm in the saved data itself). Catches every path that changes item.bpm.
+  // Workout blocks set their own tempos — don't let them pollute the user's map.
   useEffect(() => {
-    if (!item || item.source === 'user') return
+    if (!item || item.source === 'user' || runRef.current) return
     setTempoMap((m) => (m[item.id] === item.bpm ? m : { ...m, [item.id]: item.bpm }))
   }, [item])
 
   const mode = nav === 'metronome' ? 'metronome' : (item ? 'practice' : 'metronome')
+
+  // Options while a workout block runs: the block's settings override the
+  // user's saved options without touching them; count-in defaults ON so each
+  // block starts with a lead-in.
+  const workoutBlock = run && !run.done ? workoutById(run.wId)?.blocks[run.blockIdx] : null
+  const activeOptions = useMemo(() => {
+    if (!workoutBlock) return options
+    const s = workoutBlock.settings || {}
+    return {
+      metroWith: true,
+      accentOne: options.accentOne,
+      soundSubs: s.soundSubs ?? false,
+      swing: s.swing ?? 0,
+      tempoRamp: s.tempoRamp ?? { enabled: false },
+      gapTrainer: s.gapTrainer ?? { enabled: false },
+      countIn: s.countIn ?? { enabled: true, bars: 1, mode: 'loop', feel: 'quarter' },
+    }
+  }, [workoutBlock, options])
 
   // Drive the single lifted scheduler from the active context.
   useEffect(() => {
@@ -140,21 +168,21 @@ export default function App() {
       sched.setSwing(swingFraction(metro.swing))
     } else if (item) {
       sched.setPattern(item)
-      sched.setTempoRamp(options.tempoRamp)
-      sched.setGapTrainer(options.gapTrainer)
-      sched.setCountIn(options.countIn)
+      sched.setTempoRamp(activeOptions.tempoRamp)
+      sched.setGapTrainer(activeOptions.gapTrainer)
+      sched.setCountIn(activeOptions.countIn)
       sched.setLoopRange(loopRange)
-      sched.setSwing(swingFraction(options.swing))
+      sched.setSwing(swingFraction(activeOptions.swing))
       sched.setBpm(item.bpm)
       sched.setTimeSignature(item.timeSignature)
       sched.setSubdivision(item.subdivision)
-      sched.setAccentFirst(options.accentOne)
-      sched.setSoundSubdivisions(options.soundSubs)
-      sched.setMetronomeEnabled(options.metroWith)
+      sched.setAccentFirst(activeOptions.accentOne)
+      sched.setSoundSubdivisions(activeOptions.soundSubs)
+      sched.setMetronomeEnabled(activeOptions.metroWith)
       sched.setMetronomeVolume(vols.metro / 100)
       sched.setPatternVolume(vols.ex / 100)
     }
-  }, [mode, metro, item, options, vols, loopRange, sched])
+  }, [mode, metro, item, activeOptions, vols, loopRange, sched])
 
   // Stop playback when switching transport context.
   useEffect(() => { sched.stop() }, [mode]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -165,6 +193,7 @@ export default function App() {
   // ---- handlers ----
   const refreshSaved = useCallback(() => setSaved(loadLibrary()), [])
   const openItem = (ex) => {
+    setRun(null) // manually opening an exercise ends any running workout
     const it = clone(ex)
     // Restore the user's working tempo for catalog exercises.
     if (it.source !== 'user' && tempoMap[it.id]) it.bpm = tempoMap[it.id]
@@ -172,7 +201,72 @@ export default function App() {
     setLoopRange(null) // loop ranges are per practice session
     setNav('practice')
   }
-  const newExercise = () => { setItem(createEmptyExercise({ source: 'user', name: t('newExercise') })); setLoopRange(null); setNav('practice') }
+  const newExercise = () => { setRun(null); setItem(createEmptyExercise({ source: 'user', name: t('newExercise') })); setLoopRange(null); setNav('practice') }
+
+  // ---- Workout runner ----
+  const openWorkoutBlock = useCallback((w, idx) => {
+    const block = w.blocks[idx]
+    const src = exById.get(block.exerciseId)
+    if (!src) return
+    const it = clone(src)
+    if (block.settings?.bpm) it.bpm = block.settings.bpm
+    setItem(it)
+    setLoopRange(null)
+    setNav('practice')
+  }, [exById])
+
+  const startWorkout = (wId) => {
+    const w = workoutById(wId)
+    if (!w) return
+    setRun({ wId, blockIdx: 0, secLeft: w.blocks[0].minutes * 60, done: false })
+    openWorkoutBlock(w, 0)
+    setTimeout(() => sched.start(), 200)
+  }
+
+  const advanceWorkout = useCallback(() => {
+    const r = runRef.current
+    if (!r || r.done) return
+    const w = workoutById(r.wId)
+    sched.stop()
+    const next = r.blockIdx + 1
+    if (next >= w.blocks.length) {
+      setRun({ ...r, done: true, secLeft: 0 })
+    } else {
+      setRun({ wId: r.wId, blockIdx: next, secLeft: w.blocks[next].minutes * 60, done: false })
+      openWorkoutBlock(w, next)
+      setTimeout(() => sched.start(), 300)
+    }
+  }, [sched, openWorkoutBlock])
+
+  const stopWorkout = useCallback(() => { setRun(null); sched.stop() }, [sched])
+
+  // Block timer — ticks only while playing, so pausing the player pauses the
+  // workout (the minutes count actual practice).
+  const runActive = !!run && !run.done
+  useEffect(() => {
+    if (!runActive) return undefined
+    const id = setInterval(() => {
+      const r = runRef.current
+      if (!r || r.done || !sched.scheduler.isPlaying) return
+      if (r.secLeft > 1) setRun({ ...r, secLeft: r.secLeft - 1 })
+      else advanceWorkout()
+    }, 1000)
+    return () => clearInterval(id)
+  }, [runActive, sched, advanceWorkout])
+
+  // What PracticeView shows in the workout banner.
+  const runView = useMemo(() => {
+    if (!run) return null
+    const w = workoutById(run.wId)
+    if (!w) return null
+    const block = w.blocks[Math.min(run.blockIdx, w.blocks.length - 1)]
+    const nextBlock = w.blocks[run.blockIdx + 1]
+    return {
+      name: w.name, idx: run.blockIdx + 1, total: w.blocks.length,
+      secLeft: run.secLeft, note: block.note, done: !!run.done,
+      nextName: nextBlock ? (exById.get(nextBlock.exerciseId)?.name || '') : null,
+    }
+  }, [run, exById])
 
   const setProgress = (state) => {
     if (!item) return
@@ -310,6 +404,9 @@ export default function App() {
                     <span className="side-dot" style={{ background: c.hue }} />{c.label[lang] || c.label.en}
                   </button>
                 ))}
+                <button className={'side-subitem' + (libActive && (libTarget.section === 'workouts' || libTarget.section === 'workout') ? ' is-active' : '')} onClick={() => goLib({ section: 'workouts', cat: null })}>
+                  <Icon name="star" className="ic-xs side-subic" />{t('workouts')}
+                </button>
                 <button className={'side-subitem' + (libActive && libTarget.section === 'saved' ? ' is-active' : '')} onClick={() => goLib({ section: 'saved', cat: null })}>
                   <Icon name="bookmark" className="ic-xs side-subic" />{t('saved')}
                   {saved.length > 0 && <span className="side-badge num">{saved.length}</span>}
@@ -332,17 +429,23 @@ export default function App() {
 
       <main className="main">
         {nav === 'metronome' && <MetronomeView t={t} metro={metro} setMetro={setMetro} playing={playing && mode === 'metronome'} step={step} />}
-        {nav === 'library' && (
+        {nav === 'library' && (libTarget.section === 'workout' ? (
+          <WorkoutView t={t} workout={workoutById(libTarget.wk)} exercisesById={exById}
+            onStart={startWorkout} onOpenExercise={openItem}
+            onBack={() => setLibTarget({ section: 'workouts', cat: null })} />
+        ) : (
           <LibraryView t={t} lang={lang} saved={saved} progressMap={progressMap} onOpen={openItem}
             onNew={newExercise} onImport={importFile} onExportItem={exportExercise} onExportAll={exportLibraryFile}
-            onDeleteSaved={deleteSaved} route={libTarget} onRoute={setLibTarget} />
-        )}
+            onDeleteSaved={deleteSaved} onOpenWorkout={(id) => setLibTarget({ section: 'workout', cat: null, wk: id })}
+            route={libTarget} onRoute={setLibTarget} />
+        ))}
         {nav === 'practice' && item && (
           <PracticeView t={t} lang={lang} item={item} setItem={setItem} options={options} setOptions={setOptions}
             vols={vols} setVols={setVols} playing={playing && mode === 'practice'} step={step}
             loopRange={loopRange} onLoopRange={setLoopRange}
+            workoutRun={runView} onWorkoutSkip={advanceWorkout} onWorkoutStop={stopWorkout}
             progress={progressMap[item.id] || 'none'} onProgress={setProgress} onDuplicate={duplicate}
-            onBack={() => setNav('library')} onSave={saveCurrent} onExport={() => exportExercise(item)}
+            onBack={() => { if (runRef.current) stopWorkout(); setNav('library') }} onSave={saveCurrent} onExport={() => exportExercise(item)}
             onNew={newExercise} savedFlash={savedFlash} />
         )}
       </main>
