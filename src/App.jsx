@@ -21,10 +21,11 @@ import {
   createEmptyExercise, exportExercise, exportLibraryFile, parseImported,
   loadLibrary, saveToLibrary, deleteFromLibrary, genId, barLayout,
 } from './model/exercise.js'
-import { logPracticeSeconds, logTempo, flushJournal, exportJournal, mergeJournal, getTempoStats } from './model/progress.js'
+import { logPracticeSeconds, logTempo, flushJournal, exportJournal, mergeJournal, getTempoStats, dayKey } from './model/progress.js'
+import { generateRhythm, exerciseOfTheDay } from './data/generator.js'
 import { decodeShare, shareFromHash } from './model/share.js'
 
-const APP_VERSION = 'v5.10' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v5.11' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -297,6 +298,13 @@ export default function App() {
     setNav('practice')
   }
   const newExercise = () => { if (runRef.current) { setRun(null); restoreUserOptions() } setPracticeView('grid'); setItem(createEmptyExercise({ source: 'user', name: t('newExercise') })); setLoopRange(null); setNav('practice') }
+  // Sight reading: open a freshly generated rhythm; "New rhythm" regenerates
+  // at the same level with a new seed.
+  const openGenerated = (level, seed) =>
+    openItem(generateRhythm({ level, bars: 2, seed: seed ?? Math.floor(Math.random() * 1e9) }))
+  const regenerate = () => { if (item?.genLevel) openGenerated(item.genLevel) }
+  // The daily exercise — same seed (the local date) all day.
+  const daily = useMemo(() => exerciseOfTheDay(dayKey()), [])
   // Fully close the exercise from the player bar: stop the transport and
   // return the bar to plain-metronome duty.
   const closeItem = () => {
@@ -602,12 +610,14 @@ export default function App() {
         ) : (
           <WorkoutsView t={t} exercisesById={exById} onOpenWorkout={setWkId}
             myWorkouts={myWk} onNew={() => setWkEdit(emptyWorkout())}
-            onEdit={(w) => setWkEdit(w)} onDelete={deleteWk} />
+            onEdit={(w) => setWkEdit(w)} onDelete={deleteWk}
+            daily={daily} onOpenDaily={() => openItem(daily)} />
         ))}
         {nav === 'library' && (
           <LibraryView t={t} lang={lang} saved={saved} progressMap={progressMap} onOpen={openItem}
             onNew={newExercise} onImport={importFile} onExportItem={exportExercise} onExportAll={() => exportLibraryFile({ journal: exportJournal(), myWorkouts: loadMyWorkouts() })}
-            onDeleteSaved={deleteSaved} route={libTarget} onRoute={setLibTarget} />
+            onDeleteSaved={deleteSaved} route={libTarget} onRoute={setLibTarget}
+            onGenerate={openGenerated} />
         )}
         {nav === 'practice' && item && (
           <PracticeView t={t} lang={lang} item={item} setItem={setItem} options={options} setOptions={setOptions}
@@ -616,7 +626,7 @@ export default function App() {
             loopRange={loopRange} onLoopRange={setLoopRange}
             progress={progressMap[item.id] || 'none'} onProgress={setProgress} onDuplicate={duplicate}
             onBack={() => { if (runRef.current) { stopWorkout(); setNav('workouts') } else setNav('library') }} onSave={saveCurrent} onExport={() => exportExercise(item)}
-            onNew={newExercise} savedFlash={savedFlash} />
+            onNew={newExercise} savedFlash={savedFlash} onRegenerate={regenerate} />
         )}
       </main>
 

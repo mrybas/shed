@@ -428,3 +428,24 @@
   display: grid; place-items: center;
   font-family: var(--num-font); font-weight: 700; font-size: 11px;
 }
+
+/* ---- Exercise of the day card (Workouts) + sight-reading hint ---- */
+.daily-card {
+  display: flex; align-items: center; gap: var(--s-3);
+  width: 100%; margin-top: var(--s-4); padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--border-soft); border-radius: var(--r-md);
+  background: var(--surface-1); cursor: pointer; text-align: left;
+  color: var(--text); font: inherit;
+}
+.daily-card:hover { border-color: var(--accent); }
+.daily-icon {
+  flex: none; display: grid; place-items: center; width: 36px; height: 36px;
+  border-radius: var(--r-sm); background: color-mix(in oklab, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+.daily-icon .ic { width: 18px; height: 18px; }
+.daily-main { display: grid; gap: 1px; min-width: 0; }
+.daily-title { font-weight: 700; font-size: var(--fs-sm); }
+.daily-sub { color: var(--text-3); font-size: var(--fs-xs); }
+.daily-go { margin-left: auto; color: var(--text-3); }
+.gen-hint { margin: 2px 0 var(--s-2); }

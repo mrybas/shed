@@ -75,12 +75,22 @@ function WorkoutCard({ t, w, onOpen, onEdit, onDelete }) {
   )
 }
 
-export default function WorkoutsView({ t, exercisesById, onOpenWorkout, myWorkouts = [], onNew, onEdit, onDelete }) {
+export default function WorkoutsView({ t, exercisesById, onOpenWorkout, myWorkouts = [], onNew, onEdit, onDelete, daily, onOpenDaily }) {
   const byLevel = (lv) => WORKOUTS.filter((w) => w.level === lv)
   return (
     <div className="lib2-home" data-screen-label="Workouts">
       <h1 className="page-title">{t('workouts')}</h1>
       <ProgressPanel t={t} exercisesById={exercisesById} />
+      {daily && (
+        <button className="daily-card" onClick={onOpenDaily}>
+          <span className="daily-icon"><Icon name="star" className="ic" /></span>
+          <span className="daily-main">
+            <span className="daily-title">{t('dailyTitle')}</span>
+            <span className="daily-sub">{t('sightReading')} · {t(`level_${daily.genLevel}`)} · {daily.bpm} {t('bpm')}</span>
+          </span>
+          <span className="daily-go"><Icon name="chevright" className="ic" /></span>
+        </button>
+      )}
       <p className="wk-desc">{t('workoutsIntro')}</p>
 
       <div className="sec-row" style={{ marginTop: 'var(--s-4)' }}>

@@ -61,7 +61,7 @@ function FilterChip({ active, onClick, children }) {
 
 const TAG_FILTERS = ['singles', 'doubles', 'triples', 'quads', 'rudiment', 'groove']
 
-export default function LibraryView({ t, lang, saved, progressMap, onOpen, onNew, onImport, onExportItem, onExportAll, onDeleteSaved, route, onRoute }) {
+export default function LibraryView({ t, lang, saved, progressMap, onOpen, onNew, onImport, onExportItem, onExportAll, onDeleteSaved, route, onRoute, onGenerate }) {
   const section = route?.section || 'home'
   const activeCat = route?.cat || null
   const go = (s, c = null) => onRoute?.({ section: s, cat: c })
@@ -138,6 +138,21 @@ export default function LibraryView({ t, lang, saved, progressMap, onOpen, onNew
               </button>
             ))}
           </div>
+          {onGenerate && (
+            <>
+              <div className="sec-label" style={{ marginTop: 'var(--s-5)' }}>{t('sightReading')}</div>
+              <p className="muted-line gen-hint">{t('sightReadingHint')}</p>
+              <div className="cat-grid">
+                {[['beginner', 'oklch(0.72 0.17 150)'], ['intermediate', 'oklch(0.78 0.14 78)'], ['advanced', 'oklch(0.70 0.155 38)']].map(([lv, hue]) => (
+                  <button key={lv} className="cat-card" onClick={() => onGenerate(lv)}>
+                    <span className="cat-icon" style={{ background: hue }}><Icon name="notes" className="ic" /></span>
+                    <span className="cat-name">{t(`level_${lv}`)}</span>
+                    <span className="cat-count">{t('sightReadingNew')}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
           <div className="sec-row">
             <span className="sec-label">{t('collections')}</span>
             <div className="sec-actions">

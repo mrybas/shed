@@ -61,7 +61,7 @@ export default function PracticeView({
   t, lang, item, setItem, options, setOptions, vols, setVols, playing, step,
   loopRange, onLoopRange,
   progress, onProgress, onDuplicate, onBack, onSave, onExport, onNew, savedFlash,
-  initialView = 'notes',
+  initialView = 'notes', onRegenerate,
 }) {
   const editable = item.source === 'user'
   // Catalog items have no grid editing to land on; user items open in the
@@ -496,6 +496,9 @@ export default function PracticeView({
             </>
           ) : (
             <>
+              {item.source === 'generated' && onRegenerate && (
+                <Button size="sm" variant="accent" icon="plus" onClick={onRegenerate}>{t('newRhythm')}</Button>
+              )}
               <Button size="sm" icon="download" onClick={onExport}>{t('export')}</Button>
               <Button size="sm" icon="upload" variant={sharedFlash ? 'accent' : 'default'} onClick={shareLink}>{sharedFlash ? t('shared_ok') : t('share')}</Button>
               {view === 'notes' && <Button size="sm" icon="notes" onClick={printNotes}>{t('print')}</Button>}

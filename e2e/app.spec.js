@@ -310,3 +310,23 @@ test('articulations: pedal row exists; cross-stick stamps only on snare', async 
   await page.locator('.view-bar .seg-item', { hasText: 'Notes' }).click()
   await expect(page.locator('.notation-wrap .vf-line svg').first()).toBeVisible()
 })
+
+test('sight reading: generate, regenerate, and the daily exercise', async ({ page }) => {
+  // Library home shows three level cards.
+  await page.locator('.side-parent-main').click()
+  await page.locator('.cat-card', { hasText: 'Random rhythm' }).first().click()
+  await expect(page.locator('.practice')).toBeVisible()
+  await expect(page.locator('.notation-wrap .vf-line svg').first()).toBeVisible()
+  // Generated exercises are read-only and offer "New rhythm".
+  const regen = page.getByRole('button', { name: 'New rhythm' })
+  await expect(regen).toBeVisible()
+  const before = await page.locator('.notation-wrap .vf-host, .notation-wrap .vf-line').first().innerHTML()
+  await regen.click()
+  await expect(page.locator('.notation-wrap .vf-line svg').first()).toBeVisible()
+  // Daily exercise card opens a practice session too.
+  await page.locator('.side-link', { hasText: 'Workouts' }).click()
+  await page.locator('.daily-card').click()
+  await expect(page.locator('.practice')).toBeVisible()
+  await expect(page.locator('.pb-title')).toContainText('Exercise of the day')
+  expect(before).toBeTruthy()
+})
