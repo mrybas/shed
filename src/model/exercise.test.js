@@ -21,6 +21,8 @@ import {
   barLayout,
   addBar,
   insertBar,
+  barSnapshot,
+  repeatBar,
   duplicateBar,
   removeBar,
   setBarTimeSignature,
@@ -390,5 +392,35 @@ describe('localStorage library', () => {
     const after = loadLibrary()
     expect(after).toHaveLength(1)
     expect(after[0].id).toBe(b.id)
+  })
+})
+
+describe('bar clipboard + repeat', () => {
+  it('barSnapshot captures meter, cells and sticking; insertBar pastes it anywhere', () => {
+    let ex = createEmptyExercise({ timeSignature: { beats: 4, unit: 4 }, subdivision: 'eighth' })
+    ex.rows.kick[0] = { on: true, accent: true, roll: 0 }
+    ex.sticking[0] = 'R'
+    ex = addBar(ex) // bar 2 empty
+    const snap = barSnapshot(ex, 0)
+    expect(snap.bar.ts).toEqual({ beats: 4, unit: 4 })
+    expect(snap.cells.rows.kick[0].on).toBe(true)
+    const pasted = insertBar(ex, 2, snap) // paste at the end
+    expect(barCount(pasted)).toBe(3)
+    const lay = barLayout(pasted)
+    const start = lay.bars[2].startStep
+    expect(pasted.rows.kick[start].on).toBe(true)
+    expect(pasted.rows.kick[start].accent).toBe(true)
+    expect(pasted.sticking[start]).toBe('R')
+  })
+
+  it('repeatBar inserts N copies right after the bar', () => {
+    let ex = createEmptyExercise({ timeSignature: { beats: 4, unit: 4 }, subdivision: 'eighth' })
+    ex.rows.snare[2] = { on: true, accent: false, roll: 0 }
+    const out = repeatBar(ex, 0, 4)
+    expect(barCount(out)).toBe(5)
+    const lay = barLayout(out)
+    lay.bars.forEach((b) => {
+      expect(out.rows.snare[b.startStep + 2].on).toBe(true)
+    })
   })
 })

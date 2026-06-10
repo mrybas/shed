@@ -443,3 +443,21 @@ test('metronome accent pattern: preset chips and tap-to-accent persist', async (
   await page.locator('.accent-presets .fchip', { hasText: 'Reset accents' }).click()
   await expect(page.locator('.metro-bigbeats .beat-btn.is-down')).toHaveCount(1)
 })
+
+test('bar clipboard: copy, paste and repeat ×N', async ({ page }) => {
+  await page.locator('.side-parent-main').click()
+  await page.getByRole('button', { name: /New exercise/ }).click()
+  // put a kick on step 1 of bar 1, then copy the bar
+  await page.locator('.seq-row').filter({ has: page.locator('.seq-rowlabel', { hasText: /^Kick$/ }) }).locator('.cell').first().click()
+  await page.getByRole('button', { name: 'Copy bar' }).click()
+  // paste at the trailing slot -> 2 bars, both with the kick
+  await page.locator('button[aria-label="Paste copied bar here"]').last().click()
+  await expect(page.locator('.bar-block')).toHaveCount(2)
+  const kicks = page.locator('.seq-row').filter({ has: page.locator('.seq-rowlabel', { hasText: /^Kick$/ }) }).locator('.cell.on')
+  await expect(kicks).toHaveCount(2)
+  // repeat bar 1 ×4 -> 6 bars total
+  await page.locator('button[aria-label="Repeat bar ×N"]').first().click()
+  await page.locator('.bar-rep-menu button', { hasText: '×4' }).click()
+  await expect(page.locator('.bar-block')).toHaveCount(6)
+  await expect(kicks).toHaveCount(6)
+})

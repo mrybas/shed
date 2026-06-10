@@ -206,17 +206,33 @@ export function addBar(ex, opts = {}) {
   return insertBar(ex, getBars(ex).length, opts)
 }
 
-// Insert an exact copy of bar `index` (meter + cells + sticking) right after it.
-export function duplicateBar(ex, index) {
+// Snapshot of one bar (meter + cells + sticking) — the editor's clipboard
+// format, also reused by duplicate/repeat.
+export function barSnapshot(ex, index) {
   const layout = barLayout(ex)
   const lb = layout.bars[index]
-  if (!lb) return ex
+  if (!lb) return null
   const rows = {}
   INSTRUMENTS.forEach((key) => {
     rows[key] = (ex.rows[key] || []).slice(lb.startStep, lb.startStep + lb.stepCount)
   })
   const sticking = ex.sticking.slice(lb.startStep, lb.startStep + lb.stepCount)
-  return insertBar(ex, index + 1, { bar: { ts: lb.ts, beatSubs: lb.beatSubs.slice() }, cells: { rows, sticking } })
+  return { bar: { ts: lb.ts, beatSubs: lb.beatSubs.slice() }, cells: { rows, sticking } }
+}
+
+// Insert an exact copy of bar `index` (meter + cells + sticking) right after it.
+export function duplicateBar(ex, index) {
+  const snap = barSnapshot(ex, index)
+  return snap ? insertBar(ex, index + 1, snap) : ex
+}
+
+// Insert `times` copies of bar `index` right after it (repeat ×N).
+export function repeatBar(ex, index, times = 1) {
+  const snap = barSnapshot(ex, index)
+  if (!snap) return ex
+  let cur = ex
+  for (let k = 0; k < times; k++) cur = insertBar(cur, index + 1, snap)
+  return cur
 }
 
 // Remove bar `i` (its step range is spliced out). Keeps at least one bar.

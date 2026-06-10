@@ -26,7 +26,7 @@ function Sparkline({ history }) {
     </svg>
   )
 }
-import { INSTRUMENTS, resizeExercise, setBeatSub, setAllBeatSubs, barLayout, addBar, insertBar, duplicateBar, removeBar, setBarTimeSignature } from '../../model/exercise.js'
+import { INSTRUMENTS, resizeExercise, setBeatSub, setAllBeatSubs, barLayout, addBar, insertBar, duplicateBar, repeatBar, barSnapshot, removeBar, setBarTimeSignature } from '../../model/exercise.js'
 import { sigToTimeSignature } from './util.js'
 
 const INSTR_COLORS = {
@@ -188,6 +188,12 @@ export default function PracticeView({
   const insertBefore = (i) => mutate((p) => insertBar(p, i))
   const dupBar = (i) => mutate((p) => duplicateBar(p, i))
   const delBar = (i) => mutate((p) => removeBar(p, i))
+  // Bar clipboard: copy a bar, paste it at any insertion slot; repeat ×N.
+  const [barClip, setBarClip] = useState(null)
+  const [repeatMenuFor, setRepeatMenuFor] = useState(null)
+  const copyBar = (i) => setBarClip(barSnapshot(itemRef.current, i))
+  const pasteBar = (i) => barClip && mutate((p) => insertBar(p, i, barClip))
+  const repBar = (i, n) => { setRepeatMenuFor(null); mutate((p) => repeatBar(p, i, n)) }
   const setBarTS = (i, s) => mutate((p) => setBarTimeSignature(p, i, sigToTimeSignature(s)))
 
   // Roll type currently authored (open/closed); also restamps existing rolls.
@@ -581,6 +587,12 @@ export default function PracticeView({
                     aria-label={t('insertBarHere')} title={t('insertBarHere')}>
                     <Icon name="plus" className="ic-xs" />
                   </button>
+                  {barClip && (
+                    <button className="bar-insert bar-paste" onClick={() => pasteBar(bar.bar)}
+                      aria-label={t('pasteBar')} title={t('pasteBar')}>
+                      <Icon name="upload" className="ic-xs" />
+                    </button>
+                  )}
                 <div className={'bar-block' + (inLoop(bar.bar) ? ' is-loop' : '')}>
                   <div className="bar-block-head">
                     <button className={'bar-tag num' + (inLoop(bar.bar) ? ' is-loop' : '')}
@@ -591,9 +603,23 @@ export default function PracticeView({
                       {TIME_SIGS.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
                     <span className="bar-acts">
+                      <button className={'bar-act' + (barClip ? ' is-armed' : '')} onClick={() => copyBar(bar.bar)} aria-label={t('copyBar')} title={t('copyBar')}>
+                        <Icon name="save" className="ic-xs" />
+                      </button>
                       <button className="bar-act" onClick={() => dupBar(bar.bar)} aria-label={t('duplicateBar')} title={t('duplicateBar')}>
                         <Icon name="copy" className="ic-xs" />
                       </button>
+                      <span className="bar-rep">
+                        <button className="bar-act num" onClick={() => setRepeatMenuFor(repeatMenuFor === bar.bar ? null : bar.bar)}
+                          aria-label={t('repeatBar')} title={t('repeatBar')}>×N</button>
+                        {repeatMenuFor === bar.bar && (
+                          <span className="bar-rep-menu">
+                            {[2, 4, 8].map((n) => (
+                              <button key={n} className="bar-act num" onClick={() => repBar(bar.bar, n)}>×{n}</button>
+                            ))}
+                          </span>
+                        )}
+                      </span>
                       {layout.bars.length > 1 && (
                         <button className="bar-act bar-del" onClick={() => delBar(bar.bar)} aria-label={t('removeBar')} title={t('removeBar')}>
                           <Icon name="trash" className="ic-xs" />
@@ -608,6 +634,12 @@ export default function PracticeView({
               <button className="bar-insert" onClick={addBarBtn} aria-label={t('addBar')} title={t('addBar')}>
                 <Icon name="plus" className="ic-xs" />
               </button>
+              {barClip && (
+                <button className="bar-insert bar-paste" onClick={() => pasteBar(layout.bars.length)}
+                  aria-label={t('pasteBar')} title={t('pasteBar')}>
+                  <Icon name="upload" className="ic-xs" />
+                </button>
+              )}
             </div>
           )}
           {editable && (

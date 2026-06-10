@@ -484,3 +484,15 @@
 .beat-btn { cursor: pointer; padding: 0; }
 .beat-btn:hover { border-color: var(--accent); }
 .accent-presets { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: var(--s-3); }
+
+/* ---- Bar clipboard / repeat ---- */
+.bar-act.is-armed { color: var(--accent); border-color: var(--accent); }
+.bar-insert.bar-paste { color: var(--accent); border-color: var(--accent); }
+.bar-rep { position: relative; display: inline-flex; }
+.bar-rep .bar-act { font-size: 10px; width: auto; padding: 0 5px; }
+.bar-rep-menu {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 30;
+  display: flex; gap: 4px; padding: 4px;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm);
+  box-shadow: var(--shadow-md);
+}
