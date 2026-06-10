@@ -13,6 +13,7 @@ export const CATEGORIES = [
   { id: 'grooves', hue: 'oklch(0.74 0.12 250)', icon: 'metro', label: { en: 'Grooves', uk: 'Груви' } },
   { id: 'triplets', hue: 'oklch(0.70 0.14 30)', icon: 'notes', label: { en: 'Triplets', uk: 'Тріолі' } },
   { id: 'rolls', hue: 'oklch(0.66 0.14 280)', icon: 'grid', label: { en: 'Rolls', uk: 'Роли' } },
+  { id: 'flams', hue: 'oklch(0.74 0.13 130)', icon: 'accent', label: { en: 'Flams', uk: 'Флеми' } },
 ]
 
 export function CAT(id) {
@@ -24,6 +25,7 @@ export function catOf(ex) {
   if (ex.cat) return ex.cat
   if (ex.section === 'triplets') return 'triplets'
   if (ex.section === 'rolls') return 'rolls'
+  if (ex.section === 'flams') return 'flams'
   if (ex.section === 'paradiddle') return 'paradiddle'
   if (ex.section === 'grooves') return 'grooves'
   if (ex.section === 'rudiments') return 'rudiments'

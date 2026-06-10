@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import { getStickControlExercises } from './stickControl.js'
+import { barCount, getBars, exerciseTotalSteps } from '../model/exercise.js'
 
 const list = getStickControlExercises()
 const single = list.filter((e) => e.section === 'single-beat')
 const triplets = list.filter((e) => e.section === 'triplets')
 const rolls = list.filter((e) => e.section === 'rolls')
+const flams = list.filter((e) => e.section === 'flams')
 const byNum = (n) => single.find((e) => e.number === n)
 
 describe('Stick Control — Single Beat Combinations (pages 5–7)', () => {
@@ -80,5 +82,66 @@ describe('Stick Control — Single Beat Combinations (pages 5–7)', () => {
       '5-stroke roll', '5-stroke roll (L)',
       '9-stroke roll', '9-stroke roll (L)',
     ])
+  })
+})
+
+describe('Stick Control — Flam Beats (pages 16–17)', () => {
+  const fb = (n) => flams.find((e) => e.number === n)
+  const marks = (ex) => ({
+    on: ex.rows.snare.map((c, i) => (c.on ? i : -1)).filter((i) => i >= 0),
+    flams: ex.rows.snare.map((c, i) => (c.on && c.flam ? i : -1)).filter((i) => i >= 0),
+    sticking: ex.sticking.filter(Boolean).join(''),
+  })
+
+  it('has 48 flam beats, two 2/4 bars each, on a 16th grid', () => {
+    expect(flams).toHaveLength(48)
+    flams.forEach((ex) => {
+      expect(barCount(ex)).toBe(2)
+      getBars(ex).forEach((b) => {
+        expect(b.ts).toEqual({ beats: 2, unit: 4 })
+        expect(b.beatSubs).toEqual(['sixteenth', 'sixteenth'])
+      })
+      expect(exerciseTotalSteps(ex)).toBe(16)
+      expect([16, 17]).toContain(ex.page)
+    })
+  })
+
+  it('#1: four "8th + two 16ths" groups, right-hand flam on each group', () => {
+    const m = marks(fb(1))
+    expect(m.on).toEqual([0, 2, 3, 4, 6, 7, 8, 10, 11, 12, 14, 15])
+    expect(m.flams).toEqual([0, 4, 8, 12]) // group starts
+    expect(m.sticking).toBe('RLLRLLRLLRLL')
+  })
+
+  it('#2: same figure led by left-hand flams', () => {
+    const m = marks(fb(2))
+    expect(m.flams).toEqual([0, 4, 8, 12])
+    expect(m.sticking).toBe('LRRLRRLRRLRR')
+  })
+
+  it('#8: four 16ths per beat, flam on each beat (FLRL)', () => {
+    const m = marks(fb(8))
+    expect(m.on).toEqual([...Array(16).keys()]) // all 16 slots
+    expect(m.flams).toEqual([0, 4, 8, 12])
+    expect(m.sticking).toBe('RLRLRLRLRLRLRLRL')
+  })
+
+  it('#11: flammed doubles — flams mid-beat too (F R P L)', () => {
+    const m = marks(fb(11))
+    expect(m.flams).toEqual([0, 2, 4, 6, 8, 10, 12, 14])
+    expect(m.sticking).toBe('RRLLRRLLRRLLRRLL')
+  })
+
+  it('#24: combination — two FLL groups then 16th groups (FLRR PRLL)', () => {
+    const m = marks(fb(24))
+    expect(m.on).toEqual([0, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
+    expect(m.flams).toEqual([0, 4, 8, 12])
+    expect(m.sticking).toBe('RLLRLLRLRRLRLL')
+  })
+
+  it('#48: ends with flammed doubles bar (FLR PRL FRPL FRPL)', () => {
+    const m = marks(fb(48))
+    expect(m.flams).toEqual([0, 4, 8, 10, 12, 14])
+    expect(m.sticking).toBe('RLRLRLRRLLRRLL')
   })
 })

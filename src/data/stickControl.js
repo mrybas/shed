@@ -227,6 +227,66 @@ function getRollProgressions() {
   ]
 }
 
+// ---- Flam Beats (pages 16–17, #1–48) -------------------------------------
+// Each exercise: two bars of 2/4 on a 16th grid. Beat groups come in two
+// figures, exactly as printed: a 3-stroke group = eighth + two 16ths (strikes on
+// 16th slots 0,2,3) and a 4-stroke group = four 16ths. Stroke letters:
+//   R/L = plain stroke;  F = right-hand flam (lR);  P = left-hand flam (rL)
+// (the book prints P-strokes as a circled F; the flam grace is the opposite hand).
+const FLAM_BEATS = [
+  'FLL FLL FLL FLL', 'PRR PRR PRR PRR', 'FRR PLL FRR PLL', 'FLR PRL FLR PRL',
+  'FRL FRL FRL FRL', 'PLR PLR PLR PLR', 'FRL PLR FRL PLR', 'FLRL FLRL FLRL FLRL',
+  'PRLR PRLR PRLR PRLR', 'FLRR PRLL FLRR PRLL', 'FRPL FRPL FRPL FRPL',
+  'FLRL PRLR FLRL PRLR', 'FRLL FRLL FRLL FRLL', 'PLRR PLRR PLRR PLRR',
+  'FRLR PLRL FRLR PLRL', 'FRLL PLRR FRLL PLRR', 'FLLR PRRL FLLR PRRL',
+  'FRRR PLLL FRRR PLLL', 'FLL FLL FRR PLL', 'FLL FLL FLR PRL',
+  'FLL FLL FRL FRL', 'FLL FLL FRL PLR', 'FLL FLL FLRL FLRL', 'FLL FLL FLRR PRLL',
+  'FLL FLL FRPL FRPL', 'FLL FLL FLRL PRLR', 'FLL FLL FRLL FRLL',
+  'FLL FLL FRLR PLRL', 'FLL FLL FRLL PLRR', 'FLL FLL FLLR PRRL',
+  'FLL FLL FRRR PLLL', 'FRR PLL FLR PRL', 'FRR PLL FRL FRL', 'FRR PLL FRL PLR',
+  'FRR PLL FLRL FLRL', 'FRR PLL FLRR PRLL', 'FRR PLL FRPL FRPL',
+  'FRR PLL FLRL PRLR', 'FRR PLL FRLL FRLL', 'FRR PLL FRLR PLRL',
+  'FRR PLL FRLL PLRR', 'FRR PLL FLLR PRRL', 'FRR PLL FRRR PLLL',
+  'FLR PRL FRL FRL', 'FLR PRL FRL PLR', 'FLR PRL FLRL FLRL',
+  'FLR PRL FLRR PRLL', 'FLR PRL FRPL FRPL',
+]
+
+function flamBeat(num, groupsStr) {
+  const groups = groupsStr.split(/\s+/)
+  const ex = createEmptyExercise({
+    id: `sc_fb_${num}`,
+    name: `Flam Beat ${num}`,
+    bpm: 70,
+    bars: [
+      { ts: { beats: 2, unit: 4 }, beatSubs: ['sixteenth', 'sixteenth'] },
+      { ts: { beats: 2, unit: 4 }, beatSubs: ['sixteenth', 'sixteenth'] },
+    ],
+    source: 'stick-control',
+    section: 'flams',
+    number: num,
+    page: num <= 24 ? 16 : 17,
+    tags: ['rudiment'],
+  })
+  groups.forEach((g, beat) => {
+    const base = beat * 4
+    // 3 strokes = eighth + two 16ths (slots 0,2,3); 4 strokes = four 16ths.
+    const slots = g.length === 3 ? [0, 2, 3] : [0, 1, 2, 3]
+    g.split('').forEach((ch, idx) => {
+      const i = base + slots[idx]
+      const flam = ch === 'F' || ch === 'P'
+      const cell = { on: true, accent: false, roll: 0 }
+      if (flam) cell.flam = true
+      ex.rows.snare[i] = cell
+      ex.sticking[i] = ch === 'F' ? 'R' : ch === 'P' ? 'L' : ch
+    })
+  })
+  return ex
+}
+
+export function getFlamBeats() {
+  return FLAM_BEATS.map((s, i) => flamBeat(i + 1, s))
+}
+
 export function getStickControlExercises() {
   const out = []
   PAGE5.forEach((s, i) => out.push(singleBeat(i + 1, 5, s)))
@@ -235,5 +295,6 @@ export function getStickControlExercises() {
   TRIPLET_BEAT1.forEach((b1, i) => out.push(triplet(i + 1, b1)))
   getRollExercises().forEach((ex) => out.push(ex))
   getRollProgressions().forEach((ex) => out.push(ex))
+  getFlamBeats().forEach((ex) => out.push(ex))
   return out
 }
