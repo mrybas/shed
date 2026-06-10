@@ -207,7 +207,7 @@ export default function App() {
         ex.source = 'user'
         saveToLibrary(ex); refreshSaved(); setItem(ex); setNav('practice')
       } catch {
-        alert(lang === 'uk' ? 'Не вдалося імпортувати файл.' : 'Could not import this file.')
+        alert('Could not import this file.')
       }
     }
     reader.readAsText(file)

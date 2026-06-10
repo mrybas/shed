@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Slider, NumberStepper, NotePicker, Segmented, Switch, Button, Icon } from '../ui.jsx'
+import { useTapTempo } from '../../hooks/useTapTempo.js'
 import NotationView from '../NotationView.jsx'
 import { TIME_SIGS } from './util.js'
 import { CAT, catOf, sigOf } from '../../data/catalogV2.js'
@@ -73,18 +74,7 @@ export default function PracticeView({
     return { ...prev, rows, sticking: prev.sticking.map(() => '') }
   })
 
-  const tapRef = useRef([])
-  const tap = () => {
-    const now = performance.now()
-    const arr = tapRef.current.filter((x) => now - x < 2200)
-    arr.push(now); tapRef.current = arr
-    if (arr.length >= 2) {
-      const d = arr.slice(1).map((x, i) => x - arr[i])
-      const avg = d.reduce((a, b) => a + b, 0) / d.length
-      const bpm = Math.round(60000 / avg)
-      if (bpm >= 30 && bpm <= 300) setBpm(bpm)
-    }
-  }
+  const tap = useTapTempo(useCallback((bpm) => setItem((p) => ({ ...p, bpm })), [setItem]))
 
   const localPlay = playing ? step : -1
 
