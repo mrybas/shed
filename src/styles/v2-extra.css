@@ -587,3 +587,17 @@
 }
 .surprise-ctl { margin-left: auto; display: inline-flex; gap: var(--s-2); align-items: center; }
 .surprise-ctl .select { height: 32px; padding: 0 8px; font-size: var(--fs-sm); }
+
+/* Bottom sheets become centered dialogs on wide screens — a phone-style
+   strip pinned to the bottom looks lost on desktop. */
+@media (min-width: 900px) {
+  .sheet-backdrop { align-items: center; }
+  .sheet {
+    width: min(720px, 92vw);
+    max-height: 86vh;
+    border-radius: 16px;
+    border-bottom: 1px solid var(--border);
+    box-shadow: var(--shadow-md, 0 18px 50px oklch(0 0 0 / .4));
+  }
+  .sheet-grip { display: none; }
+}

@@ -268,6 +268,7 @@ export default function NotationView({ exercise, currentStep, loopRange, onBarCl
                 x: (xs[idx] - 12) * outScale,
                 top: (lineTop + PLAYHEAD_TOP) * outScale,
                 width: Math.max(20, nx - xs[idx]) * outScale,
+                height: PLAYHEAD_H * outScale,
               }
             }
           })
@@ -329,7 +330,7 @@ export default function NotationView({ exercise, currentStep, loopRange, onBarCl
             title={barClickTitle}>{b.label}</button>
         ))}
         {hl && (
-          <div className="note-playhead" style={{ left: `${hl.x}px`, top: `${hl.top}px`, width: `${hl.width}px`, height: `${PLAYHEAD_H}px` }} />
+          <div className="note-playhead" style={{ left: `${hl.x}px`, top: `${hl.top}px`, width: `${hl.width}px`, height: `${hl.height || PLAYHEAD_H}px` }} />
         )}
         <div ref={hostRef} className="vf-host" />
       </div>
