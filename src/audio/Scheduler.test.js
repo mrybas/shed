@@ -361,6 +361,21 @@ describe('Scheduler step scheduling', () => {
     expect(graceGain).toBeLessThan(mainGain)
   })
 
+  it('drag schedules two grace strokes before the main hit', () => {
+    const s = new Scheduler()
+    s.subdivision = 'quarter'
+    s.metronomeEnabled = false
+    const ex = createEmptyExercise({ subdivision: 'quarter' })
+    ex.rows.snare[0] = { on: true, accent: false, roll: 0, flam: 'drag' }
+    s.pattern = ex
+    s._scheduleStep(0, 5.0)
+    expect(DRUM_VOICES.snare).toHaveBeenCalledTimes(3) // 2 graces + main
+    const times = DRUM_VOICES.snare.mock.calls.map((c) => c[1]).sort((a, b) => a - b)
+    expect(times[2]).toBe(5.0)
+    expect(times[0]).toBeLessThan(times[1])
+    expect(times[1]).toBeLessThan(5.0)
+  })
+
   it('ghost notes play quieter than normal hits', () => {
     const s = new Scheduler()
     s.subdivision = 'quarter'

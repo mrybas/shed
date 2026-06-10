@@ -67,7 +67,7 @@ export function buildNotationData(ex) {
     return {
       onset: active.length > 0,
       accent: active.some((inst) => ex.rows[inst][step].accent),
-      flam: active.some((inst) => ex.rows[inst][step].flam),
+      flam: active.map((inst) => ex.rows[inst][step].flam).find(Boolean) || false,
       ghost: active.some((inst) => ex.rows[inst][step].ghost),
       open: active.some((inst) => RENDER_INFO[inst]?.open),
       roll: (active.find((inst) => ex.rows[inst][step].roll) && ex.rows[active[0]][step].roll) || 0,

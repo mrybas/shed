@@ -81,10 +81,20 @@ export default function NotationView({ exercise, currentStep }) {
           try { Parenthesis.buildAndAttach([sn]) } catch { /* ignore */ }
         }
         if (!td.rest && td.flam) {
-          // Flam: a single slashed grace note before the main hit.
+          // Flam: a single slashed grace note; drag (ruff): two beamed 16th graces.
           try {
-            const grace = new GraceNote({ keys: [td.keys[0]], duration: '8', slash: true })
-            sn.addModifier(new GraceNoteGroup([grace], false), 0)
+            if (td.flam === 'drag') {
+              const graces = [
+                new GraceNote({ keys: [td.keys[0]], duration: '16' }),
+                new GraceNote({ keys: [td.keys[0]], duration: '16' }),
+              ]
+              const group = new GraceNoteGroup(graces, false)
+              if (group.beamNotes) group.beamNotes()
+              sn.addModifier(group, 0)
+            } else {
+              const grace = new GraceNote({ keys: [td.keys[0]], duration: '8', slash: true })
+              sn.addModifier(new GraceNoteGroup([grace], false), 0)
+            }
           } catch { /* ignore */ }
         }
         if (!td.rest && td.roll) {

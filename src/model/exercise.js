@@ -248,10 +248,11 @@ function makeRow(n) {
 
 // Normalize a cell, preserving the optional `flam`/`ghost` flags only when set
 // (so empty cells keep their minimal { on, accent, roll } shape).
+// flam is `true` (one grace stroke) or 'drag' (two grace strokes / ruff).
 function copyCell(c) {
   if (!c) return { on: false, accent: false, roll: 0 }
   const nc = { on: !!c.on, accent: !!c.accent, roll: c.roll || 0 }
-  if (c.flam) nc.flam = true
+  if (c.flam) nc.flam = c.flam === 'drag' ? 'drag' : true
   if (c.ghost) nc.ghost = true
   return nc
 }

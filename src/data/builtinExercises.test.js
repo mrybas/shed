@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { getBuiltinExercises } from './builtinExercises.js'
-import { totalSteps } from '../model/exercise.js'
+import { exerciseTotalSteps } from '../model/exercise.js'
 
 const byId = (id) => getBuiltinExercises().find((e) => e.id === id)
 
@@ -25,10 +25,50 @@ describe('builtin library', () => {
 
   it('every row matches the exercise total step count', () => {
     getBuiltinExercises().forEach((ex) => {
-      const n = totalSteps(ex.timeSignature, ex.subdivision)
+      const n = exerciseTotalSteps(ex)
       Object.values(ex.rows).forEach((row) => expect(row).toHaveLength(n))
       expect(ex.sticking).toHaveLength(n)
     })
+  })
+})
+
+describe('flam & drag rudiments (PAS)', () => {
+  const marks = (ex) => ({
+    flams: ex.rows.snare.map((c, i) => (c.flam === true ? i : -1)).filter((i) => i >= 0),
+    drags: ex.rows.snare.map((c, i) => (c.flam === 'drag' ? i : -1)).filter((i) => i >= 0),
+    accents: ex.rows.snare.map((c, i) => (c.on && c.accent ? i : -1)).filter((i) => i >= 0),
+    sticking: ex.sticking.join(''),
+  })
+
+  it('flam tap: flammed accented doubles', () => {
+    const m = marks(byId('builtin_flam_tap'))
+    expect(m.sticking).toBe('RRLLRRLL')
+    expect(m.flams).toEqual([0, 2, 4, 6])
+    expect(m.accents).toEqual([0, 2, 4, 6])
+  })
+
+  it('flamacue: mixed 16ths + quarter, accent on the second note', () => {
+    const ex = byId('builtin_flamacue')
+    expect(ex.beatSubs).toEqual(['sixteenth', 'quarter'])
+    expect(exerciseTotalSteps(ex)).toBe(5)
+    const m = marks(ex)
+    expect(m.sticking).toBe('RLRLR')
+    expect(m.flams).toEqual([0, 4])
+    expect(m.accents).toEqual([1])
+  })
+
+  it('single drag tap: drags resolving to accented taps', () => {
+    const m = marks(byId('builtin_single_drag_tap'))
+    expect(m.sticking).toBe('RLLRRLLR')
+    expect(m.drags).toEqual([0, 2, 4, 6])
+    expect(m.accents).toEqual([1, 3, 5, 7])
+  })
+
+  it('double drag tap: triplet feel, two drags then an accent', () => {
+    const m = marks(byId('builtin_double_drag_tap'))
+    expect(m.sticking).toBe('RRLLLRRRLLLR')
+    expect(m.drags).toEqual([0, 1, 3, 4, 6, 7, 9, 10])
+    expect(m.accents).toEqual([2, 5, 8, 11])
   })
 })
 

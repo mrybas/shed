@@ -357,9 +357,14 @@ export class Scheduler {
           if (cell.roll && voice) {
             drumRoll(ctx, time, this._rollDuration(step), cell.roll, master, gain, voice)
           } else if (voice) {
-            // Flam: a soft grace stroke a hair (~28 ms) before the main hit —
-            // clamped so a tightly-scheduled grace can't land in the past.
-            if (cell.flam) voice(ctx, Math.max(time - 0.028, ctx.currentTime + 0.005), master, { gain: gain * 0.5 })
+            // Flam: one soft grace stroke ~28ms early; drag (ruff): two graces
+            // ~52/26ms early — clamped so they can't land in the past.
+            if (cell.flam === 'drag') {
+              voice(ctx, Math.max(time - 0.052, ctx.currentTime + 0.005), master, { gain: gain * 0.45 })
+              voice(ctx, Math.max(time - 0.026, ctx.currentTime + 0.01), master, { gain: gain * 0.45 })
+            } else if (cell.flam) {
+              voice(ctx, Math.max(time - 0.028, ctx.currentTime + 0.005), master, { gain: gain * 0.5 })
+            }
             voice(ctx, time, master, { gain })
           }
         }

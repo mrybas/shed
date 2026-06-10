@@ -21,10 +21,11 @@ const STAMPS = {
   accent: () => ({ on: true, accent: true, roll: 0 }),
   ghost: () => ({ on: true, accent: false, roll: 0, ghost: true }),
   flam: () => ({ on: true, accent: false, roll: 0, flam: true }),
+  drag: () => ({ on: true, accent: false, roll: 0, flam: 'drag' }),
   roll: (rollType) => ({ on: true, accent: false, roll: rollType }),
   erase: () => ({ on: false, accent: false, roll: 0 }),
 }
-const TOOL_GLYPHS = { hit: '●', accent: '>', ghost: '( )', flam: 'f', roll: 'z', erase: '⌫' }
+const TOOL_GLYPHS = { hit: '●', accent: '>', ghost: '( )', flam: 'f', drag: 'd', roll: 'z', erase: '⌫' }
 
 export default function PracticeView({
   t, lang, item, setItem, options, setOptions, vols, setVols, playing, step,
@@ -137,7 +138,7 @@ export default function PracticeView({
       const cur = prev.rows[k]?.[i]
       if (!cur) return prev
       const same = cur.on === next.on && cur.accent === next.accent && (cur.roll || 0) === (next.roll || 0)
-        && !!cur.flam === !!next.flam && !!cur.ghost === !!next.ghost
+        && (cur.flam || false) === (next.flam || false) && !!cur.ghost === !!next.ghost
       if (same) return prev
       const rows = { ...prev.rows, [k]: prev.rows[k].map((c, idx) => (idx === i ? { ...next } : c)) }
       return { ...prev, rows }
@@ -477,7 +478,7 @@ export default function PracticeView({
                     <button key={i} disabled={!editable} aria-label={t(k) + ' ' + (i + 1)}
                       data-cellk={k} data-celli={i}
                       className={['cell', cell.roll ? 'roll' : cell.flam ? 'flam' : cell.ghost ? 'ghost' : cell.accent ? 'accent' : cell.on ? 'on' : '', beatStartSet.has(i) ? 'beat-start' : '', barStartSet.has(i) ? 'bar-start' : '', localPlay === i ? 'play-col' : '', !editable ? 'ro' : ''].join(' ')}
-                      onClick={() => editable && !tool && cycleCell(k, i)}>{cell.roll ? 'z' : cell.flam ? 'f' : cell.ghost ? '()' : ''}</button>
+                      onClick={() => editable && !tool && cycleCell(k, i)}>{cell.roll ? 'z' : cell.flam === 'drag' ? 'd' : cell.flam ? 'f' : cell.ghost ? '()' : ''}</button>
                   ))}
                 </div>
               </div>
@@ -502,6 +503,7 @@ export default function PracticeView({
         <span className="cl-item"><span className="cl-sw cell accent" />{t('legendAccent')}</span>
         <span className="cl-item"><span className="cl-sw cell ghost">()</span>{t('legendGhost')}</span>
         <span className="cl-item"><span className="cl-sw cell flam">f</span>{t('legendFlam')}</span>
+        <span className="cl-item"><span className="cl-sw cell flam">d</span>{t('legendDrag')}</span>
         <span className="cl-item"><span className="cl-sw cell roll">z</span>{t('legendRoll')}</span>
         <span className="cl-item"><span className="cl-rl">R / L</span>{t('legendSticking')}</span>
       </div>
