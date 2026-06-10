@@ -175,3 +175,14 @@
 .bar-tag:hover { color: var(--text); background: var(--surface-2); }
 .bar-tag.is-loop { color: var(--on-accent); background: var(--accent); }
 .bar-block.is-loop { border-color: var(--accent); }
+
+/* Clickable bar zones in the notation (loop selection). */
+.note-barzone {
+  position: absolute; z-index: 3; cursor: pointer;
+  border: none; padding: 0; background: transparent; border-radius: 8px;
+}
+.note-barzone:hover { background: color-mix(in oklab, var(--accent) 9%, transparent); }
+.note-barzone.is-loop {
+  background: color-mix(in oklab, var(--accent) 13%, transparent);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}

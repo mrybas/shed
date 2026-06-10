@@ -401,8 +401,13 @@ export default function PracticeView({
 
       {(view === 'notes') ? (
         <div ref={playAreaRef}>
-          <div className="notation-wrap"><NotationView exercise={item} currentStep={localPlay} /></div>
-          <div className="notation-hint">{editable ? t('editInGridHint') : t('viewOnly')}</div>
+          <div className="notation-wrap">
+            <NotationView exercise={item} currentStep={localPlay}
+              loopRange={loopRange} onBarClick={toggleLoopBar} barClickTitle={t('loopBarTitle')} />
+          </div>
+          <div className="notation-hint">
+            {layout.bars.length > 1 ? `${t('loopNotesHint')} · ` : ''}{editable ? t('editInGridHint') : t('viewOnly')}
+          </div>
         </div>
       ) : (
         <div className="seq" ref={playAreaRef}>

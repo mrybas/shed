@@ -14,10 +14,11 @@ const COMFY_NOTE_PX = 30
 const CLEF_W = 42
 const TS_W = 30
 
-export default function NotationView({ exercise, currentStep }) {
+export default function NotationView({ exercise, currentStep, loopRange, onBarClick, barClickTitle }) {
   const wrapRef = useRef(null)
   const hostRef = useRef(null)
   const [meta, setMeta] = useState([])
+  const [barBoxes, setBarBoxes] = useState([]) // clickable per-bar zones
   const [dims, setDims] = useState({ w: 0, h: LINE_H })
   const [containerWidth, setContainerWidth] = useState(0)
   const [error, setError] = useState('')
@@ -116,6 +117,7 @@ export default function NotationView({ exercise, currentStep }) {
       }
 
       const stepMeta = new Array(data.totalSteps)
+      const boxes = []
 
       lines.forEach((lineBars, line) => {
         const lineTop = line * LINE_H
@@ -213,10 +215,12 @@ export default function NotationView({ exercise, currentStep }) {
             }
           })
 
+          boxes.push({ bar: bm.bar, x, top: lineTop + PLAYHEAD_TOP, width: staveW, height: PLAYHEAD_H })
           x += staveW
         })
       })
 
+      setBarBoxes(boxes)
       setMeta(stepMeta)
       setDims({ w: width, h: lines.length * LINE_H + BOTTOM_PAD })
     } catch (e) {
@@ -226,11 +230,20 @@ export default function NotationView({ exercise, currentStep }) {
   }, [sig, containerWidth]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const hl = currentStep >= 0 && currentStep < meta.length ? meta[currentStep] : null
+  // Clickable bar zones (loop selection) only make sense with several bars.
+  const zones = onBarClick && barBoxes.length > 1 ? barBoxes : []
+  const inLoop = (bar) => loopRange && bar >= loopRange.from && bar <= loopRange.to
 
   return (
     <div className="notation" ref={wrapRef}>
       {error && <p className="error">notation error: {error}</p>}
       <div className="notation-inner" style={{ width: dims.w || '100%', height: dims.h }}>
+        {zones.map((b) => (
+          <button key={b.bar + ':' + b.x} type="button" title={barClickTitle}
+            className={'note-barzone' + (inLoop(b.bar) ? ' is-loop' : '')}
+            style={{ left: `${b.x}px`, top: `${b.top}px`, width: `${b.width}px`, height: `${b.height}px` }}
+            onClick={() => onBarClick(b.bar)} aria-label={`bar ${b.bar + 1}`} />
+        ))}
         {hl && (
           <div className="note-playhead" style={{ left: `${hl.x}px`, top: `${hl.top}px`, width: `${hl.width}px`, height: `${PLAYHEAD_H}px` }} />
         )}

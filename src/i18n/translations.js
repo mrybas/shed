@@ -145,5 +145,6 @@ export const translations = {
     loopTag: 'loop',
     exportAll: 'Export all',
     loopBarTitle: 'Loop this bar — click another bar to extend, click again to clear',
+    loopNotesHint: 'Click a bar to loop it',
   },
 }
