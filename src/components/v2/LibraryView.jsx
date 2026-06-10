@@ -54,7 +54,7 @@ function FilterChip({ active, onClick, children }) {
 
 const TAG_FILTERS = ['singles', 'doubles', 'triples', 'quads', 'rudiment', 'groove']
 
-export default function LibraryView({ t, lang, saved, progressMap, onOpen, onNew, onImport, onExportItem, onDeleteSaved, route, onRoute }) {
+export default function LibraryView({ t, lang, saved, progressMap, onOpen, onNew, onImport, onExportItem, onExportAll, onDeleteSaved, route, onRoute }) {
   const section = route?.section || 'home'
   const activeCat = route?.cat || null
   const go = (s, c = null) => onRoute?.({ section: s, cat: c })
@@ -159,6 +159,9 @@ export default function LibraryView({ t, lang, saved, progressMap, onOpen, onNew
               <div className="exlist-count num">{listItems.length} {t('results')}</div>
               {section === 'saved' && (
                 <div className="sec-actions">
+                  {saved.length > 0 && onExportAll && (
+                    <Button size="sm" icon="download" onClick={onExportAll}>{t('exportAll')}</Button>
+                  )}
                   <Button size="sm" icon="upload" onClick={() => fileRef.current?.click()}>{t('import')}</Button>
                   <Button size="sm" variant="accent" icon="plus" onClick={onNew}>{t('newExercise')}</Button>
                 </div>

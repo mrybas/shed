@@ -279,6 +279,21 @@ describe('parseImported', () => {
     expect(parsed.id).not.toBe(ex.id) // new id assigned on import
   })
 
+  it('round-trips a whole-library backup file', () => {
+    const a = createEmptyExercise({ name: 'One' })
+    let b = createEmptyExercise({ name: 'Two', subdivision: 'eighth' })
+    b = addBar(b)
+    b.rows.snare[0] = { on: true, accent: true, roll: 0 }
+    const file = JSON.stringify({ app: 'drums', type: 'library', version: 1, exercises: [a, b] })
+    const parsed = parseImported(file)
+    expect(parsed.type).toBe('library')
+    expect(parsed.exercises).toHaveLength(2)
+    expect(parsed.exercises[1].name).toBe('Two')
+    expect(parsed.exercises[1].rows.snare[0].accent).toBe(true)
+    expect(barCount(parsed.exercises[1])).toBe(2)
+    expect(parsed.exercises[0].id).not.toBe(a.id) // re-id'd on import
+  })
+
   it('rejects non-drums files', () => {
     expect(() => parseImported('{"app":"other"}')).toThrow()
     expect(() => parseImported('not json')).toThrow('Invalid JSON')

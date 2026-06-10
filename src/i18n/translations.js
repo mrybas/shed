@@ -141,6 +141,7 @@ export const translations = {
     undo: 'Undo',
     swing: 'Swing',
     loopTag: 'loop',
+    exportAll: 'Export all',
     loopBarTitle: 'Loop this bar — click another bar to extend, click again to clear',
   },
 }

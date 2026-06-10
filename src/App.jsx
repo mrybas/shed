@@ -11,11 +11,11 @@ import PracticeView from './components/v2/PracticeView.jsx'
 import { sigToTimeSignature } from './components/v2/util.js'
 import { CATEGORIES, sigOf } from './data/catalogV2.js'
 import {
-  createEmptyExercise, exportExercise, parseImported,
+  createEmptyExercise, exportExercise, exportLibraryFile, parseImported,
   loadLibrary, saveToLibrary, deleteFromLibrary, genId, barLayout,
 } from './model/exercise.js'
 
-const APP_VERSION = 'v3.7' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v3.8' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -211,9 +211,27 @@ export default function App() {
     const reader = new FileReader()
     reader.onload = () => {
       try {
-        const ex = parseImported(String(reader.result))
-        ex.source = 'user'
-        saveToLibrary(ex); refreshSaved(); setItem(ex); setNav('practice')
+        const parsed = parseImported(String(reader.result))
+        if (parsed.type === 'library') {
+          // Merge a whole-library backup; skip entries identical to existing ones.
+          const existing = loadLibrary()
+          const sig = (e) => JSON.stringify({ n: e.name, r: e.rows, s: e.sticking, b: e.bars || null })
+          const seen = new Set(existing.map(sig))
+          let added = 0
+          parsed.exercises.forEach((ex) => {
+            if (seen.has(sig(ex))) return
+            ex.source = 'user'
+            saveToLibrary(ex)
+            added += 1
+          })
+          refreshSaved()
+          setLibTarget({ section: 'saved', cat: null })
+          setNav('library')
+          alert(`Imported ${added} exercise${added === 1 ? '' : 's'}${added < parsed.exercises.length ? ` (${parsed.exercises.length - added} duplicates skipped)` : ''}.`)
+        } else {
+          parsed.source = 'user'
+          saveToLibrary(parsed); refreshSaved(); setItem(parsed); setNav('practice')
+        }
       } catch {
         alert('Could not import this file.')
       }
@@ -316,8 +334,8 @@ export default function App() {
         {nav === 'metronome' && <MetronomeView t={t} metro={metro} setMetro={setMetro} playing={playing && mode === 'metronome'} step={step} />}
         {nav === 'library' && (
           <LibraryView t={t} lang={lang} saved={saved} progressMap={progressMap} onOpen={openItem}
-            onNew={newExercise} onImport={importFile} onExportItem={exportExercise} onDeleteSaved={deleteSaved}
-            route={libTarget} onRoute={setLibTarget} />
+            onNew={newExercise} onImport={importFile} onExportItem={exportExercise} onExportAll={exportLibraryFile}
+            onDeleteSaved={deleteSaved} route={libTarget} onRoute={setLibTarget} />
         )}
         {nav === 'practice' && item && (
           <PracticeView t={t} lang={lang} item={item} setItem={setItem} options={options} setOptions={setOptions}

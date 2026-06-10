@@ -387,20 +387,36 @@ export function setBeatSub(ex, beatIndex, subdivision) {
 
 // ---- Serialization ----
 
-export function exportExercise(ex) {
-  const data = JSON.stringify(ex, null, 2)
-  const blob = new Blob([data], { type: 'application/json' })
+function downloadJSON(text, filename) {
+  const blob = new Blob([text], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
-  const safe = ex.name.replace(/[^\w\-а-яіїєґ ]/gi, '').trim().replace(/\s+/g, '_') || 'exercise'
   a.href = url
-  a.download = `${safe}.drums.json`
+  a.download = filename
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
 }
 
+export function exportExercise(ex) {
+  const safe = ex.name.replace(/[^\w\-а-яіїєґ ]/gi, '').trim().replace(/\s+/g, '_') || 'exercise'
+  downloadJSON(JSON.stringify(ex, null, 2), `${safe}.drums.json`)
+}
+
+// Back up the whole saved library as one file.
+export function exportLibraryFile() {
+  const lib = loadLibrary()
+  downloadJSON(
+    JSON.stringify({ app: 'drums', type: 'library', version: 1, exercises: lib }, null, 2),
+    'shed-library.drums.json',
+  )
+  return lib.length
+}
+
+// Parse an exported file: either a single exercise, or a whole-library backup
+// ({ type: 'library', exercises: [...] }) — the latter returns
+// { type: 'library', exercises } with each exercise normalized + re-id'd.
 export function parseImported(text) {
   let obj
   try {
@@ -408,6 +424,13 @@ export function parseImported(text) {
   } catch {
     throw new Error('Invalid JSON')
   }
+  if (obj && obj.app === 'drums' && obj.type === 'library' && Array.isArray(obj.exercises)) {
+    return { type: 'library', exercises: obj.exercises.map(parseOne) }
+  }
+  return parseOne(obj)
+}
+
+function parseOne(obj) {
   if (!obj || obj.app !== 'drums' || !obj.rows || !obj.timeSignature) {
     throw new Error('Not a valid drums exercise file')
   }
