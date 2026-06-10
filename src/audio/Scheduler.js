@@ -58,6 +58,7 @@ export class Scheduler {
     this.soundSubdivisions = false // also click on non-beat steps
     this.metronomeVolume = 1 // 0..2 multiplier for click loudness
     this.patternVolume = 1 // 0..2 multiplier for exercise (drum) loudness
+    this.mixer = {} // per-instrument 0..2 multiplier (absent = 1; 0 mutes)
 
     this.isPlaying = false
     this.currentStep = 0
@@ -382,8 +383,10 @@ export class Scheduler {
       INSTRUMENTS.forEach((inst) => {
         const cell = this.pattern.rows[inst]?.[step]
         if (cell && cell.on) {
+          const mix = this.mixer[inst] ?? 1
+          if (mix <= 0) return // muted in the mixer
           // Three dynamic levels: ghost (quiet) < normal < accent.
-          const gain = (cell.ghost ? 0.22 : cell.accent ? 1.0 : 0.55) * this.patternVolume
+          const gain = (cell.ghost ? 0.22 : cell.accent ? 1.0 : 0.55) * this.patternVolume * mix
           const voice = DRUM_VOICES[inst]
           if (cell.roll && voice) {
             drumRoll(ctx, time, this._rollDuration(step), cell.roll, master, gain, voice)

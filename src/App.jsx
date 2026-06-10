@@ -24,7 +24,7 @@ import {
 import { logPracticeSeconds, logTempo, flushJournal, exportJournal, mergeJournal, getTempoStats } from './model/progress.js'
 import { decodeShare, shareFromHash } from './model/share.js'
 
-const APP_VERSION = 'v5.5' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v5.6' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -261,6 +261,9 @@ export default function App() {
       sched.setMetronomeEnabled(options.metroWith)
       sched.setMetronomeVolume(vols.metro / 100)
       sched.setPatternVolume(vols.ex / 100)
+      sched.setMixer(Object.fromEntries(
+        Object.entries(vols.mixer || {}).map(([k, v]) => [k, v / 100]),
+      ))
     }
   }, [mode, metro, item, options, vols, loopRange, sched])
 

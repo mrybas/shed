@@ -516,3 +516,49 @@ describe('metronome trainers', () => {
     expect(s._total).toBe(8) // 2 beats × 4
   })
 })
+
+describe('per-instrument mixer', () => {
+  beforeEach(() => { vi.clearAllMocks() })
+
+  const make = () => {
+    const s = new Scheduler()
+    s.subdivision = 'quarter'
+    s.metronomeEnabled = false
+    const ex = createEmptyExercise({ subdivision: 'quarter' })
+    ex.rows.snare[0] = { on: true, accent: false, roll: 0 }
+    ex.rows.kick[0] = { on: true, accent: false, roll: 0 }
+    s.pattern = ex
+    return s
+  }
+
+  it('scales a voice gain by its mixer value', () => {
+    const s = make()
+    s.mixer = { snare: 2 }
+    s._scheduleStep(0, 1.0)
+    expect(DRUM_VOICES.snare).toHaveBeenCalledWith(fakeCtx, 1.0, expect.anything(), { gain: 0.55 * 2 })
+    expect(DRUM_VOICES.kick).toHaveBeenCalledWith(fakeCtx, 1.0, expect.anything(), { gain: 0.55 }) // untouched
+  })
+
+  it('a mixer value of 0 mutes the instrument entirely', () => {
+    const s = make()
+    s.mixer = { snare: 0 }
+    s._scheduleStep(0, 1.0)
+    expect(DRUM_VOICES.snare).not.toHaveBeenCalled()
+    expect(DRUM_VOICES.kick).toHaveBeenCalled()
+  })
+
+  it('mixer mute also silences rolls and flams on that instrument', () => {
+    const s = new Scheduler()
+    s.subdivision = 'quarter'
+    s.metronomeEnabled = false
+    const ex = createEmptyExercise({ subdivision: 'quarter' })
+    ex.rows.snare[0] = { on: true, accent: false, roll: 'open' }
+    ex.rows.tom1[0] = { on: true, accent: false, roll: 0, flam: true }
+    s.pattern = ex
+    s._recompute()
+    s.mixer = { snare: 0, tom1: 0 }
+    s._scheduleStep(0, 1.0)
+    expect(drumRoll).not.toHaveBeenCalled()
+    expect(DRUM_VOICES.tom1).not.toHaveBeenCalled()
+  })
+})

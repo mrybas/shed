@@ -105,6 +105,7 @@ export function useScheduler(initial = {}) {
   const setSoundSubdivisions = useCallback((v) => { sched.soundSubdivisions = v }, [sched])
   const setMetronomeVolume = useCallback((v) => { sched.metronomeVolume = v }, [sched])
   const setPatternVolume = useCallback((v) => { sched.patternVolume = v }, [sched])
+  const setMixer = useCallback((v) => { sched.mixer = v || {} }, [sched])
 
   return {
     isPlaying,
@@ -132,6 +133,7 @@ export function useScheduler(initial = {}) {
     setSoundSubdivisions,
     setMetronomeVolume,
     setPatternVolume,
+    setMixer,
     scheduler: sched,
   }
 }

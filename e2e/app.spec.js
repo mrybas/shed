@@ -222,3 +222,34 @@ test('new exercise opens in grid; reopening a saved one opens in notes', async (
   await page.locator('.exrow', { hasText: 'Reopen test' }).click()
   await expect(page.locator('.notation-wrap .vf-line svg').first()).toBeVisible() // saved -> notes
 })
+
+test('sound sheet: kit choice persists, mixer mute persists', async ({ page }) => {
+  await page.locator('.side-parent-main').click()
+  await page.locator('.cat-card').first().click()
+  await page.locator('.exrow').first().click()
+  await page.getByRole('button', { name: /Mixer & sounds/ }).click()
+  await expect(page.locator('.sheet')).toBeVisible()
+
+  // Pick the electronic kit and zero out the snare.
+  await page.locator('.kit-chip', { hasText: 'Electronic' }).click()
+  await expect(page.locator('.kit-chip', { hasText: 'Electronic' })).toHaveClass(/is-active/)
+  await page.locator('.mixer-row', { has: page.locator('.mix-label', { hasText: /^Snare$/ }) })
+    .locator('input[type="range"]').fill('0')
+  await expect(page.locator('.mix-label', { hasText: /^Snare$/ })).toHaveClass(/is-muted/)
+
+  // Reset appears once the mixer is dirty.
+  await expect(page.locator('.sheet').getByRole('button', { name: 'Reset' })).toBeVisible()
+
+  // Both settings survive a reload.
+  await page.reload()
+  await page.locator('.side-parent-main').click()
+  await page.locator('.cat-card').first().click()
+  await page.locator('.exrow').first().click()
+  await page.getByRole('button', { name: /Mixer & sounds/ }).click()
+  await expect(page.locator('.kit-chip', { hasText: 'Electronic' })).toHaveClass(/is-active/)
+  await expect(page.locator('.mix-label', { hasText: /^Snare$/ })).toHaveClass(/is-muted/)
+
+  // Reset restores every fader to 100%.
+  await page.locator('.sheet').getByRole('button', { name: 'Reset' }).click()
+  await expect(page.locator('.mix-label.is-muted')).toHaveCount(0)
+})

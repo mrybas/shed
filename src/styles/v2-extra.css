@@ -342,3 +342,56 @@
   .notation-wrap { box-shadow: none !important; border: none !important; padding: 0 !important; background: #fff !important; }
   .notation-hint, .note-playhead, .note-barzone { display: none !important; }
 }
+
+/* ---- Sound bottom sheet: kit picker + per-instrument mixer ---- */
+.sheet-backdrop {
+  position: fixed; inset: 0; z-index: 80;
+  background: oklch(0 0 0 / .45);
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.sheet {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 16px 16px 0 0;
+  width: min(560px, 100%);
+  max-height: 82dvh;
+  overflow-y: auto;
+  padding: var(--s-3) var(--s-5) calc(var(--s-5) + env(safe-area-inset-bottom));
+  box-shadow: 0 -12px 40px oklch(0 0 0 / .35);
+}
+.sheet-grip {
+  width: 36px; height: 4px; border-radius: 2px;
+  background: var(--text-3); opacity: .5;
+  margin: 0 auto var(--s-2);
+}
+.sheet-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: var(--s-4);
+}
+.sheet-title { font-weight: 700; font-size: var(--fs-md, 15px); }
+.sheet-close {
+  background: none; border: none; color: var(--text-3);
+  font-size: 15px; cursor: pointer; padding: 4px 8px; border-radius: var(--r-sm);
+}
+.sheet-close:hover { color: var(--text); }
+.kit-chips { display: flex; gap: var(--s-2); margin: var(--s-2) 0 var(--s-4); }
+.kit-chip {
+  flex: 1 1 0; padding: 8px 10px; border-radius: var(--r-md); cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--text-2);
+  font: inherit; font-size: var(--fs-sm); font-weight: 600;
+}
+.kit-chip:hover { border-color: var(--border-strong); color: var(--text); }
+.kit-chip.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+}
+.sheet-mixhead { display: flex; align-items: center; justify-content: space-between; min-height: 30px; }
+.mixer-rows { display: grid; gap: 6px; margin-top: var(--s-2); }
+.mixer-row { display: grid; grid-template-columns: 104px 1fr 48px; align-items: center; gap: var(--s-2); }
+.mix-label { font-size: var(--fs-xs); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mix-label.is-muted { color: var(--accent); text-decoration: line-through; }
+.sheet-hint { display: flex; align-items: center; gap: 6px; margin-top: var(--s-3); }
+.sheet-hint .v-ic { width: 16px; height: 16px; flex: none; }

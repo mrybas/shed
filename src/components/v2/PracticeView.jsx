@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Slider, NumberStepper, NotePicker, NoteGlyph, Segmented, Switch, Button, Icon } from '../ui.jsx'
 import { useTapTempo } from '../../hooks/useTapTempo.js'
 import NotationView from '../NotationView.jsx'
+import SoundSheet from './SoundSheet.jsx'
 import { TIME_SIGS } from './util.js'
 import { CAT, catOf, sigOf, levelOf } from '../../data/catalogV2.js'
 import { getTempoStats } from '../../model/progress.js'
@@ -256,6 +257,9 @@ export default function PracticeView({
     }
   }
 
+  // Global sound settings (kit + mixer) live in a bottom sheet.
+  const [soundOpen, setSoundOpen] = useState(false)
+
   // Print: relayout the notation to A4 width first, then open the dialog.
   const [printing, setPrinting] = useState(false)
   const printNotes = () => {
@@ -466,6 +470,9 @@ export default function PracticeView({
             <div className="volume-row"><Icon name="metro" className="v-ic" /><Slider value={vols.metro} min={0} max={200} onChange={(v) => setVols((s) => ({ ...s, metro: v }))} aria-label={t('metronomeVolume')} /><span className="v-val num">{vols.metro}%</span></div>
           </div>
         </div>
+        <div style={{ marginTop: 'var(--s-3)' }}>
+          <Button size="sm" icon="vol" onClick={() => setSoundOpen(true)}>{t('soundBtn')}</Button>
+        </div>
       </div>
 
       <div className="view-bar">
@@ -620,6 +627,8 @@ export default function PracticeView({
         <span className="cl-item"><span className="cl-sw cell roll">z</span>{t('legendRoll')}</span>
         <span className="cl-item"><span className="cl-rl">R / L</span>{t('legendSticking')}</span>
       </div>
+
+      <SoundSheet t={t} open={soundOpen} onClose={() => setSoundOpen(false)} vols={vols} setVols={setVols} />
     </div>
   )
 }
