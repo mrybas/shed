@@ -39,6 +39,13 @@ export class Scheduler {
     // Swing: 0..~0.33 fraction — long/short pairs on eighth/sixteenth grids
     // (0.33 ≈ triplet feel). Tuplet beats are never swung.
     this.swing = 0
+    // Subdivision switcher (metronome trainer): rotate through `subs` every
+    // `everyBars` bars — forces the inner clock to re-subdivide on the fly.
+    this.subSwitcher = { enabled: false, everyBars: 2, subs: ['eighth', 'sixteenth', 'triplet'] }
+    // Polyrhythm (metronome trainer): a second click voice playing `against`
+    // even strokes per bar (X:Y where X = beats of the meter).
+    this.poly = { enabled: false, against: 3 }
+    this._nextPolyTime = 0
     this._phase = 'pattern' // 'countin' | 'pattern'
     this._countInStep = 0
     this._countInBeats = 4 // beats per count-in bar (first bar of the pattern)
@@ -73,10 +80,21 @@ export class Scheduler {
   // (steps-per-beat of its beat), whether it starts a beat, and whether it
   // starts a bar. Uses the pattern's bars (multi-bar aware) when present,
   // otherwise a single uniform bar (metronome / legacy).
+  // The subdivision the metronome runs right now (switcher-aware).
+  currentSubdivision() {
+    const sw = this.subSwitcher
+    if (!this.pattern && sw?.enabled && sw.subs?.length) {
+      const idx = Math.floor(this._bars / Math.max(1, sw.everyBars || 1)) % sw.subs.length
+      return sw.subs[idx]
+    }
+    return this.subdivision
+  }
+
   _recompute() {
+    const sub = this.currentSubdivision()
     const bars = this.pattern
       ? getBars(this.pattern)
-      : [{ ts: this.timeSignature, beatSubs: Array.from({ length: this.timeSignature.beats }, () => this.subdivision) }]
+      : [{ ts: this.timeSignature, beatSubs: Array.from({ length: this.timeSignature.beats }, () => sub) }]
     const divisor = []
     const isBeat = []
     const isBarStart = []
@@ -205,6 +223,7 @@ export class Scheduler {
     this._countInStep = 0
     this._phase = this._countInLen() > 0 ? 'countin' : 'pattern'
     this.nextNoteTime = ctx.currentTime + 0.12
+    this._nextPolyTime = this.nextNoteTime // poly voice locks to the downbeat
     this.notesInQueue = []
     this._startTicker()
   }
@@ -263,6 +282,15 @@ export class Scheduler {
         this._advance()
       }
     }
+    // Second click voice for polyrhythms: `against` even strokes per bar.
+    if (!this.pattern && this.poly?.enabled && this._phase !== 'countin') {
+      const master = getMaster()
+      const polyStep = (this.timeSignature.beats * (60.0 / this.bpm)) / Math.max(2, this.poly.against || 3)
+      while (this._nextPolyTime < ctx.currentTime + this.scheduleAheadSec) {
+        click(ctx, this._nextPolyTime, master, 'poly', this.metronomeVolume)
+        this._nextPolyTime += polyStep
+      }
+    }
     if (!this._usingWorker) this.timerId = setTimeout(this._tick, this.lookaheadMs)
   }
 
@@ -308,6 +336,9 @@ export class Scheduler {
     if (startsBar) {
       this._bars += 1
       this.bpm = this.rampedBpm()
+      // The switcher may re-subdivide the next bar — rebuild the layout now so
+      // the steps scheduled in this very tick already use the new grid.
+      if (!this.pattern && this.subSwitcher?.enabled) this._recompute()
     }
     // "Count-in each pass" mode: at the end of a pass (full phrase, or the
     // looped range), count in again before replaying.

@@ -24,14 +24,18 @@ import {
 import { logPracticeSeconds, logTempo, flushJournal, exportJournal, mergeJournal, getTempoStats } from './model/progress.js'
 import { decodeShare, shareFromHash } from './model/share.js'
 
-const APP_VERSION = 'v4.9' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v5.0' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
 const METRO_KEY = 'drums2_metro'
 const TEMPO_KEY = 'drums2_tempo' // chosen bpm per catalog exercise id
 const TW_DEFAULT = { theme: 'dark', accent: 'coral', density: 'regular' }
-const METRO_DEFAULT = { bpm: 100, sig: '4/4', sub: 'quarter', accentOne: true, soundSubs: true, vol: 120, swing: 0 }
+const METRO_DEFAULT = {
+  bpm: 100, sig: '4/4', sub: 'quarter', accentOne: true, soundSubs: true, vol: 120, swing: 0,
+  switcher: { enabled: false, everyBars: 2, subs: ['eighth', 'sixteenth', 'triplet'] },
+  poly: { enabled: false, against: 3 },
+}
 const OPTIONS_DEFAULT = {
   metroWith: true, accentOne: true, soundSubs: false, swing: 0,
   tempoRamp: { enabled: false, everyBars: 4, stepBpm: 5, maxBpm: 0 },
@@ -238,8 +242,12 @@ export default function App() {
       sched.setCountIn({ enabled: false })
       sched.setLoopRange(null)
       sched.setSwing(swingFraction(metro.swing))
+      sched.setSubSwitcher({ ...METRO_DEFAULT.switcher, ...metro.switcher })
+      sched.setPoly({ ...METRO_DEFAULT.poly, ...metro.poly })
     } else if (item) {
       sched.setPattern(item)
+      sched.setSubSwitcher({ enabled: false })
+      sched.setPoly({ enabled: false })
       sched.setTempoRamp(options.tempoRamp)
       sched.setGapTrainer(options.gapTrainer)
       sched.setCountIn(options.countIn)
@@ -463,7 +471,7 @@ export default function App() {
 
   // transport params for the player bar
   const sig = mode === 'metronome' ? metro.sig : (item ? sigOf(item) : '4/4')
-  const sub = mode === 'metronome' ? metro.sub : (item ? item.subdivision : 'quarter')
+  const sub = mode === 'metronome' ? (playing ? sched.liveSub : metro.sub) : (item ? item.subdivision : 'quarter')
   const bpm = mode === 'metronome' ? metro.bpm : (item ? item.bpm : 100)
   const setActiveBpm = (b) => mode === 'metronome' ? setMetro((m) => ({ ...m, bpm: b })) : setItem((p) => ({ ...p, bpm: b }))
 
@@ -556,7 +564,7 @@ export default function App() {
       </aside>
 
       <main className="main">
-        {nav === 'metronome' && <MetronomeView t={t} metro={metro} setMetro={setMetro} playing={playing && mode === 'metronome'} step={step} />}
+        {nav === 'metronome' && <MetronomeView t={t} metro={metro} setMetro={setMetro} playing={playing && mode === 'metronome'} step={step} liveSub={sched.liveSub} />}
         {nav === 'workouts' && (wkEdit ? (
           <WorkoutEditorView t={t} initial={wkEdit} exercises={[...exById.values()]}
             onSave={saveWk} onCancel={() => setWkEdit(null)} />

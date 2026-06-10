@@ -18,6 +18,7 @@ export function useScheduler(initial = {}) {
   const [liveBpm, setLiveBpm] = useState(sched.baseBpm)
   const [gapMuted, setGapMuted] = useState(false)
   const [countingIn, setCountingIn] = useState(false)
+  const [liveSub, setLiveSub] = useState(sched.subdivision)
   const rafRef = useRef(null)
 
   const loop = useCallback(() => {
@@ -34,6 +35,8 @@ export function useScheduler(initial = {}) {
     const m = s.metronomeMuted()
     setGapMuted((prev) => (prev !== m ? m : prev))
     setCountingIn((prev) => (prev !== ci ? ci : prev))
+    const sub = s.currentSubdivision()
+    setLiveSub((prev) => (prev !== sub ? sub : prev))
     rafRef.current = requestAnimationFrame(loop)
   }, [])
 
@@ -91,6 +94,8 @@ export function useScheduler(initial = {}) {
   const setGapTrainer = useCallback((v) => { sched.gapTrainer = { ...sched.gapTrainer, ...v } }, [sched])
   const setCountIn = useCallback((v) => { sched.countIn = { ...sched.countIn, ...v } }, [sched])
   const setLoopRange = useCallback((v) => { sched.loopRange = v }, [sched])
+  const setSubSwitcher = useCallback((v) => { sched.subSwitcher = { ...sched.subSwitcher, ...v } }, [sched])
+  const setPoly = useCallback((v) => { sched.poly = { ...sched.poly, ...v } }, [sched])
   const setSwing = useCallback((v) => { sched.swing = v }, [sched])
   const setTimeSignature = useCallback((v) => { sched.timeSignature = v }, [sched])
   const setSubdivision = useCallback((v) => { sched.subdivision = v }, [sched])
@@ -107,6 +112,7 @@ export function useScheduler(initial = {}) {
     liveBpm,
     gapMuted,
     countingIn,
+    liveSub,
     start,
     stop,
     toggle,
@@ -115,6 +121,8 @@ export function useScheduler(initial = {}) {
     setGapTrainer,
     setLoopRange,
     setSwing,
+    setSubSwitcher,
+    setPoly,
     setCountIn,
     setTimeSignature,
     setSubdivision,

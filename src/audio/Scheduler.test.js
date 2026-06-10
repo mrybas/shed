@@ -481,3 +481,38 @@ describe('Scheduler visualStep', () => {
     expect(s.notesInQueue).toHaveLength(0)
   })
 })
+
+describe('metronome trainers', () => {
+  it('subdivision switcher rotates the grid every N bars', () => {
+    const s = new Scheduler()
+    s.timeSignature = { beats: 2, unit: 4 }
+    s.subdivision = 'quarter'
+    s.subSwitcher = { enabled: true, everyBars: 2, subs: ['quarter', 'sixteenth', 'triplet'] }
+    s._bars = 0
+    expect(s.currentSubdivision()).toBe('quarter')
+    s._bars = 2
+    expect(s.currentSubdivision()).toBe('sixteenth')
+    s._bars = 4
+    expect(s.currentSubdivision()).toBe('triplet')
+    s._bars = 6
+    expect(s.currentSubdivision()).toBe('quarter') // wraps
+    s._recompute()
+    expect(s._total).toBe(2) // quarter grid again
+    // exercises never switch
+    s.pattern = createEmptyExercise({ subdivision: 'eighth' })
+    expect(s.currentSubdivision()).toBe('quarter') // falls back to this.subdivision
+  })
+
+  it('switcher rebuilds the layout exactly at the bar boundary', () => {
+    const s = new Scheduler()
+    s.timeSignature = { beats: 2, unit: 4 }
+    s.subdivision = 'quarter'
+    s.subSwitcher = { enabled: true, everyBars: 1, subs: ['quarter', 'sixteenth'] }
+    s._recompute()
+    s.isPlaying = true
+    s.currentStep = 1 // last step of the quarter bar
+    s._advance() // wrap -> bars=1 -> recompute -> sixteenth grid
+    expect(s.currentStep).toBe(0)
+    expect(s._total).toBe(8) // 2 beats × 4
+  })
+})

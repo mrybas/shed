@@ -1,10 +1,10 @@
 import { useCallback } from 'react'
-import { Slider, NumberStepper, NotePicker, Switch, Button, Icon } from '../ui.jsx'
+import { Slider, NumberStepper, NotePicker, NoteGlyph, Switch, Button, Icon } from '../ui.jsx'
 import { BeatDots } from './PlayerBar.jsx'
 import { TIME_SIGS } from './util.js'
 import { useTapTempo } from '../../hooks/useTapTempo.js'
 
-export default function MetronomeView({ t, metro, setMetro, playing, step }) {
+export default function MetronomeView({ t, metro, setMetro, playing, step, liveSub }) {
   const set = (patch) => setMetro((m) => ({ ...m, ...patch }))
   const tap = useTapTempo(useCallback((bpm) => setMetro((m) => ({ ...m, bpm })), [setMetro]))
 
@@ -18,7 +18,7 @@ export default function MetronomeView({ t, metro, setMetro, playing, step }) {
           <span className="metro-bpm-unit">{t('bpm')}</span>
         </div>
         <div className="metro-bigbeats">
-          <BeatDots sig={metro.sig} sub={metro.sub} step={step} playing={playing} />
+          <BeatDots sig={metro.sig} sub={playing && liveSub ? liveSub : metro.sub} step={step} playing={playing} />
         </div>
       </div>
 
@@ -47,6 +47,52 @@ export default function MetronomeView({ t, metro, setMetro, playing, step }) {
         </div>
 
         <hr className="divider" style={{ margin: 'var(--s-5) 0' }} />
+
+        <div className="ramp-block" style={{ marginBottom: 'var(--s-5)' }}>
+          <Switch checked={!!metro.switcher?.enabled}
+            onChange={(v) => set({ switcher: { ...metro.switcher, enabled: v } })}
+            label={t('subSwitcher')} icon="notes" />
+          <div className="muted-line" style={{ margin: '6px 0 0' }}>{t('subSwitcherHint')}</div>
+          {metro.switcher?.enabled && (
+            <div className="ramp-fields" style={{ marginTop: 'var(--s-3)', alignItems: 'center' }}>
+              <label className="ramp-field">
+                <span className="ramp-cap">{t('everyBars')}</span>
+                <NumberStepper value={metro.switcher.everyBars} min={1} max={16}
+                  onChange={(v) => set({ switcher: { ...metro.switcher, everyBars: v } })} />
+                <span className="ramp-cap">{t('barsUnit')}</span>
+              </label>
+              <div className="seg notepick">
+                {['quarter', 'eighth', 'triplet', 'sixteenth'].map((k) => {
+                  const on = metro.switcher.subs.includes(k)
+                  return (
+                    <button key={k} className={'seg-item' + (on ? ' is-active' : '')} aria-label={k}
+                      onClick={() => {
+                        const subs = on ? metro.switcher.subs.filter((x) => x !== k) : [...metro.switcher.subs, k]
+                        if (subs.length >= 2) set({ switcher: { ...metro.switcher, subs } })
+                      }}>
+                      <NoteGlyph kind={k} />
+                    </button>
+                  )
+                })}
+              </div>
+              {playing && liveSub && <span className="pb-muted-pill">{t(liveSub)}</span>}
+            </div>
+          )}
+        </div>
+
+        <div className="ramp-block" style={{ marginBottom: 'var(--s-5)' }}>
+          <Switch checked={!!metro.poly?.enabled}
+            onChange={(v) => set({ poly: { ...metro.poly, enabled: v } })}
+            label={t('polyrhythm')} icon="metro" />
+          <div className="muted-line" style={{ margin: '6px 0 0' }}>{t('polyHint')}</div>
+          {metro.poly?.enabled && (
+            <div className="ramp-fields" style={{ marginTop: 'var(--s-3)', alignItems: 'center' }}>
+              <span className="ramp-cap num">{(metro.sig || '4/4').split('/')[0]} :</span>
+              <NumberStepper value={metro.poly.against} min={2} max={7}
+                onChange={(v) => set({ poly: { ...metro.poly, against: v } })} />
+            </div>
+          )}
+        </div>
 
         <div className="ctl-grid">
           <div className="group col-7">
