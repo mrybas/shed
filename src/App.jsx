@@ -18,7 +18,7 @@ import {
   loadLibrary, saveToLibrary, deleteFromLibrary, genId, barLayout,
 } from './model/exercise.js'
 
-const APP_VERSION = 'v4.5' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v4.6' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -120,7 +120,12 @@ export default function App() {
   }, [tw])
 
   useEffect(() => { try { localStorage.setItem(PROG_KEY, JSON.stringify(progressMap)) } catch { /* ignore */ } }, [progressMap])
-  useEffect(() => { try { localStorage.setItem(OPTS_KEY, JSON.stringify({ options, vols })) } catch { /* ignore */ } }, [options, vols])
+  useEffect(() => {
+    // Don't persist while a workout block is live — those are the block's
+    // settings, not the user's preferences.
+    if (runRef.current && !runRef.current.done) return
+    try { localStorage.setItem(OPTS_KEY, JSON.stringify({ options, vols })) } catch { /* ignore */ }
+  }, [options, vols])
   useEffect(() => { try { localStorage.setItem(METRO_KEY, JSON.stringify(metro)) } catch { /* ignore */ } }, [metro])
   useEffect(() => { try { localStorage.setItem(TEMPO_KEY, JSON.stringify(tempoMap)) } catch { /* ignore */ } }, [tempoMap])
 
@@ -134,23 +139,23 @@ export default function App() {
 
   const mode = nav === 'metronome' ? 'metronome' : (item ? 'practice' : 'metronome')
 
-  // Options while a workout block runs: the block's settings override the
-  // user's saved options without touching them; count-in defaults ON so each
-  // block starts with a lead-in.
-  const workoutBlock = run && !run.done ? workoutById(run.wId)?.blocks[run.blockIdx] : null
-  const activeOptions = useMemo(() => {
-    if (!workoutBlock) return options
-    const s = workoutBlock.settings || {}
+  // A workout block writes its settings INTO the live options, so the panels
+  // show exactly what's playing (speed trainer on, with its values) and remain
+  // editable mid-block. The user's own options are snapshotted at workout start
+  // and restored when it ends; they're never persisted while a block runs.
+  const userOptsRef = useRef(null)
+  const blockOptions = (block, cur) => {
+    const s = block.settings || {}
     return {
       metroWith: true,
-      accentOne: options.accentOne,
-      soundSubs: s.soundSubs ?? false,
+      accentOne: cur.accentOne,
+      soundSubs: s.soundSubs ?? cur.soundSubs,
       swing: s.swing ?? 0,
-      tempoRamp: s.tempoRamp ?? { enabled: false },
-      gapTrainer: s.gapTrainer ?? { enabled: false },
-      countIn: s.countIn ?? { enabled: true, bars: 1, mode: 'loop', feel: 'quarter' },
+      tempoRamp: { ...OPTIONS_DEFAULT.tempoRamp, ...(s.tempoRamp || { enabled: false }) },
+      gapTrainer: { ...OPTIONS_DEFAULT.gapTrainer, ...(s.gapTrainer || { enabled: false }) },
+      countIn: { ...OPTIONS_DEFAULT.countIn, enabled: true, ...(s.countIn || {}) },
     }
-  }, [workoutBlock, options])
+  }
 
   // Drive the single lifted scheduler from the active context.
   useEffect(() => {
@@ -170,21 +175,21 @@ export default function App() {
       sched.setSwing(swingFraction(metro.swing))
     } else if (item) {
       sched.setPattern(item)
-      sched.setTempoRamp(activeOptions.tempoRamp)
-      sched.setGapTrainer(activeOptions.gapTrainer)
-      sched.setCountIn(activeOptions.countIn)
+      sched.setTempoRamp(options.tempoRamp)
+      sched.setGapTrainer(options.gapTrainer)
+      sched.setCountIn(options.countIn)
       sched.setLoopRange(loopRange)
-      sched.setSwing(swingFraction(activeOptions.swing))
+      sched.setSwing(swingFraction(options.swing))
       sched.setBpm(item.bpm)
       sched.setTimeSignature(item.timeSignature)
       sched.setSubdivision(item.subdivision)
-      sched.setAccentFirst(activeOptions.accentOne)
-      sched.setSoundSubdivisions(activeOptions.soundSubs)
-      sched.setMetronomeEnabled(activeOptions.metroWith)
+      sched.setAccentFirst(options.accentOne)
+      sched.setSoundSubdivisions(options.soundSubs)
+      sched.setMetronomeEnabled(options.metroWith)
       sched.setMetronomeVolume(vols.metro / 100)
       sched.setPatternVolume(vols.ex / 100)
     }
-  }, [mode, metro, item, activeOptions, vols, loopRange, sched])
+  }, [mode, metro, item, options, vols, loopRange, sched])
 
   // Stop playback when switching transport context.
   useEffect(() => { sched.stop() }, [mode]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -195,7 +200,7 @@ export default function App() {
   // ---- handlers ----
   const refreshSaved = useCallback(() => setSaved(loadLibrary()), [])
   const openItem = (ex) => {
-    setRun(null) // manually opening an exercise ends any running workout
+    if (runRef.current) { setRun(null); restoreUserOptions() } // manual open ends a workout
     const it = clone(ex)
     // Restore the user's working tempo for catalog exercises.
     if (it.source !== 'user' && tempoMap[it.id]) it.bpm = tempoMap[it.id]
@@ -203,9 +208,13 @@ export default function App() {
     setLoopRange(null) // loop ranges are per practice session
     setNav('practice')
   }
-  const newExercise = () => { setRun(null); setItem(createEmptyExercise({ source: 'user', name: t('newExercise') })); setLoopRange(null); setNav('practice') }
+  const newExercise = () => { if (runRef.current) { setRun(null); restoreUserOptions() } setItem(createEmptyExercise({ source: 'user', name: t('newExercise') })); setLoopRange(null); setNav('practice') }
 
   // ---- Workout runner ----
+  const restoreUserOptions = useCallback(() => {
+    if (userOptsRef.current) { setOptions(userOptsRef.current); userOptsRef.current = null }
+  }, [])
+
   const openWorkoutBlock = useCallback((w, idx) => {
     const block = w.blocks[idx]
     const src = exById.get(block.exerciseId)
@@ -213,13 +222,15 @@ export default function App() {
     const it = clone(src)
     if (block.settings?.bpm) it.bpm = block.settings.bpm
     setItem(it)
+    setOptions((cur) => blockOptions(block, cur))
     setLoopRange(null)
     setNav('practice')
-  }, [exById])
+  }, [exById]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const startWorkout = (wId) => {
     const w = workoutById(wId)
     if (!w) return
+    if (!userOptsRef.current) userOptsRef.current = options // restore after the workout
     setRun({ wId, blockIdx: 0, secLeft: w.blocks[0].minutes * 60, done: false })
     openWorkoutBlock(w, 0)
     setTimeout(() => sched.start(), 200)
@@ -233,21 +244,22 @@ export default function App() {
     const next = r.blockIdx + 1
     if (next >= w.blocks.length) {
       setRun({ ...r, done: true, secLeft: 0 })
+      restoreUserOptions()
     } else {
       setRun({ wId: r.wId, blockIdx: next, secLeft: w.blocks[next].minutes * 60, done: false })
       openWorkoutBlock(w, next)
       setTimeout(() => sched.start(), 300)
     }
-  }, [sched, openWorkoutBlock])
+  }, [sched, openWorkoutBlock, restoreUserOptions])
 
-  const stopWorkout = useCallback(() => { setRun(null); sched.stop() }, [sched])
+  const stopWorkout = useCallback(() => { setRun(null); sched.stop(); restoreUserOptions() }, [sched, restoreUserOptions])
 
   // Navigating anywhere away from the workout's practice page ends the workout —
   // the player-bar strip exists only while a routine is actually running.
   const navTo = useCallback((dest) => {
-    if (runRef.current) { setRun(null); sched.stop() }
+    if (runRef.current) { setRun(null); sched.stop(); restoreUserOptions() }
     setNav(dest)
-  }, [sched])
+  }, [sched, restoreUserOptions])
 
   // Block timer — ticks only while playing, so pausing the player pauses the
   // workout (the minutes count actual practice). The effect must depend ONLY on
