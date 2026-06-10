@@ -25,7 +25,7 @@ import { logPracticeSeconds, logTempo, flushJournal, exportJournal, mergeJournal
 import { generateRhythm, exerciseOfTheDay } from './data/generator.js'
 import { decodeShare, shareFromHash } from './model/share.js'
 
-const APP_VERSION = 'v5.13' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v5.14' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'

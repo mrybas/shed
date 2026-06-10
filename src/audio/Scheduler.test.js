@@ -617,3 +617,57 @@ describe('articulations', () => {
     expect(DRUM_VOICES.hihatPedal).toHaveBeenCalledWith(fakeCtx, 1.0, expect.anything(), { gain: 0.55 })
   })
 })
+
+describe('tied vs untied rolls at a barline', () => {
+  beforeEach(() => { vi.clearAllMocks() })
+
+  const make = (tie) => {
+    const s = new Scheduler()
+    s.bpm = 60
+    s.metronomeEnabled = false
+    const ex = createEmptyExercise({
+      bars: [
+        { ts: { beats: 2, unit: 2 }, beatSubs: ['sixteenth', 'quarter'] },
+        { ts: { beats: 2, unit: 2 }, beatSubs: ['sixteenth', 'sextuplet'] },
+      ],
+    })
+    for (let i = 0; i < 4; i++) ex.rows.snare[i] = { on: true, accent: false, roll: 0 }
+    ex.rows.snare[4] = { on: true, accent: false, roll: 'open', ...(tie ? { tie: true } : {}) }
+    for (let i = 5; i < 15; i++) ex.rows.snare[i] = { on: true, accent: false, roll: 0 }
+    s.pattern = ex
+    s._recompute()
+    return s
+  }
+
+  it('a tied roll buzzes seamlessly into the next bar downbeat', () => {
+    const s = make(true)
+    s._scheduleStep(4, 1.0)
+    const dur = drumRoll.mock.calls[0][2]
+    expect(dur).toBeCloseTo(s._secondsPerStepAt(4)) // the full half note
+  })
+
+  it('an untied roll releases just before the barline', () => {
+    const tied = make(true)
+    tied._scheduleStep(4, 1.0)
+    const tiedDur = drumRoll.mock.calls[0][2]
+    vi.clearAllMocks()
+    const s = make(false)
+    s._scheduleStep(4, 1.0)
+    const dur = drumRoll.mock.calls[0][2]
+    expect(dur).toBeLessThan(tiedDur)
+    expect(dur).toBeCloseTo(tiedDur - 0.16)
+  })
+
+  it('the loop seam stays seamless for untied rolls (single-bar exercises)', () => {
+    const s = new Scheduler()
+    s.bpm = 60
+    s.timeSignature = { beats: 2, unit: 4 }
+    s.metronomeEnabled = false
+    const ex = createEmptyExercise({ timeSignature: { beats: 2, unit: 4 }, subdivision: 'quarter' })
+    ex.rows.snare[0] = { on: true, accent: false, roll: 'open' }
+    s.pattern = ex
+    s._recompute()
+    s._scheduleStep(0, 5.0)
+    expect(drumRoll.mock.calls[0][2]).toBe(2) // both beats, no release
+  })
+})
