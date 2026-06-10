@@ -17,7 +17,7 @@ function settingsSummary(s, t) {
   return parts.join(' · ')
 }
 
-export default function WorkoutView({ t, workout, exercisesById, onStart, onBack, onOpenExercise }) {
+export default function WorkoutView({ t, workout, exercisesById, onStart, onBack, onOpenExercise, onEdit, onDuplicate, onExport }) {
   if (!workout) return null
   return (
     <div className="workout" data-screen-label="Workout">
@@ -34,7 +34,12 @@ export default function WorkoutView({ t, workout, exercisesById, onStart, onBack
             <span className="chip num">{workout.blocks.length} {t('workoutBlocks')}</span>
           </div>
         </div>
-        <Button variant="accent" icon="play" onClick={() => onStart(workout.id)}>{t('workoutStart')}</Button>
+        <div className="wkv-acts">
+          {workout.custom && onEdit && <Button icon="grid" onClick={() => onEdit(workout)}>{t('wkeEdit')}</Button>}
+          {!workout.custom && onDuplicate && <Button icon="copy" onClick={() => onDuplicate(workout)}>{t('wkeDuplicate')}</Button>}
+          {onExport && <Button icon="download" onClick={() => onExport(workout)}>{t('export')}</Button>}
+          <Button variant="accent" icon="play" onClick={() => onStart(workout.id)}>{t('workoutStart')}</Button>
+        </div>
       </div>
 
       <p className="wk-desc">{workout.description}</p>

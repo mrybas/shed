@@ -10,16 +10,20 @@ import LibraryView from './components/v2/LibraryView.jsx'
 import PracticeView from './components/v2/PracticeView.jsx'
 import WorkoutView from './components/v2/WorkoutView.jsx'
 import WorkoutsView from './components/v2/WorkoutsView.jsx'
+import WorkoutEditorView from './components/v2/WorkoutEditorView.jsx'
 import { sigToTimeSignature } from './components/v2/util.js'
 import { CATEGORIES, sigOf, getCatalogExercises } from './data/catalogV2.js'
-import { WORKOUTS, adaptiveStartBpm } from './data/workouts.js'
+import {
+  WORKOUTS, adaptiveStartBpm, loadMyWorkouts, saveMyWorkout, deleteMyWorkout,
+  emptyWorkout, duplicateWorkout, exportWorkoutFile,
+} from './data/workouts.js'
 import {
   createEmptyExercise, exportExercise, exportLibraryFile, parseImported,
   loadLibrary, saveToLibrary, deleteFromLibrary, genId, barLayout,
 } from './model/exercise.js'
 import { logPracticeSeconds, logTempo, flushJournal, exportJournal, mergeJournal, getTempoStats } from './model/progress.js'
 
-const APP_VERSION = 'v4.7' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v4.8' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -77,6 +81,8 @@ export default function App() {
   const [tw, setTw] = useState(() => ({ ...TW_DEFAULT, ...loadJSON(TW_KEY, {}) }))
   const [nav, setNav] = useState('metronome') // metronome | workouts | library | practice
   const [wkId, setWkId] = useState(null) // selected workout in the Workouts tab
+  const [wkEdit, setWkEdit] = useState(null) // workout draft open in the editor
+  const [myWk, setMyWk] = useState(() => loadMyWorkouts())
   const [item, setItem] = useState(null)
   const [saved, setSaved] = useState(() => loadLibrary())
   const [progressMap, setProgressMap] = useState(() => loadJSON(PROG_KEY, {}))
@@ -95,7 +101,7 @@ export default function App() {
   const runRef = useRef(run)
   runRef.current = run
   const exById = useMemo(() => new Map(getCatalogExercises().map((e) => [e.id, e])), [])
-  const workoutById = (id) => WORKOUTS.find((w) => w.id === id)
+  const workoutById = (id) => WORKOUTS.find((w) => w.id === id) || myWk.find((w) => w.id === id)
 
   // ---- Practice journal collectors ----
   const modeRef = useRef('metronome')
@@ -302,6 +308,20 @@ export default function App() {
 
   const stopWorkout = useCallback(() => { setRun(null); sched.stop(); restoreUserOptions() }, [sched, restoreUserOptions])
 
+  // ---- Custom workouts ----
+  const saveWk = (w) => {
+    const list = saveMyWorkout(w)
+    if (!list) { alert('Could not save — browser storage is full.'); return }
+    setMyWk(list)
+    setWkEdit(null)
+    setWkId(w.id)
+  }
+  const deleteWk = (id) => {
+    setMyWk(deleteMyWorkout(id))
+    if (wkId === id) setWkId(null)
+  }
+  const duplicateWk = (w) => { setWkId(null); setWkEdit(duplicateWorkout(w)) }
+
   // Navigating anywhere away from the workout's practice page ends the workout —
   // the player-bar strip exists only while a routine is actually running.
   const navTo = useCallback((dest) => {
@@ -397,10 +417,23 @@ export default function App() {
             added += 1
           })
           if (parsed.journal) mergeJournal(parsed.journal)
+          if (parsed.myWorkouts) {
+            const have = new Set(loadMyWorkouts().map((w) => w.name + '|' + w.blocks.length))
+            let list = null
+            parsed.myWorkouts.forEach((w) => {
+              if (have.has(w.name + '|' + w.blocks.length)) return
+              list = saveMyWorkout({ ...w, custom: true })
+            })
+            if (list) setMyWk(list)
+          }
           refreshSaved()
           setLibTarget({ section: 'saved', cat: null })
           setNav('library')
           alert(`Imported ${added} exercise${added === 1 ? '' : 's'}${added < parsed.exercises.length ? ` (${parsed.exercises.length - added} duplicates skipped)` : ''}.`)
+        } else if (parsed.type === 'workout') {
+          const w = { ...parsed.workout, custom: true }
+          const list = saveMyWorkout(w)
+          if (list) { setMyWk(list); setWkEdit(null); setWkId(w.id); navTo('workouts') }
         } else {
           parsed.source = 'user'
           saveToLibrary(parsed); refreshSaved(); setItem(parsed); setNav('practice')
@@ -492,7 +525,7 @@ export default function App() {
               </div>
             )}
           </div>
-          <button className={'side-link' + (wkActive ? ' is-active' : '')} onClick={() => { setWkId(null); navTo('workouts') }}>
+          <button className={'side-link' + (wkActive ? ' is-active' : '')} onClick={() => { setWkId(null); setWkEdit(null); navTo('workouts') }}>
             <Icon name="star" className="ic" /><span>{t('workouts')}</span>
           </button>
         </nav>
@@ -510,16 +543,23 @@ export default function App() {
 
       <main className="main">
         {nav === 'metronome' && <MetronomeView t={t} metro={metro} setMetro={setMetro} playing={playing && mode === 'metronome'} step={step} />}
-        {nav === 'workouts' && (wkId ? (
+        {nav === 'workouts' && (wkEdit ? (
+          <WorkoutEditorView t={t} initial={wkEdit} exercises={[...exById.values()]}
+            onSave={saveWk} onCancel={() => setWkEdit(null)} />
+        ) : wkId ? (
           <WorkoutView t={t} workout={workoutById(wkId)} exercisesById={exById}
             onStart={startWorkout} onOpenExercise={openItem}
+            onEdit={(w) => { setWkId(null); setWkEdit(w) }} onDuplicate={duplicateWk}
+            onExport={exportWorkoutFile}
             onBack={() => setWkId(null)} />
         ) : (
-          <WorkoutsView t={t} exercisesById={exById} onOpenWorkout={setWkId} />
+          <WorkoutsView t={t} exercisesById={exById} onOpenWorkout={setWkId}
+            myWorkouts={myWk} onNew={() => setWkEdit(emptyWorkout())}
+            onEdit={(w) => setWkEdit(w)} onDelete={deleteWk} />
         ))}
         {nav === 'library' && (
           <LibraryView t={t} lang={lang} saved={saved} progressMap={progressMap} onOpen={openItem}
-            onNew={newExercise} onImport={importFile} onExportItem={exportExercise} onExportAll={() => exportLibraryFile({ journal: exportJournal() })}
+            onNew={newExercise} onImport={importFile} onExportItem={exportExercise} onExportAll={() => exportLibraryFile({ journal: exportJournal(), myWorkouts: loadMyWorkouts() })}
             onDeleteSaved={deleteSaved} route={libTarget} onRoute={setLibTarget} />
         )}
         {nav === 'practice' && item && (
@@ -549,7 +589,7 @@ export default function App() {
         <button className={'bn-link' + (libActive ? ' is-active' : '')} onClick={() => goLib({ section: 'home', cat: null })}>
           <Icon name="library" className="ic" /><span>{t('library')}</span>
         </button>
-        <button className={'bn-link' + (wkActive ? ' is-active' : '')} onClick={() => { setWkId(null); navTo('workouts') }}>
+        <button className={'bn-link' + (wkActive ? ' is-active' : '')} onClick={() => { setWkId(null); setWkEdit(null); navTo('workouts') }}>
           <Icon name="star" className="ic" /><span>{t('workouts')}</span>
         </button>
       </nav>

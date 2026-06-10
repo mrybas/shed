@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Button, Icon } from '../ui.jsx'
 import { WORKOUTS } from '../../data/workouts.js'
 import { getStreak, getWeekMinutes, getDayMap, getRecentExercises } from '../../model/progress.js'
 
@@ -54,7 +55,7 @@ function ProgressPanel({ t, exercisesById }) {
   )
 }
 
-function WorkoutCard({ t, w, onOpen }) {
+function WorkoutCard({ t, w, onOpen, onEdit, onDelete }) {
   return (
     <button className="wk-card" onClick={() => onOpen(w.id)}>
       <span className="wk-card-head">
@@ -64,17 +65,36 @@ function WorkoutCard({ t, w, onOpen }) {
       </span>
       <span className="wk-card-desc">{w.description}</span>
       <span className="wk-card-meta num">{w.blocks.length} {t('workoutBlocks')} · {t(`level_${w.level}`)}</span>
+      {(onEdit || onDelete) && (
+        <span className="wk-card-acts">
+          {onEdit && <span role="button" tabIndex={0} className="rowact" aria-label={t('wkeEdit')} onClick={(e) => { e.stopPropagation(); onEdit(w) }}><Icon name="grid" className="ic" /></span>}
+          {onDelete && <span role="button" tabIndex={0} className="rowact del" aria-label={t('delete')} onClick={(e) => { e.stopPropagation(); onDelete(w.id) }}><Icon name="trash" className="ic" /></span>}
+        </span>
+      )}
     </button>
   )
 }
 
-export default function WorkoutsView({ t, exercisesById, onOpenWorkout }) {
+export default function WorkoutsView({ t, exercisesById, onOpenWorkout, myWorkouts = [], onNew, onEdit, onDelete }) {
   const byLevel = (lv) => WORKOUTS.filter((w) => w.level === lv)
   return (
     <div className="lib2-home" data-screen-label="Workouts">
       <h1 className="page-title">{t('workouts')}</h1>
       <ProgressPanel t={t} exercisesById={exercisesById} />
       <p className="wk-desc">{t('workoutsIntro')}</p>
+
+      <div className="sec-row" style={{ marginTop: 'var(--s-4)' }}>
+        <span className="sec-label">{t('wkMine')}</span>
+        <Button size="sm" variant="accent" icon="plus" onClick={onNew}>{t('wkeNew')}</Button>
+      </div>
+      {myWorkouts.length > 0 && (
+        <div className="wk-grid">
+          {myWorkouts.map((w) => (
+            <WorkoutCard key={w.id} t={t} w={w} onOpen={onOpenWorkout} onEdit={onEdit} onDelete={onDelete} />
+          ))}
+        </div>
+      )}
+
       {['beginner', 'intermediate', 'advanced'].map((lv) => (
         <div key={lv}>
           <div className="sec-label" style={{ marginTop: 'var(--s-5)' }}>

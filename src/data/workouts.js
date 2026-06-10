@@ -1,3 +1,5 @@
+import { downloadJSON } from '../model/exercise.js'
+
 // Built-in daily workouts: ordered blocks of catalog exercises with per-block
 // playback settings (tempo, speed/gap trainer, swing, count-in). Built on the
 // standard practice principles: warm up slow, raise tempo gradually (Stone's
@@ -106,6 +108,58 @@ export const WORKOUTS = [
   },
 ]
 
+// ---- User-made workouts (localStorage) ----
+const MY_KEY = 'drums2_myworkouts'
+
+export function loadMyWorkouts() {
+  try {
+    const raw = localStorage.getItem(MY_KEY)
+    const list = raw ? JSON.parse(raw) : []
+    return Array.isArray(list) ? list : []
+  } catch {
+    return []
+  }
+}
+
+export function saveMyWorkout(w) {
+  const list = loadMyWorkouts()
+  const i = list.findIndex((x) => x.id === w.id)
+  if (i >= 0) list[i] = w
+  else list.push(w)
+  try {
+    localStorage.setItem(MY_KEY, JSON.stringify(list))
+    return list
+  } catch {
+    return null
+  }
+}
+
+export function deleteMyWorkout(id) {
+  const list = loadMyWorkouts().filter((w) => w.id !== id)
+  try { localStorage.setItem(MY_KEY, JSON.stringify(list)) } catch { /* ignore */ }
+  return list
+}
+
+let wkCounter = 0
+export function newWorkoutId() {
+  wkCounter += 1
+  return `mywk_${wkCounter}_${performance.now().toString(36).replace('.', '')}`
+}
+
+export function emptyWorkout() {
+  return { id: newWorkoutId(), name: 'My workout', level: 'intermediate', minutes: 0, description: '', custom: true, blocks: [] }
+}
+
+// A user copy of any workout (re-id'd, marked custom, minutes recomputed).
+export function duplicateWorkout(w) {
+  const copy = JSON.parse(JSON.stringify(w))
+  copy.id = newWorkoutId()
+  copy.name = `${w.name} (copy)`
+  copy.custom = true
+  copy.minutes = copy.blocks.reduce((t, b) => t + b.minutes, 0)
+  return copy
+}
+
 // Adaptive progression: when a ramped block has tempo history for its exercise,
 // start a touch below the last reached tempo instead of the cold base — classic
 // periodization. Clamped so it never starts below the block's base or within
@@ -129,4 +183,10 @@ export function validateWorkouts(catalog) {
     if (!['beginner', 'intermediate', 'advanced'].includes(w.level)) problems.push(`${w.id}: bad level`)
   })
   return problems
+}
+
+// Share/backup a single workout as a file.
+export function exportWorkoutFile(w) {
+  const safe = w.name.replace(/[^\w\- ]/gi, '').trim().replace(/\s+/g, '_') || 'workout'
+  downloadJSON(JSON.stringify({ app: 'drums', type: 'workout', version: 1, workout: w }, null, 2), `${safe}.workout.json`)
 }

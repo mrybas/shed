@@ -403,7 +403,7 @@ export function setBeatSub(ex, beatIndex, subdivision) {
 
 // ---- Serialization ----
 
-function downloadJSON(text, filename) {
+export function downloadJSON(text, filename) {
   const blob = new Blob([text], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -442,7 +442,10 @@ export function parseImported(text) {
     throw new Error('Invalid JSON')
   }
   if (obj && obj.app === 'drums' && obj.type === 'library' && Array.isArray(obj.exercises)) {
-    return { type: 'library', exercises: obj.exercises.map(parseOne), journal: obj.journal || null }
+    return { type: 'library', exercises: obj.exercises.map(parseOne), journal: obj.journal || null, myWorkouts: Array.isArray(obj.myWorkouts) ? obj.myWorkouts : null }
+  }
+  if (obj && obj.app === 'drums' && obj.type === 'workout' && obj.workout && Array.isArray(obj.workout.blocks)) {
+    return { type: 'workout', workout: obj.workout }
   }
   return parseOne(obj)
 }

@@ -293,3 +293,20 @@
 /* Best-tempo chip + sparkline in the exercise meta. */
 .chip-best { color: var(--accent); display: inline-flex; align-items: center; gap: 8px; }
 .tempo-spark { color: var(--accent); opacity: .8; }
+
+/* ---- Workout editor ---- */
+.wkedit-desc { margin-top: var(--s-2); max-width: 640px; }
+.wke-block {
+  display: grid; gap: var(--s-2);
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--border-soft); border-radius: var(--r-md); background: var(--surface-1);
+}
+.wke-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3) var(--s-4); }
+.wke-ex { flex: 1 1 220px; min-width: 0; height: 36px; }
+.wke-trainers { row-gap: var(--s-2); }
+.wke-swing { flex: 1 1 180px; }
+.wke-note { font-size: var(--fs-sm); }
+.wk-card { position: relative; }
+.wk-card-acts { position: absolute; top: 8px; right: 8px; display: none; gap: 4px; }
+.wk-card:hover .wk-card-acts { display: inline-flex; }
+.wkv-acts { display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: center; }
