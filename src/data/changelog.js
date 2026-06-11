@@ -7,6 +7,13 @@
 
 export const CHANGELOG = [
   {
+    version: 'v5.38',
+    items: [
+      { text: 'Feedback button — tell us what to improve via a prefilled GitHub issue', guide: 'start' },
+      { text: 'shed. is now open source under AGPL-3.0; releases ship as tagged GitHub Releases' },
+    ],
+  },
+  {
     version: 'v5.33',
     items: [
       { text: 'The Guide: an illustrated manual of everything — and this What\'s new dialog', guide: 'start' },

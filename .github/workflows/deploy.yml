@@ -1,22 +1,24 @@
-name: Deploy to GitHub Pages
+# Tag = release: pushing a v* tag (maintainers only — contributors can't push
+# tags) runs the full test suite, deploys to GitHub Pages and publishes a
+# GitHub Release whose notes come from src/data/changelog.js.
+name: Release
 
 on:
   push:
-    branches: [main]
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write # create the GitHub Release
   pages: write
   id-token: write
 
-# Allow one concurrent deployment; cancel in-progress runs of older pushes.
 concurrency:
   group: pages
   cancel-in-progress: true
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,8 +27,20 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      # The tag must match the in-app version (and have a changelog entry).
+      - name: Verify tag matches APP_VERSION
+        run: |
+          APP=$(grep -o "APP_VERSION = '[^']*'" src/App.jsx | cut -d"'" -f2)
+          TAG="${GITHUB_REF_NAME}"
+          if [ "$APP" != "$TAG" ]; then
+            echo "Tag $TAG does not match APP_VERSION $APP" >&2
+            exit 1
+          fi
+          node scripts/release-notes.mjs "$TAG" > /dev/null
       - run: npm test
       - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
       # Carry the custom-domain CNAME into the published artifact.
       - run: cp CNAME dist/CNAME
       - uses: actions/configure-pages@v5
@@ -37,7 +51,7 @@ jobs:
           path: dist
 
   deploy:
-    needs: build
+    needs: test
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -45,3 +59,21 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  release:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build release notes from the changelog
+        run: node scripts/release-notes.mjs "${GITHUB_REF_NAME}" > /tmp/notes.md
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "shed. ${GITHUB_REF_NAME}" \
+            --notes-file /tmp/notes.md

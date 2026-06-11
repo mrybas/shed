@@ -18,7 +18,7 @@ function GuideItem({ item }) {
 
 // The in-app manual. Sections live in the MAIN sidebar (desktop) / chips
 // (mobile); scrolling reports the active section back up via onActiveChange.
-export default function GuideView({ t, target, onActiveChange }) {
+export default function GuideView({ t, target, onActiveChange, feedbackUrl }) {
   const [q, setQ] = useState('')
   const [active, setActive] = useState(GUIDE[0].id)
   const results = searchGuide(q)
@@ -67,6 +67,11 @@ export default function GuideView({ t, target, onActiveChange }) {
     <div className="guide" data-screen-label="Guide">
       <div className="gd-head">
         <h1 className="page-title">{t('guideTitle')}</h1>
+        {feedbackUrl && (
+          <a className="btn btn-sm gd-feedback" href={feedbackUrl} target="_blank" rel="noopener noreferrer">
+            <Icon name="github" /> {t('feedback')}
+          </a>
+        )}
         <div className="gd-search lib2-search">
           <Icon name="search" className="ic" />
           <input value={q} placeholder={t('guideSearch')} onChange={(e) => setQ(e.target.value)} />

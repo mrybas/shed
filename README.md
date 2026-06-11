@@ -55,11 +55,23 @@ The Guide's screenshots are generated, not hand-made — after UI changes run
 `node scripts/guide-shots.mjs` against a running dev server to refresh
 `public/guide/`.
 
-## Deploy
+## CI & releases
 
-Pushing to `main` builds and deploys to GitHub Pages via
-`.github/workflows/deploy.yml`. The site is served from the custom domain
-**https://shed.beardlabs.cc/** (see `CNAME`), so the Vite base is `/`.
+- Every push to `main` and every pull request runs the full test suite
+  (Vitest + Playwright) — see `.github/workflows/ci.yml`. Merges never deploy.
+- **A version tag is a release**: pushing `vX.Y` (maintainers only) re-runs the
+  tests, deploys to GitHub Pages and publishes a GitHub Release whose notes
+  come from `src/data/changelog.js` — the same source the in-app "What's new"
+  dialog uses. The tag must match `APP_VERSION` in `src/App.jsx`.
+- The site is served from the custom domain **https://shed.beardlabs.cc/**
+  (see `CNAME`), so the Vite base is `/`.
+
+## License
+
+**AGPL-3.0** (see `LICENSE`). In short: use it, fork it, contribute — but any
+distributed or hosted derivative must stay open under the same license.
+**Commercial licensing is available separately** — contact
+max.a.rybas@gmail.com.
 
 ## Note on content
 

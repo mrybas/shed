@@ -628,3 +628,14 @@ test("what's new shows once after an update and links into the guide", async ({ 
   await page.reload()
   await expect(page.locator('.whatsnew')).toHaveCount(0)
 })
+
+test('feedback links to a prefilled GitHub issue with version info', async ({ page }) => {
+  const side = page.locator('.sidebar a.side-link-ext')
+  await expect(side).toBeVisible()
+  const href = await side.getAttribute('href')
+  expect(href).toContain('github.com/mrybas/shed/issues/new')
+  expect(decodeURIComponent(href)).toMatch(/App: shed\. v\d+\.\d+/)
+  // also reachable from the Guide header
+  await page.locator('.side-link', { hasText: 'Guide' }).click()
+  await expect(page.locator('.gd-feedback')).toBeVisible()
+})

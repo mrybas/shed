@@ -154,6 +154,7 @@ export const translations = {
     wnLearnMore: 'Learn more',
     wnOpenGuide: 'Open the guide',
     wnGotIt: 'Got it',
+    feedback: 'Feedback',
     openExercise: 'Open exercise',
     closeExercise: 'Close exercise',
     viewOnly: 'View only — duplicate to edit',

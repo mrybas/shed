@@ -33,7 +33,7 @@ import { initClickSamples } from './audio/clickSamples.js'
 import { loadSetlist, toggleInSetlist, removeFromSetlist, moveInSetlist, clearSetlist } from './model/setlist.js'
 import { decodeShare, shareFromHash } from './model/share.js'
 
-const APP_VERSION = 'v5.37' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v5.38' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -110,6 +110,16 @@ export default function App() {
   const [progressMap, setProgressMap] = useState(() => loadJSON(PROG_KEY, {}))
   const [savedFlash, setSavedFlash] = useState(false)
   const [libTarget, setLibTarget] = useState({ section: 'home', cat: null })
+  // Feedback goes through GitHub issues, prefilled with version + platform.
+  const feedbackUrl = () => {
+    const body = [
+      '', '', '---',
+      `App: shed. ${APP_VERSION}`,
+      `Platform: ${navigator.userAgent}`,
+      `Screen: ${window.innerWidth}×${window.innerHeight}`,
+    ].join('\n')
+    return `https://github.com/mrybas/shed/issues/new?labels=feedback&body=${encodeURIComponent(body)}`
+  }
   const [guideTarget, setGuideTarget] = useState(null) // section anchor for the Guide
   const [guideActive, setGuideActive] = useState(null) // scroll-spied section
   const openGuide = (sectionId = null) => { setGuideTarget(sectionId); navTo('guide') }
@@ -680,6 +690,9 @@ export default function App() {
           <button className={'side-link' + (nav === 'guide' ? ' is-active' : '')} onClick={() => openGuide()}>
             <Icon name="bookmark" className="ic" /><span>{t('guideTitle')}</span>
           </button>
+          <a className="side-link side-link-ext" href={feedbackUrl()} target="_blank" rel="noopener noreferrer">
+            <Icon name="upload" className="ic" /><span>{t('feedback')}</span>
+          </a>
           {nav === 'guide' && (
             <div className="side-sub">
               {GUIDE.map((sec) => (
@@ -710,7 +723,7 @@ export default function App() {
 
       <main className="main">
         {nav === 'metronome' && <MetronomeView t={t} metro={metro} setMetro={setMetro} playing={playing && mode === 'metronome'} step={step} liveSub={sched.liveSub} />}
-        {nav === 'guide' && <GuideView t={t} target={guideTarget} onActiveChange={setGuideActive} />}
+        {nav === 'guide' && <GuideView t={t} target={guideTarget} onActiveChange={setGuideActive} feedbackUrl={feedbackUrl()} />}
         {nav === 'workouts' && (wkEdit ? (
           <WorkoutEditorView t={t} initial={wkEdit} exercises={[...exById.values()]}
             onSave={saveWk} onCancel={() => setWkEdit(null)} />
