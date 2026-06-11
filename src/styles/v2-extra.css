@@ -2,6 +2,8 @@
 .side-foot-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); }
 .app-version { font-size: 11px; color: var(--text-3); letter-spacing: .04em; }
 .accent-picker { display: flex; gap: var(--s-2); margin-bottom: var(--s-3); }
+.side-foot-row .accent-picker { margin-bottom: 0; }
+.side-foot-row .app-version { margin-left: var(--s-2); }
 .accent-dot {
   width: 20px; height: 20px; border-radius: 50%;
   border: 2px solid transparent; cursor: pointer; padding: 0;
@@ -634,9 +636,3 @@ a.iconbtn { display: inline-grid; place-items: center; text-decoration: none; }
 /* Sidebar footer: GitHub + theme as a right-aligned pair of icon buttons. */
 .side-foot-acts { margin-left: auto; display: inline-flex; gap: var(--s-2); align-items: center; }
 
-/* Version as a small pill badge next to the brand (sidebar + mobile topbar). */
-.side-brand .app-version {
-  border: 1px solid var(--border-soft); background: var(--surface-2);
-  border-radius: 999px; padding: 2px 8px; line-height: 1; font-size: 10px;
-  align-self: center;
-}

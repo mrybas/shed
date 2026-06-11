@@ -29,7 +29,7 @@ import { initClickSamples } from './audio/clickSamples.js'
 import { loadSetlist, toggleInSetlist, removeFromSetlist, moveInSetlist, clearSetlist } from './model/setlist.js'
 import { decodeShare, shareFromHash } from './model/share.js'
 
-const APP_VERSION = 'v5.31' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v5.32' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -65,7 +65,7 @@ function mergeOptions(saved) {
   }
 }
 
-const ACCENTS = ['coral', 'teal', 'indigo', 'amber']
+const ACCENTS = ['coral', 'teal', 'indigo'] // amber retired: the footer row needs the room
 const ACCENT_SWATCH = {
   coral: 'oklch(0.70 0.155 38)', teal: 'oklch(0.74 0.115 178)',
   indigo: 'oklch(0.62 0.16 274)', amber: 'oklch(0.78 0.14 78)',
@@ -614,7 +614,7 @@ export default function App() {
 
       <aside className="sidebar">
         <button className="side-brand brand-btn" onClick={() => navTo('metronome')} aria-label={t('tabMetronome')}>
-          <BrandMark /><span className="brand-name">{t('appName')}</span><span className="app-version num">{APP_VERSION}</span>
+          <BrandMark /><span className="brand-name">{t('appName')}</span>
         </button>
         <nav className="side-nav">
           <button className={'side-link' + (nav === 'metronome' ? ' is-active' : '')} onClick={() => navTo('metronome')}>
@@ -651,8 +651,9 @@ export default function App() {
           <Icon name="star" className="ic-xs" /><span className="num">{masteredCount}</span> <span>{t('mastered')}</span>
         </div>
         <div className="side-foot">
-          {accentPicker}
           <div className="side-foot-row">
+            {accentPicker}
+            <span className="app-version num">{APP_VERSION}</span>
             <span className="side-foot-acts">
               <a className="iconbtn" href="https://github.com/mrybas/shed" target="_blank" rel="noopener noreferrer"
                 aria-label="GitHub" title="GitHub"><Icon name="github" /></a>
