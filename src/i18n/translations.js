@@ -121,6 +121,8 @@ export const translations = {
     stTempo: 'Tempo history',
     stToday: 'today',
     stOther: 'Other',
+    stMine: 'My exercises',
+    stTempoEmpty: 'Tempo charts appear once an exercise has records from two or more days — keep playing!',
     slTitle: 'Setlist',
     slTag: 'Setlist',
     slAdd: 'Setlist',

@@ -89,7 +89,7 @@ export default function StatsSheet({ t, lang, open, onClose, exercisesById }) {
       name = cat ? (cat.label[lang] || cat.label.en) : t('stOther')
       hue = cat ? cat.hue : 'var(--text-3)'
     } else if (exId !== 'metronome') {
-      key = 'other'; name = t('stOther')
+      key = 'mine'; name = t('stMine')
     }
     const cur = catMinutes.get(key) || { key, name, hue, minutes: 0 }
     cur.minutes += seconds / 60
@@ -122,13 +122,13 @@ export default function StatsSheet({ t, lang, open, onClose, exercisesById }) {
           </>
         )}
 
-        {tempos.length > 0 && (
-          <>
-            <span className="field-label">{t('stTempo')}</span>
-            {tempos.map((x) => (
-              <TempoLine key={x.exId} name={nameOf(x.exId)} best={x.best} history={x.history} t={t} />
-            ))}
-          </>
+        <span className="field-label">{t('stTempo')}</span>
+        {tempos.length > 0 ? (
+          tempos.map((x) => (
+            <TempoLine key={x.exId} name={nameOf(x.exId)} best={x.best} history={x.history} t={t} />
+          ))
+        ) : (
+          <p className="muted-line">{t('stTempoEmpty')}</p>
         )}
       </div>
     </div>

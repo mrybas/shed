@@ -33,7 +33,7 @@ import { initClickSamples } from './audio/clickSamples.js'
 import { loadSetlist, toggleInSetlist, removeFromSetlist, moveInSetlist, clearSetlist } from './model/setlist.js'
 import { decodeShare, shareFromHash } from './model/share.js'
 
-const APP_VERSION = 'v5.35' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v5.36' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -141,6 +141,12 @@ export default function App() {
   const runRef = useRef(run)
   runRef.current = run
   const exById = useMemo(() => new Map(getCatalogExercises().map((e) => [e.id, e])), [])
+  // Stats/recents also need the user's saved exercises resolved by id.
+  const exAndSavedById = useMemo(() => {
+    const m = new Map(exById)
+    saved.forEach((e) => m.set(e.id, e))
+    return m
+  }, [exById, saved])
   const [genWk, setGenWk] = useState(null) // last "surprise me" workout (ephemeral)
   const workoutById = (id) => WORKOUTS.find((w) => w.id === id) || myWk.find((w) => w.id === id) || (genWk?.id === id ? genWk : null)
   const surpriseMe = (level, minutes) => {
@@ -715,7 +721,7 @@ export default function App() {
             onExport={exportWorkoutFile}
             onBack={() => setWkId(null)} />
         ) : (
-          <WorkoutsView t={t} lang={lang} exercisesById={exById} onOpenWorkout={setWkId}
+          <WorkoutsView t={t} lang={lang} exercisesById={exAndSavedById} onOpenWorkout={setWkId}
             myWorkouts={myWk} onNew={() => setWkEdit(emptyWorkout())}
             onEdit={(w) => setWkEdit(w)} onDelete={deleteWk}
             daily={daily} onOpenDaily={() => openItem(daily)}
