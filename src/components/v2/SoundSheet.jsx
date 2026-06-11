@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { Slider, Button, Icon } from '../ui.jsx'
 import { INSTRUMENTS } from '../../model/exercise.js'
 import { KIT_NAMES, getKit, setKit } from '../../audio/drumSynths.js'
+import ClickSoundCard from './ClickSoundCard.jsx'
 
 // Global sound settings in a bottom sheet: drum kit choice + per-instrument
 // mixer. Both are device-level settings, not exercise properties — the kit
 // lives in the audio module (drums2_kit), the mixer in vols.mixer (OPTS_KEY).
-export default function SoundSheet({ t, open, onClose, vols, setVols }) {
+export default function SoundSheet({ t, open, onClose, vols, setVols, clickSound = 'synth', onClickSound }) {
   const [kit, setKitName] = useState(getKit())
   if (!open) return null
 
@@ -24,6 +25,14 @@ export default function SoundSheet({ t, open, onClose, vols, setVols }) {
           <button type="button" className="sheet-close" onClick={onClose} aria-label={t('close')}>✕</button>
         </div>
 
+        {onClickSound && (
+          <>
+            <span className="field-label">{t('clickSound')}</span>
+            <div style={{ marginBottom: 'var(--s-4)' }}>
+              <ClickSoundCard t={t} value={clickSound} onChange={onClickSound} />
+            </div>
+          </>
+        )}
         <span className="field-label">{t('soundKit')}</span>
         <div className="kit-chips">
           {KIT_NAMES.map((name) => (

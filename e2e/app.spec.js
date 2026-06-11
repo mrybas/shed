@@ -39,7 +39,7 @@ test('subdivision note picker updates selection', async ({ page }) => {
 test('theme toggle flips data-theme', async ({ page }) => {
   const html = page.locator('html')
   await expect(html).toHaveAttribute('data-theme', 'dark')
-  await page.locator('.sidebar .iconbtn').first().click()
+  await page.locator('.sidebar button.iconbtn').first().click()
   await expect(html).toHaveAttribute('data-theme', 'light')
 })
 
@@ -552,4 +552,50 @@ test('surprise me: generates a session and the runner starts it', async ({ page 
   await page.getByRole('button', { name: /Start/ }).first().click()
   await expect(page.locator('.practice')).toBeVisible()
   await expect(page.locator('.pb-wkrow')).toContainText('Block 1/')
+})
+
+// A tiny valid WAV (0.05s of a 1kHz-ish square) generated in-test.
+function makeWav() {
+  const rate = 8000
+  const n = 400
+  const buf = Buffer.alloc(44 + n * 2)
+  buf.write('RIFF', 0); buf.writeUInt32LE(36 + n * 2, 4); buf.write('WAVE', 8)
+  buf.write('fmt ', 12); buf.writeUInt32LE(16, 16); buf.writeUInt16LE(1, 20); buf.writeUInt16LE(1, 22)
+  buf.writeUInt32LE(rate, 24); buf.writeUInt32LE(rate * 2, 28); buf.writeUInt16LE(2, 32); buf.writeUInt16LE(16, 34)
+  buf.write('data', 36); buf.writeUInt32LE(n * 2, 40)
+  for (let i = 0; i < n; i++) buf.writeInt16LE(((i >> 2) % 2 ? 12000 : -12000), 44 + i * 2)
+  return buf
+}
+
+test('custom click sample: upload on the metronome page, persists, shows in practice sheet', async ({ page }) => {
+  await expect(page.locator('.metroview .clicksound')).toBeVisible()
+  // upload into the Beat slot (set the hidden input directly)
+  await page.locator('.metroview .cs-slot', { hasText: 'Beat' }).locator('input[type="file"]')
+    .setInputFiles({ name: 'myclick.wav', mimeType: 'audio/wav', buffer: makeWav() })
+  await expect(page.locator('.metroview .cs-name', { hasText: 'myclick.wav' })).toBeVisible()
+  // uploading switches the mode to "My samples"
+  await expect(page.locator('.metroview .clicksound .seg-item', { hasText: 'My samples' })).toHaveClass(/is-active/)
+  // survives a reload (IndexedDB + drums2_metro)
+  await page.reload()
+  await expect(page.locator('.metroview .cs-name', { hasText: 'myclick.wav' })).toBeVisible()
+  await expect(page.locator('.metroview .clicksound .seg-item', { hasText: 'My samples' })).toHaveClass(/is-active/)
+  // metronome still plays with the sample click
+  await page.locator('.pb-play').click()
+  await expect(page.locator('.metro-bigbeats .beat.is-active')).toHaveCount(1, { timeout: 3000 })
+  await page.locator('.pb-play').click()
+  // the same picker is reachable from the practice Sound sheet
+  await page.locator('.side-parent-main').click()
+  await page.locator('.cat-card').first().click()
+  await page.locator('.exrow').first().click()
+  await page.getByRole('button', { name: /Mixer & sounds/ }).click()
+  await expect(page.locator('.sheet .clicksound .cs-name', { hasText: 'myclick.wav' })).toBeVisible()
+  // removing the only sample reverts to the built-in click
+  await page.locator('.sheet .cs-del').click()
+  await expect(page.locator('.sheet .clicksound .seg-item', { hasText: 'Built-in' })).toHaveClass(/is-active/)
+})
+
+test('GitHub link is present in the sidebar', async ({ page }) => {
+  const link = page.locator('.sidebar a[href="https://github.com/mrybas/shed"]')
+  await expect(link).toBeVisible()
+  await expect(link).toHaveAttribute('target', '_blank')
 })

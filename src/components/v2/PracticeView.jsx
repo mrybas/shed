@@ -99,6 +99,7 @@ export default function PracticeView({
   loopRange, onLoopRange,
   progress, onProgress, onDuplicate, onBack, onSave, onExport, onNew, savedFlash,
   initialView = 'notes', onRegenerate, fav, onToggleFav, inSetlist, onToggleSetlist,
+  clickSound, onClickSound,
 }) {
   const editable = item.source === 'user'
   // Catalog items have no grid editing to land on; user items open in the
@@ -803,7 +804,8 @@ export default function PracticeView({
         </div>
       )}
 
-      <SoundSheet t={t} open={soundOpen} onClose={() => setSoundOpen(false)} vols={vols} setVols={setVols} />
+      <SoundSheet t={t} open={soundOpen} onClose={() => setSoundOpen(false)} vols={vols} setVols={setVols}
+        clickSound={clickSound} onClickSound={onClickSound} />
     </div>
   )
 }

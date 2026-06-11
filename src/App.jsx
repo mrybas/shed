@@ -24,10 +24,12 @@ import {
 import { logPracticeSeconds, logTempo, flushJournal, exportJournal, mergeJournal, getTempoStats, dayKey } from './model/progress.js'
 import { generateRhythm, exerciseOfTheDay } from './data/generator.js'
 import { loadFavs, toggleFav } from './model/favs.js'
+import { setClickMode } from './audio/click.js'
+import { initClickSamples } from './audio/clickSamples.js'
 import { loadSetlist, toggleInSetlist, removeFromSetlist, moveInSetlist, clearSetlist } from './model/setlist.js'
 import { decodeShare, shareFromHash } from './model/share.js'
 
-const APP_VERSION = 'v5.28' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v5.29' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -36,6 +38,7 @@ const TEMPO_KEY = 'drums2_tempo' // chosen bpm per catalog exercise id
 const TW_DEFAULT = { theme: 'dark', accent: 'coral', density: 'regular' }
 const METRO_DEFAULT = {
   bpm: 100, sig: '4/4', sub: 'quarter', accentOne: true, soundSubs: true, vol: 120, swing: 0,
+  clickSound: 'synth', // 'synth' | 'sample' (user samples live in IndexedDB)
   switcher: { enabled: false, everyBars: 2, subs: ['eighth', 'sixteenth', 'triplet'] },
   poly: { enabled: false, against: 3 },
 }
@@ -130,6 +133,10 @@ export default function App() {
 
   const sched = useScheduler({ pattern: null, metronomeEnabled: true })
   useSpacebar(sched.toggle)
+
+  // Load user click samples (IndexedDB) and keep the click mode applied.
+  useEffect(() => { initClickSamples() }, [])
+  useEffect(() => { setClickMode(metro.clickSound) }, [metro.clickSound])
 
   // iOS Safari: keep audio unlocked. iOS re-suspends the context (backgrounding,
   // route changes), so resume on every interaction, not just the first.
@@ -598,7 +605,11 @@ export default function App() {
         <button className="side-brand brand-btn" onClick={() => navTo('metronome')} aria-label={t('tabMetronome')}>
           <BrandMark size={18} /><span className="brand-name">{t('appName')}</span><span className="app-version num">{APP_VERSION}</span>
         </button>
-        <IconButton icon={themeIcon} label={t('theme')} onClick={toggleTheme} />
+        <span className="topbar-acts">
+          <a className="iconbtn" href="https://github.com/mrybas/shed" target="_blank" rel="noopener noreferrer"
+            aria-label="GitHub" title="GitHub"><Icon name="github" /></a>
+          <IconButton icon={themeIcon} label={t('theme')} onClick={toggleTheme} />
+        </span>
       </header>
 
       <aside className="sidebar">
@@ -642,7 +653,11 @@ export default function App() {
         <div className="side-foot">
           {accentPicker}
           <div className="side-foot-row">
-            <span className="app-version num">{APP_VERSION}</span>
+            <span className="side-foot-meta">
+              <span className="app-version num">{APP_VERSION}</span>
+              <a className="gh-link" href="https://github.com/mrybas/shed" target="_blank" rel="noopener noreferrer"
+                aria-label="GitHub" title="GitHub"><Icon name="github" className="ic-xs" /></a>
+            </span>
             <IconButton icon={themeIcon} label={t('theme')} onClick={toggleTheme} />
           </div>
         </div>
@@ -685,7 +700,8 @@ export default function App() {
             onBack={() => { if (runRef.current) { stopWorkout(); setNav('workouts') } else setNav('library') }} onSave={saveCurrent} onExport={() => exportExercise(item)}
             onNew={newExercise} savedFlash={savedFlash} onRegenerate={regenerate}
             fav={favs.includes(item.id)} onToggleFav={() => onToggleFav(item.id)}
-            inSetlist={setlist.includes(item.id)} onToggleSetlist={() => onToggleSetlist(item.id)} />
+            inSetlist={setlist.includes(item.id)} onToggleSetlist={() => onToggleSetlist(item.id)}
+            clickSound={metro.clickSound || 'synth'} onClickSound={(v) => setMetro((m) => ({ ...m, clickSound: v }))} />
         )}
       </main>
 

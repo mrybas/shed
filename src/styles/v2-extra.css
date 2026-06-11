@@ -601,3 +601,38 @@
   }
   .sheet-grip { display: none; }
 }
+
+/* ---- Click sound (custom samples) ---- */
+.clicksound { display: grid; gap: var(--s-2); }
+.clicksound .seg { justify-self: start; align-self: start; }
+.cs-slots { display: grid; gap: 6px; }
+.cs-slot { display: grid; grid-template-columns: 92px minmax(0, 320px); align-items: center; gap: var(--s-2); }
+.cs-cap { font-size: var(--fs-xs); color: var(--text-3); font-weight: 700; }
+.cs-upload {
+  display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px;
+  border: 1px dashed var(--border-strong); border-radius: var(--r-sm);
+  background: transparent; color: var(--text-2); font-size: var(--fs-xs); cursor: pointer;
+  justify-self: start;
+}
+.cs-upload:hover { color: var(--text); border-color: var(--accent); }
+.cs-file {
+  display: inline-flex; align-items: center; gap: 6px; min-width: 0;
+  height: 30px; padding: 0 6px; border: 1px solid var(--border-soft);
+  border-radius: var(--r-sm); background: var(--surface-2);
+}
+.cs-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-xs); }
+.cs-play, .cs-del {
+  flex: none; display: grid; place-items: center; width: 22px; height: 22px;
+  border: none; background: none; color: var(--text-3); cursor: pointer; border-radius: 4px;
+}
+.cs-play:hover, .cs-del:hover { color: var(--text); background: var(--surface-3); }
+.cs-error { color: var(--danger, oklch(0.65 0.2 25)); font-size: var(--fs-xs); margin: 0; }
+
+/* GitHub link uses the iconbtn look; anchors need the inline-grid reset. */
+a.iconbtn { display: inline-grid; place-items: center; text-decoration: none; }
+.topbar-acts { display: inline-flex; gap: var(--s-2); align-items: center; }
+/* Sidebar footer: a quiet inline GitHub mark next to the version. */
+.side-foot-meta { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.gh-link { display: inline-grid; place-items: center; color: var(--text-3); }
+.gh-link:hover { color: var(--text); }
+.gh-link .ic-xs { width: 15px; height: 15px; }

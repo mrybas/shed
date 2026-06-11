@@ -3,6 +3,7 @@ import { Slider, NumberStepper, NotePicker, NoteGlyph, Switch, Button, Icon } fr
 import { BeatDots } from './PlayerBar.jsx'
 import { TIME_SIGS, parseSig } from './util.js'
 import { useTapTempo } from '../../hooks/useTapTempo.js'
+import ClickSoundCard from './ClickSoundCard.jsx'
 
 // Beat groupings that make musical sense per meter (e.g. 8/8 as 3+3+2).
 const ACCENT_PRESETS = {
@@ -93,6 +94,8 @@ export default function MetronomeView({ t, metro, setMetro, playing, step, liveS
 
         <hr className="divider" style={{ margin: 'var(--s-5) 0' }} />
 
+        <div className="ctl-grid">
+          <div className="group col-7">
         <div className="ramp-block" style={{ marginBottom: 'var(--s-5)' }}>
           <Switch checked={!!metro.switcher?.enabled}
             onChange={(v) => set({ switcher: { ...metro.switcher, enabled: v } })}
@@ -125,7 +128,7 @@ export default function MetronomeView({ t, metro, setMetro, playing, step, liveS
           )}
         </div>
 
-        <div className="ramp-block" style={{ marginBottom: 'var(--s-5)' }}>
+        <div className="ramp-block">
           <Switch checked={!!metro.poly?.enabled}
             onChange={(v) => set({ poly: { ...metro.poly, enabled: v } })}
             label={t('polyrhythm')} icon="metro" />
@@ -138,14 +141,6 @@ export default function MetronomeView({ t, metro, setMetro, playing, step, liveS
             </div>
           )}
         </div>
-
-        <div className="ctl-grid">
-          <div className="group col-7">
-            <span className="field-label">{t('options')}</span>
-            <div className="toggles">
-              <Switch checked={metro.accentOne} onChange={(v) => set({ accentOne: v, accents: null })} label={t('accentFirst')} icon="accent" />
-              <Switch checked={metro.soundSubs} onChange={(v) => set({ soundSubs: v })} label={t('countSubdivisions')} icon="notes" />
-            </div>
           </div>
           <div className="group col-5">
             <span className="field-label">{t('metronomeVolume')}</span>
@@ -160,6 +155,22 @@ export default function MetronomeView({ t, metro, setMetro, playing, step, liveS
               <Slider value={metro.swing || 0} min={0} max={100} onChange={(v) => set({ swing: v })} aria-label={t('swing')} />
               <span className="v-val num">{metro.swing || 0}%</span>
             </div>
+          </div>
+        </div>
+
+        <hr className="divider" style={{ margin: 'var(--s-5) 0' }} />
+
+        <div className="ctl-grid">
+          <div className="group col-7">
+            <span className="field-label">{t('options')}</span>
+            <div className="toggles">
+              <Switch checked={metro.accentOne} onChange={(v) => set({ accentOne: v, accents: null })} label={t('accentFirst')} icon="accent" />
+              <Switch checked={metro.soundSubs} onChange={(v) => set({ soundSubs: v })} label={t('countSubdivisions')} icon="notes" />
+            </div>
+          </div>
+          <div className="group col-5">
+            <span className="field-label">{t('clickSound')}</span>
+            <ClickSoundCard t={t} value={metro.clickSound || 'synth'} onChange={(v) => set({ clickSound: v })} />
           </div>
         </div>
       </div>
