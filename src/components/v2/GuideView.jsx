@@ -6,7 +6,7 @@ const imgSrc = (key) => `${import.meta.env.BASE_URL || '/'}guide/${key}.webp`
 
 function GuideItem({ item }) {
   return (
-    <div className="gd-item" id={item.anchor}>
+    <div className="gd-item">
       {item.img && (
         <img className="gd-img" src={imgSrc(item.img)} alt="" loading="lazy" />
       )}
@@ -16,12 +16,33 @@ function GuideItem({ item }) {
   )
 }
 
-// The in-app manual: sticky table of contents, search across every item,
-// anchored sections (What's new links land here via `target`).
-export default function GuideView({ t, target }) {
+// The in-app manual. Sections live in the MAIN sidebar (desktop) / chips
+// (mobile); scrolling reports the active section back up via onActiveChange.
+export default function GuideView({ t, target, onActiveChange }) {
   const [q, setQ] = useState('')
+  const [active, setActive] = useState(GUIDE[0].id)
   const results = searchGuide(q)
   const searching = q.trim().length > 0
+
+  // Scroll-spy: the section crossing the upper band of the viewport is active.
+  useEffect(() => {
+    if (searching) return undefined
+    const sections = [...document.querySelectorAll('.gd-section')]
+    const onScroll = () => {
+      let cur = sections[0]?.id
+      for (const el of sections) {
+        if (el.getBoundingClientRect().top <= 140) cur = el.id
+      }
+      if (cur) {
+        const id = cur.replace('guide-', '')
+        setActive(id)
+        onActiveChange?.(id)
+      }
+    }
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [searching, onActiveChange])
 
   useEffect(() => {
     if (!target) return
@@ -39,44 +60,44 @@ export default function GuideView({ t, target }) {
   return (
     <div className="guide" data-screen-label="Guide">
       <h1 className="page-title">{t('guideTitle')}</h1>
-      <div className="gd-search lib2-search">
-        <Icon name="search" className="ic" />
-        <input value={q} placeholder={t('guideSearch')} onChange={(e) => setQ(e.target.value)} />
-        {q && <button className="search-clear" onClick={() => setQ('')}><Icon name="close" className="ic-xs" /></button>}
-      </div>
-
-      <div className="gd-layout">
+      <div className="gd-sticky">
+        <div className="gd-search lib2-search">
+          <Icon name="search" className="ic" />
+          <input value={q} placeholder={t('guideSearch')} onChange={(e) => setQ(e.target.value)} />
+          {q && <button className="search-clear" onClick={() => setQ('')}><Icon name="close" className="ic-xs" /></button>}
+        </div>
+        {/* Mobile (no app sidebar): horizontal section chips with the active one lit. */}
         <nav className="gd-toc" aria-label={t('guideToc')}>
           {GUIDE.map((sec) => (
-            <button key={sec.id} className="gd-toc-item" onClick={() => jump(sec.id)}>
+            <button key={sec.id} className={'gd-toc-item' + (active === sec.id ? ' is-active' : '')} onClick={() => jump(sec.id)}>
               <Icon name={sec.icon} className="ic" /><span>{sec.title}</span>
             </button>
           ))}
         </nav>
+      </div>
 
-        <div className="gd-content">
-          {searching ? (
-            results.length === 0 ? (
-              <p className="muted-line">{t('guideNoResults')}</p>
-            ) : (
-              results.map(({ section, item }, i) => (
-                <div key={i} className="gd-result">
-                  <button className="gd-crumb" onClick={() => jump(section.id)}>
-                    <Icon name={section.icon} className="ic-xs" /> {section.title}
-                  </button>
-                  <GuideItem item={item} />
-                </div>
-              ))
-            )
+      <div className="gd-content">
+        {searching ? (
+          results.length === 0 ? (
+            <p className="muted-line">{t('guideNoResults')}</p>
           ) : (
-            GUIDE.map((sec) => (
-              <section key={sec.id} className="gd-section" id={`guide-${sec.id}`}>
-                <h2 className="gd-sec-title"><Icon name={sec.icon} className="ic" /> {sec.title}</h2>
-                {sec.items.map((item, i) => <GuideItem key={i} item={item} />)}
-              </section>
+            results.map(({ section, item }, i) => (
+              <div key={i} className="gd-result">
+                <button className="gd-crumb" onClick={() => jump(section.id)}>
+                  <Icon name={section.icon} className="ic-xs" /> {section.title}
+                </button>
+                <GuideItem item={item} />
+              </div>
             ))
-          )}
-        </div>
+          )
+        ) : (
+          GUIDE.map((sec) => (
+            <section key={sec.id} className="gd-section" id={`guide-${sec.id}`}>
+              <h2 className="gd-sec-title"><Icon name={sec.icon} className="ic" /> {sec.title}</h2>
+              {sec.items.map((item, i) => <GuideItem key={i} item={item} />)}
+            </section>
+          ))
+        )}
       </div>
     </div>
   )

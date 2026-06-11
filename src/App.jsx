@@ -14,6 +14,7 @@ import WorkoutEditorView from './components/v2/WorkoutEditorView.jsx'
 import GuideView from './components/v2/GuideView.jsx'
 import WhatsNew from './components/v2/WhatsNew.jsx'
 import { entriesSince } from './data/changelog.js'
+import { GUIDE } from './data/guide.js'
 import { sigToTimeSignature } from './components/v2/util.js'
 import { CATEGORIES, sigOf, getCatalogExercises } from './data/catalogV2.js'
 import {
@@ -32,7 +33,7 @@ import { initClickSamples } from './audio/clickSamples.js'
 import { loadSetlist, toggleInSetlist, removeFromSetlist, moveInSetlist, clearSetlist } from './model/setlist.js'
 import { decodeShare, shareFromHash } from './model/share.js'
 
-const APP_VERSION = 'v5.33' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v5.34' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -110,6 +111,7 @@ export default function App() {
   const [savedFlash, setSavedFlash] = useState(false)
   const [libTarget, setLibTarget] = useState({ section: 'home', cat: null })
   const [guideTarget, setGuideTarget] = useState(null) // section anchor for the Guide
+  const [guideActive, setGuideActive] = useState(null) // scroll-spied section
   const openGuide = (sectionId = null) => { setGuideTarget(sectionId); navTo('guide') }
   // What's new: shown once when the app version moved past what the user saw.
   // First-ever run just records the version — to a newcomer nothing is "new".
@@ -672,6 +674,17 @@ export default function App() {
           <button className={'side-link' + (nav === 'guide' ? ' is-active' : '')} onClick={() => openGuide()}>
             <Icon name="bookmark" className="ic" /><span>{t('guideTitle')}</span>
           </button>
+          {nav === 'guide' && (
+            <div className="side-sub">
+              {GUIDE.map((sec) => (
+                <button key={sec.id}
+                  className={'side-subitem' + (guideActive === sec.id ? ' is-active' : '')}
+                  onClick={() => { setGuideTarget(null); requestAnimationFrame(() => setGuideTarget(sec.id)) }}>
+                  <Icon name={sec.icon} className="ic-xs side-subic" />{sec.title}
+                </button>
+              ))}
+            </div>
+          )}
         </nav>
         <div className="side-stat">
           <Icon name="star" className="ic-xs" /><span className="num">{masteredCount}</span> <span>{t('mastered')}</span>
@@ -691,7 +704,7 @@ export default function App() {
 
       <main className="main">
         {nav === 'metronome' && <MetronomeView t={t} metro={metro} setMetro={setMetro} playing={playing && mode === 'metronome'} step={step} liveSub={sched.liveSub} />}
-        {nav === 'guide' && <GuideView t={t} target={guideTarget} />}
+        {nav === 'guide' && <GuideView t={t} target={guideTarget} onActiveChange={setGuideActive} />}
         {nav === 'workouts' && (wkEdit ? (
           <WorkoutEditorView t={t} initial={wkEdit} exercises={[...exById.values()]}
             onSave={saveWk} onCancel={() => setWkEdit(null)} />

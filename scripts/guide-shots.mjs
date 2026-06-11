@@ -82,15 +82,47 @@ await page.addInitScript((kv) => { Object.entries(kv).forEach(([k, v]) => localS
 const shots = []
 async function shot(name, locator, opts = {}) {
   const path = `${TMP}/${name}.png`
-  await locator.screenshot({ path, ...opts })
+  await locator.evaluate((el) => el.scrollIntoView({ block: 'center', behavior: 'instant' })).catch(() => {})
+  await page.waitForTimeout(120)
+  if (opts.pad) {
+    const box = await locator.boundingBox()
+    const pad = opts.pad
+    const vp = page.viewportSize()
+    await page.screenshot({
+      path,
+      clip: {
+        x: Math.max(0, box.x - pad),
+        y: Math.max(0, box.y - pad),
+        width: Math.min(vp.width, box.width + pad * 2),
+        height: Math.min(vp.height, box.height + pad * 2),
+      },
+    })
+  } else {
+    await locator.screenshot({ path, ...opts })
+  }
   shots.push(name)
   console.log('  •', name)
+}
+
+// The fixed player bar bleeds into element screenshots — hide it (and the
+// bottom nav) for everything except the shots that ARE about the bar.
+async function hideBar(hidden) {
+  await page.evaluate((h) => {
+    let el = document.getElementById('shot-mask')
+    if (!el) {
+      el = document.createElement('style')
+      el.id = 'shot-mask'
+      document.head.appendChild(el)
+    }
+    el.textContent = h ? '.playerbar,.bottomnav{display:none !important}' : ''
+  }, hidden)
 }
 
 const goLib = () => page.locator('.side-parent-main').click()
 
 // --- Metronome page -------------------------------------------------------
 await page.goto(BASE)
+await hideBar(true)
 await page.locator('.metroview select.select').selectOption('7/8')
 await page.locator('.accent-presets .fchip', { hasText: '2+2+3' }).click()
 await shot('metro-accents', page.locator('.metro-stage'))
@@ -98,20 +130,22 @@ await page.locator('.metroview select.select').selectOption('4/4')
 
 await page.locator('.metroview .ramp-block').first().locator('input[type="checkbox"]').check({ force: true })
 await page.locator('.metroview .ramp-block').nth(1).locator('input[type="checkbox"]').check({ force: true })
-await shot('metro-trainers', page.locator('.ctl-grid .group').first())
+await shot('metro-trainers', page.locator('.ctl-grid .group').first(), { pad: 18 })
 await page.locator('.metroview .ramp-block').first().locator('input[type="checkbox"]').uncheck({ force: true })
 await page.locator('.metroview .ramp-block').nth(1).locator('input[type="checkbox"]').uncheck({ force: true })
 
 await page.locator('.metroview .cs-slot', { hasText: 'Beat' }).locator('input[type="file"]')
   .setInputFiles({ name: 'sidestick.wav', mimeType: 'audio/wav', buffer: makeWavBuffer() })
 await page.locator('.metroview .cs-name').waitFor()
-await shot('click-sound', page.locator('.metroview .clicksound'))
+await shot('click-sound', page.locator('.metroview .clicksound'), { pad: 18 })
 
 // --- Library home ----------------------------------------------------------
 await goLib()
 await page.locator('.sec-label', { hasText: 'Favorites' }).waitFor()
+await page.evaluate(() => window.scrollTo(0, 0))
 const lib = await page.locator('.library2').boundingBox()
-await shot('library', page.locator('.library2'), { clip: { x: lib.x, y: lib.y, width: lib.width, height: 560 } })
+await page.screenshot({ path: `${TMP}/library.png`, clip: { x: lib.x, y: Math.max(0, lib.y), width: lib.width, height: 560 } })
+shots.push('library'); console.log('  • library')
 
 // --- Practice: notes with loop + section, goal chip, actions ---------------
 await page.locator('.side-subitem', { hasText: 'Saved' }).click()
@@ -119,8 +153,10 @@ await page.locator('.exrow', { hasText: 'Verse groove' }).click()
 await page.locator('.notation-wrap .vf-line svg').first().waitFor()
 await page.locator('.note-seclabel', { hasText: 'Chorus' }).click() // loops the section
 await shot('notes-loop', page.locator('.notation-wrap'))
+await hideBar(false)
 await shot('player-bar', page.locator('.playerbar'))
-await shot('share-print', page.locator('.view-bar'))
+await hideBar(true)
+await shot('share-print', page.locator('.view-bar'), { pad: 10 })
 
 await page.getByRole('button', { name: 'Full screen' }).click()
 await page.locator('.perf-overlay .vf-line svg').first().waitFor()
@@ -132,14 +168,14 @@ await page.locator('.view-bar .seg-item', { hasText: 'Grid' }).click()
 const seq = await page.locator('.seq').boundingBox()
 await shot('grid-editor', page.locator('.seq'), { clip: { x: seq.x, y: seq.y, width: seq.width, height: Math.min(470, seq.height) } })
 await page.getByRole('button', { name: 'Copy bar' }).first().click() // arm the clipboard
-await shot('bar-strip', page.locator('.bar-strip'))
+await shot('bar-strip', page.locator('.bar-strip'), { pad: 12 })
 
 // goal chip (catalog exercise with seeded best+goal)
 await goLib()
 await page.locator('.lib2-search input').fill('Stick Control #1')
 await page.locator('.exrow', { hasText: 'Stick Control #1' }).first().click()
 await page.locator('.chip-goal').waitFor()
-await shot('goal-chip', page.locator('.prac-meta'))
+await shot('goal-chip', page.locator('.prac-meta'), { pad: 14 })
 
 // sound sheet
 await page.getByRole('button', { name: /Mixer & sounds/ }).click()
@@ -153,9 +189,11 @@ await page.locator('.side-link', { hasText: 'Workouts' }).click()
 await page.locator('.pr-panel').waitFor()
 await shot('progress', page.locator('.pr-panel'))
 await shot('setlist', page.locator('.sl-panel'))
-await shot('surprise', page.locator('.surprise-card'))
+await shot('surprise', page.locator('.surprise-card'), { pad: 10 })
+await page.evaluate(() => window.scrollTo(0, 0))
 const wk = await page.locator('.lib2-home').boundingBox()
-await shot('workouts', page.locator('.lib2-home'), { clip: { x: wk.x, y: wk.y, width: wk.width, height: 620 } })
+await page.screenshot({ path: `${TMP}/workouts.png`, clip: { x: wk.x, y: Math.max(0, wk.y), width: wk.width, height: 620 } })
+shots.push('workouts'); console.log('  • workouts')
 await page.getByRole('button', { name: 'Stats' }).click()
 await page.locator('.stats-sheet').waitFor()
 await shot('stats', page.locator('.stats-sheet'))

@@ -638,19 +638,27 @@ a.iconbtn { display: inline-grid; place-items: center; text-decoration: none; }
 
 
 /* ---- Guide (in-app manual) ---- */
-.guide { max-width: 980px; }
-.gd-search { margin: var(--s-3) 0 var(--s-5); max-width: 420px; }
-.gd-layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: var(--s-6); align-items: start; }
-.gd-toc { position: sticky; top: 16px; display: grid; gap: 2px; }
-.gd-toc-item {
-  display: flex; align-items: center; gap: 9px; padding: 8px 10px;
-  border: none; background: none; color: var(--text-2); cursor: pointer;
-  border-radius: var(--r-sm); font-size: var(--fs-sm); font-weight: 600; text-align: left;
+.guide { max-width: 860px; }
+/* Search (and the mobile chips) stay reachable while reading. */
+.gd-sticky {
+  position: sticky; top: 0; z-index: 10;
+  margin: 0 calc(-1 * var(--s-2)); padding: var(--s-2);
+  background: color-mix(in oklab, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px);
 }
-.gd-toc-item .ic { width: 16px; height: 16px; color: var(--text-3); }
-.gd-toc-item:hover { background: var(--surface-2); color: var(--text); }
-.gd-content { min-width: 0; display: grid; gap: var(--s-6); }
-.gd-section { display: grid; gap: var(--s-4); scroll-margin-top: 16px; }
+.gd-search { margin: var(--s-2) 0; max-width: 420px; }
+.gd-toc { display: none; }
+.gd-toc-item {
+  display: flex; align-items: center; gap: 7px; padding: 7px 10px;
+  border: 1px solid var(--border-soft); background: var(--surface-1); color: var(--text-2); cursor: pointer;
+  border-radius: 999px; font-size: var(--fs-xs); font-weight: 700; text-align: left; white-space: nowrap;
+}
+.gd-toc-item .ic { width: 14px; height: 14px; color: var(--text-3); }
+.gd-toc-item:hover { color: var(--text); border-color: var(--border-strong); }
+.gd-toc-item.is-active { color: var(--accent); border-color: var(--accent); background: color-mix(in oklab, var(--accent) 10%, transparent); }
+.gd-toc-item.is-active .ic { color: var(--accent); }
+.gd-content { min-width: 0; display: grid; gap: var(--s-6); margin-top: var(--s-3); }
+.gd-section { display: grid; gap: var(--s-4); scroll-margin-top: 86px; }
 .gd-sec-title {
   display: flex; align-items: center; gap: 10px; margin: 0;
   font-size: 1.15rem; letter-spacing: -.01em;
@@ -676,9 +684,9 @@ a.iconbtn { display: inline-grid; place-items: center; text-decoration: none; }
 .gd-crumb:hover { color: var(--accent); }
 .qmark { font-weight: 800; font-size: 15px; }
 @media (max-width: 900px) {
-  .gd-layout { grid-template-columns: 1fr; }
-  .gd-toc { position: static; display: flex; overflow-x: auto; gap: 4px; padding-bottom: 4px; }
+  .gd-toc { display: flex; overflow-x: auto; gap: 6px; padding-bottom: 4px; }
   .gd-toc-item { flex: none; }
+  .gd-section { scroll-margin-top: 130px; }
 }
 
 /* ---- What's new dialog ---- */
@@ -696,3 +704,6 @@ a.iconbtn { display: inline-grid; place-items: center; text-decoration: none; }
   font-size: var(--fs-xs); font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 2px;
 }
 .wn-foot { display: flex; justify-content: flex-end; gap: var(--s-2); margin-top: var(--s-4); }
+
+/* Pills in the beats area must not stretch into blobs when the dots wrap. */
+.pb-beats { align-items: center; gap: 8px; }
