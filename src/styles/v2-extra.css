@@ -702,3 +702,27 @@ a.iconbtn { display: inline-grid; place-items: center; text-decoration: none; }
 
 /* Pills in the beats area must not stretch into blobs when the dots wrap. */
 .pb-beats { align-items: center; gap: 8px; }
+
+/* Beat dots in the player bar NEVER wrap — they scale down to fit instead. */
+.pb-beats { container-type: inline-size; justify-content: safe center; }
+.pb-beats .beats { flex-wrap: nowrap; }
+.pb-beats .pb-barcount, .pb-beats .pb-muted-pill { white-space: nowrap; flex: none; }
+/* At the very tightest, the dots matter more than the counters. */
+@container (max-width: 210px) {
+  .pb-beats .pb-barcount { display: none; }
+}
+@container (max-width: 420px) {
+  .pb-beats .beat { width: 19px; height: 19px; }
+  .pb-beats .beat.sub { width: 9px; height: 9px; }
+  .pb-beats .beats { gap: 5px; }
+}
+@container (max-width: 280px) {
+  .pb-beats .beat { width: 14px; height: 14px; }
+  .pb-beats .beat.sub { width: 7px; height: 7px; }
+  .pb-beats .beats { gap: 4px; }
+}
+@container (max-width: 190px) {
+  .pb-beats .beat { width: 10px; height: 10px; }
+  .pb-beats .beat.sub { width: 5px; height: 5px; }
+  .pb-beats .beats { gap: 3px; }
+}

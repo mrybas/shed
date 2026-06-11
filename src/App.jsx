@@ -33,7 +33,7 @@ import { initClickSamples } from './audio/clickSamples.js'
 import { loadSetlist, toggleInSetlist, removeFromSetlist, moveInSetlist, clearSetlist } from './model/setlist.js'
 import { decodeShare, shareFromHash } from './model/share.js'
 
-const APP_VERSION = 'v5.36' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v5.37' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
