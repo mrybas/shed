@@ -55,6 +55,10 @@ The Guide's screenshots are generated, not hand-made — after UI changes run
 `node scripts/guide-shots.mjs` against a running dev server to refresh
 `public/guide/`.
 
+Want to contribute? See [CONTRIBUTING.md](CONTRIBUTING.md). If you code with
+an AI assistant, [CLAUDE.md](CLAUDE.md) teaches it the project's conventions
+(`.claude/` ships shared settings and a `/pre-release` checklist command).
+
 ## CI & releases
 
 - Every push to `main` and every pull request runs the full test suite

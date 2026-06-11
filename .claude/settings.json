@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run e2e:*)",
+      "Bash(npx vitest:*)",
+      "Bash(npx playwright test:*)",
+      "Bash(node scripts/guide-shots.mjs:*)",
+      "Bash(node scripts/release-notes.mjs:*)"
+    ],
+    "deny": [
+      "Bash(git push:*)"
+    ]
+  }
+}
