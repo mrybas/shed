@@ -33,6 +33,10 @@ export default function GuideView({ t, target, onActiveChange }) {
       for (const el of sections) {
         if (el.getBoundingClientRect().top <= 140) cur = el.id
       }
+      // Fully scrolled: the last (short) section may never cross the band.
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 8) {
+        cur = sections[sections.length - 1]?.id
+      }
       if (cur) {
         const id = cur.replace('guide-', '')
         setActive(id)
@@ -41,7 +45,9 @@ export default function GuideView({ t, target, onActiveChange }) {
     }
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
+    // Lazy images can shift the layout without a scroll event — re-check slowly.
+    const tick = setInterval(onScroll, 1000)
+    return () => { window.removeEventListener('scroll', onScroll); clearInterval(tick) }
   }, [searching, onActiveChange])
 
   useEffect(() => {
@@ -59,22 +65,22 @@ export default function GuideView({ t, target, onActiveChange }) {
 
   return (
     <div className="guide" data-screen-label="Guide">
-      <h1 className="page-title">{t('guideTitle')}</h1>
-      <div className="gd-sticky">
+      <div className="gd-head">
+        <h1 className="page-title">{t('guideTitle')}</h1>
         <div className="gd-search lib2-search">
           <Icon name="search" className="ic" />
           <input value={q} placeholder={t('guideSearch')} onChange={(e) => setQ(e.target.value)} />
           {q && <button className="search-clear" onClick={() => setQ('')}><Icon name="close" className="ic-xs" /></button>}
         </div>
-        {/* Mobile (no app sidebar): horizontal section chips with the active one lit. */}
-        <nav className="gd-toc" aria-label={t('guideToc')}>
-          {GUIDE.map((sec) => (
-            <button key={sec.id} className={'gd-toc-item' + (active === sec.id ? ' is-active' : '')} onClick={() => jump(sec.id)}>
-              <Icon name={sec.icon} className="ic" /><span>{sec.title}</span>
-            </button>
-          ))}
-        </nav>
       </div>
+      {/* Mobile (no app sidebar): horizontal section chips with the active one lit. */}
+      <nav className="gd-toc" aria-label={t('guideToc')}>
+        {GUIDE.map((sec) => (
+          <button key={sec.id} className={'gd-toc-item' + (active === sec.id ? ' is-active' : '')} onClick={() => jump(sec.id)}>
+            <Icon name={sec.icon} className="ic" /><span>{sec.title}</span>
+          </button>
+        ))}
+      </nav>
 
       <div className="gd-content">
         {searching ? (

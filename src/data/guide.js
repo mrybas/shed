@@ -55,6 +55,7 @@ export const GUIDE = [
       },
       {
         title: 'Polyrhythm',
+        img: 'poly',
         tags: ['trainer', 'polyrhythm', '3:2', '4:3'],
         body: 'Adds a second, woodier click that plays N even strokes per bar against the meter — 4:3, 4:5, anything up to 7. Great for hearing how the two streams interlock before trying it on the kit.',
       },
@@ -89,11 +90,13 @@ export const GUIDE = [
       },
       {
         title: 'Sight reading',
+        img: 'sightreading',
         tags: ['generator', 'random', 'reading'],
         body: 'The Sight reading cards generate a fresh two-bar snare rhythm at your level every time — beginner sticks to eighths, advanced mixes triplets, syncopation and flams. Inside, New rhythm rolls another one; Save keeps the ones you like.',
       },
       {
         title: 'Import & export',
+        img: 'export',
         tags: ['backup', 'json', 'files'],
         body: 'Any exercise exports as a .drums.json file; Export all backs up your whole library, journal and custom workouts in one file. Import accepts single exercises, workout files and full backups.',
       },
@@ -170,11 +173,13 @@ export const GUIDE = [
       },
       {
         title: 'Section markers',
+        img: 'sections',
         tags: ['sections', 'verse', 'chorus', 'labels'],
         body: 'Label a bar (🔖 in its header) — Intro, Verse, anything up to 24 characters. Labels show in the grid and above the notation, survive export and share links, shift correctly when you insert or delete bars, and clicking one loops the section.',
       },
       {
         title: 'Tied rolls',
+        img: 'tied-roll',
         tags: ['rolls', 'ties', 'buzz'],
         body: 'A roll cell sounds until the next onset — even across a barline. In the books\' notation a tied roll resolves into the next downbeat (the tie is drawn for you); untied rolls breathe before the barline instead. Open rolls are metered 32nd-note doubles, closed rolls buzz twice as dense, and both follow the tempo.',
       },
@@ -187,16 +192,19 @@ export const GUIDE = [
     items: [
       {
         title: 'Speed trainer',
+        img: 'speed-trainer',
         tags: ['tempo ramp', 'speed', 'bpm'],
         body: 'Raises the tempo by N bpm every M bars, optionally capped. The live tempo shows in the player bar; your highest clean tempo lands in the journal as a record. Stone\'s "20 relaxed repetitions, then faster" — automated.',
       },
       {
         title: 'Gap trainer',
+        img: 'gap-trainer',
         tags: ['gap', 'timekeeping', 'silent bars'],
         body: 'Plays the click for N bars, mutes it for M, repeating. If you are still locked in when it returns, your inner clock is doing its job. A MUTED pill shows in the player bar during the silent stretch.',
       },
       {
         title: 'Count-in',
+        img: 'count-in',
         tags: ['count in', 'count off', 'lead in'],
         body: 'Lead-in clicks before the exercise starts. Loop mode counts in once; Phrase mode counts in before every pass — drill mode for fills. Four feels, from plain quarters to the classic "1, 2, 1-2-3-4" count-off.',
       },
@@ -209,12 +217,13 @@ export const GUIDE = [
     items: [
       {
         title: 'Guided sessions',
-        img: 'workouts',
+        img: 'runner',
         tags: ['routine', 'daily', 'blocks'],
         body: 'A workout is a timed chain of blocks: each opens its exercise with the right tempo and trainers, and moves on automatically. The strip above the player bar shows the block, time left and a skip button. Pausing playback pauses the clock — the minutes count actual practice.',
       },
       {
         title: 'Your own workouts',
+        img: 'workouts',
         tags: ['custom', 'editor', 'duplicate'],
         body: 'Build routines in the workout editor: pick exercises, minutes, tempo, ramps, gaps and count-ins per block. Duplicate any built-in to use it as a starting point. Workouts export as files you can share.',
       },
@@ -231,6 +240,7 @@ export const GUIDE = [
       },
       {
         title: 'Exercise of the day',
+        img: 'daily',
         tags: ['daily', 'sight reading'],
         body: 'One generated sight-reading exercise per day — same for everyone, new every midnight. A painless daily reading habit.',
       },
@@ -249,6 +259,7 @@ export const GUIDE = [
       },
       {
         title: 'Tempo records',
+        img: 'goal-chip',
         tags: ['records', 'best', 'sparkline'],
         body: 'Your best tempo per exercise is tracked from real playback (ramped tempos count). The ★ chip on an exercise shows the record with a history sparkline.',
       },
@@ -283,6 +294,7 @@ export const GUIDE = [
       },
       {
         title: 'Volumes',
+        img: 'volumes',
         tags: ['balance', 'exercise volume', 'metronome volume'],
         body: 'Exercise and metronome volumes are separate sliders, so the click can sit above or under the kit at any balance. The metronome page has its own volume for plain-click practice.',
       },
@@ -295,11 +307,13 @@ export const GUIDE = [
     items: [
       {
         title: 'Backups',
+        img: 'export',
         tags: ['export all', 'backup', 'restore'],
         body: 'Export all (Library → collections row) writes one JSON with your exercises, journal, goals and custom workouts. Keep it somewhere safe — browser storage can be cleared by the OS. Import merges; journal days keep whichever side practiced more.',
       },
       {
         title: 'Share links',
+        img: 'share-print',
         tags: ['url', 'share', 'compress'],
         body: 'Share link compresses the open exercise into the URL itself. Anyone opening it gets the exercise in their practice view — notation, sticking, sections and all — and can save their own copy.',
       },

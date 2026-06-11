@@ -52,8 +52,8 @@ function seedStorage() {
     drums2_journal: JSON.stringify({
       days,
       tempo: {
-        sc_sb_1: { best: 126, last: 122, goal: 140, history: [8, 6, 5, 3, 2, 1, 0].map((off, i) => ({ d: dayKey(off), bpm: 96 + i * 5 })) },
-        gv_disco: { best: 118, last: 118, history: [5, 3, 1].map((off, i) => ({ d: dayKey(off), bpm: 104 + i * 7 })) },
+        sc_sb_1: { best: 126, last: 122, goal: 140, history: [[14, 96], [11, 104], [9, 100], [7, 112], [5, 108], [3, 118], [1, 114], [0, 126]].map(([off, bpm]) => ({ d: dayKey(off), bpm })) },
+        gv_disco: { best: 118, last: 118, history: [[8, 104], [6, 112], [4, 106], [2, 118], [0, 115]].map(([off, bpm]) => ({ d: dayKey(off), bpm })) },
       },
     }),
     drums2_favs: JSON.stringify(['sc_sb_1', 'gv_disco']),
@@ -131,6 +131,7 @@ await page.locator('.metroview select.select').selectOption('4/4')
 await page.locator('.metroview .ramp-block').first().locator('input[type="checkbox"]').check({ force: true })
 await page.locator('.metroview .ramp-block').nth(1).locator('input[type="checkbox"]').check({ force: true })
 await shot('metro-trainers', page.locator('.ctl-grid .group').first(), { pad: 18 })
+await shot('poly', page.locator('.metroview .ramp-block').nth(1), { pad: 18 })
 await page.locator('.metroview .ramp-block').first().locator('input[type="checkbox"]').uncheck({ force: true })
 await page.locator('.metroview .ramp-block').nth(1).locator('input[type="checkbox"]').uncheck({ force: true })
 
@@ -146,6 +147,18 @@ await page.evaluate(() => window.scrollTo(0, 0))
 const lib = await page.locator('.library2').boundingBox()
 await page.screenshot({ path: `${TMP}/library.png`, clip: { x: lib.x, y: Math.max(0, lib.y), width: lib.width, height: 560 } })
 shots.push('library'); console.log('  • library')
+const sr = page.locator('.sec-label', { hasText: 'Sight reading' })
+await sr.evaluate((el) => el.scrollIntoView({ block: 'start', behavior: 'instant' }))
+await page.waitForTimeout(120)
+const srBox = await sr.boundingBox()
+await page.screenshot({ path: `${TMP}/sightreading.png`, clip: { x: srBox.x - 8, y: srBox.y - 8, width: 980, height: 250 } })
+shots.push('sightreading'); console.log('  • sightreading')
+const coll = page.locator('.sec-row', { has: page.locator('.sec-label', { hasText: 'Collections' }) })
+await coll.evaluate((el) => el.scrollIntoView({ block: 'center', behavior: 'instant' }))
+await page.waitForTimeout(120)
+const collBox = await coll.boundingBox()
+await page.screenshot({ path: `${TMP}/export.png`, clip: { x: collBox.x - 8, y: collBox.y - 8, width: collBox.width + 16, height: collBox.height + 130 } })
+shots.push('export'); console.log('  • export')
 
 // --- Practice: notes with loop + section, goal chip, actions ---------------
 await page.locator('.side-subitem', { hasText: 'Saved' }).click()
@@ -153,6 +166,18 @@ await page.locator('.exrow', { hasText: 'Verse groove' }).click()
 await page.locator('.notation-wrap .vf-line svg').first().waitFor()
 await page.locator('.note-seclabel', { hasText: 'Chorus' }).click() // loops the section
 await shot('notes-loop', page.locator('.notation-wrap'))
+// trainer blocks in the options card
+const trainerBlock = (label) => page.locator('.practice .ramp-block', { has: page.locator('.switch-label', { hasText: label }) })
+await trainerBlock('Speed trainer').locator('input[type="checkbox"]').check({ force: true })
+await shot('speed-trainer', trainerBlock('Speed trainer'), { pad: 16 })
+await trainerBlock('Speed trainer').locator('input[type="checkbox"]').uncheck({ force: true })
+await trainerBlock('Gap trainer').locator('input[type="checkbox"]').check({ force: true })
+await shot('gap-trainer', trainerBlock('Gap trainer'), { pad: 16 })
+await trainerBlock('Gap trainer').locator('input[type="checkbox"]').uncheck({ force: true })
+await trainerBlock('Count-in').locator('input[type="checkbox"]').check({ force: true })
+await shot('count-in', trainerBlock('Count-in'), { pad: 16 })
+await trainerBlock('Count-in').locator('input[type="checkbox"]').uncheck({ force: true })
+await shot('volumes', page.locator('.vol-pair'), { pad: 16 })
 await hideBar(false)
 await shot('player-bar', page.locator('.playerbar'))
 await hideBar(true)
@@ -169,6 +194,9 @@ const seq = await page.locator('.seq').boundingBox()
 await shot('grid-editor', page.locator('.seq'), { clip: { x: seq.x, y: seq.y, width: seq.width, height: Math.min(470, seq.height) } })
 await page.getByRole('button', { name: 'Copy bar' }).first().click() // arm the clipboard
 await shot('bar-strip', page.locator('.bar-strip'), { pad: 12 })
+const bs = await page.locator('.bar-strip').boundingBox()
+await page.screenshot({ path: `${TMP}/sections.png`, clip: { x: bs.x - 8, y: bs.y - 8, width: bs.width + 16, height: Math.min(170, bs.height) } })
+shots.push('sections'); console.log('  • sections')
 
 // goal chip (catalog exercise with seeded best+goal)
 await goLib()
@@ -176,6 +204,17 @@ await page.locator('.lib2-search input').fill('Stick Control #1')
 await page.locator('.exrow', { hasText: 'Stick Control #1' }).first().click()
 await page.locator('.chip-goal').waitFor()
 await shot('goal-chip', page.locator('.prac-meta'), { pad: 14 })
+
+// tied roll notation (Stick Control 14.9)
+await goLib()
+await page.locator('.lib2-search input').fill('Short Rolls & Triplets 14.9')
+await page.locator('.exrow').first().click()
+await page.locator('.notation-wrap .vf-line svg').first().waitFor()
+await shot('tied-roll', page.locator('.notation-wrap'))
+await page.locator('.prac-back').click()
+await page.locator('.lib2-search input').fill('Stick Control #1')
+await page.locator('.exrow', { hasText: 'Stick Control #1' }).first().click()
+await page.locator('.chip-goal').waitFor()
 
 // sound sheet
 await page.getByRole('button', { name: /Mixer & sounds/ }).click()
@@ -197,6 +236,15 @@ shots.push('workouts'); console.log('  • workouts')
 await page.getByRole('button', { name: 'Stats' }).click()
 await page.locator('.stats-sheet').waitFor()
 await shot('stats', page.locator('.stats-sheet'))
+await page.locator('.stats-sheet .sheet-close').click()
+await shot('daily', page.locator('.daily-card'), { pad: 10 })
+// runner strip: start a built-in workout
+await page.locator('.wk-card', { hasText: 'Beginner Daily' }).click()
+await hideBar(false)
+await page.getByRole('button', { name: /Start/ }).first().click()
+await page.locator('.pb-wkrow').waitFor()
+await shot('runner', page.locator('.playerbar'))
+await hideBar(true)
 
 await browser.close()
 

@@ -639,14 +639,10 @@ a.iconbtn { display: inline-grid; place-items: center; text-decoration: none; }
 
 /* ---- Guide (in-app manual) ---- */
 .guide { max-width: 860px; }
-/* Search (and the mobile chips) stay reachable while reading. */
-.gd-sticky {
-  position: sticky; top: 0; z-index: 10;
-  margin: 0 calc(-1 * var(--s-2)); padding: var(--s-2);
-  background: color-mix(in oklab, var(--bg) 88%, transparent);
-  backdrop-filter: blur(10px);
-}
-.gd-search { margin: var(--s-2) 0; max-width: 420px; }
+/* Title row: search sits quietly in the top-right corner. */
+.gd-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); flex-wrap: wrap; }
+.gd-head .page-title { margin: 0; }
+.gd-search { flex: 0 1 340px; min-width: 220px; }
 .gd-toc { display: none; }
 .gd-toc-item {
   display: flex; align-items: center; gap: 7px; padding: 7px 10px;
@@ -658,7 +654,7 @@ a.iconbtn { display: inline-grid; place-items: center; text-decoration: none; }
 .gd-toc-item.is-active { color: var(--accent); border-color: var(--accent); background: color-mix(in oklab, var(--accent) 10%, transparent); }
 .gd-toc-item.is-active .ic { color: var(--accent); }
 .gd-content { min-width: 0; display: grid; gap: var(--s-6); margin-top: var(--s-3); }
-.gd-section { display: grid; gap: var(--s-4); scroll-margin-top: 86px; }
+.gd-section { display: grid; gap: var(--s-4); scroll-margin-top: 16px; }
 .gd-sec-title {
   display: flex; align-items: center; gap: 10px; margin: 0;
   font-size: 1.15rem; letter-spacing: -.01em;
@@ -684,9 +680,8 @@ a.iconbtn { display: inline-grid; place-items: center; text-decoration: none; }
 .gd-crumb:hover { color: var(--accent); }
 .qmark { font-weight: 800; font-size: 15px; }
 @media (max-width: 900px) {
-  .gd-toc { display: flex; overflow-x: auto; gap: 6px; padding-bottom: 4px; }
+  .gd-toc { display: flex; overflow-x: auto; gap: 6px; padding: var(--s-3) 0 4px; }
   .gd-toc-item { flex: none; }
-  .gd-section { scroll-margin-top: 130px; }
 }
 
 /* ---- What's new dialog ---- */
