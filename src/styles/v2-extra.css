@@ -636,3 +636,63 @@ a.iconbtn { display: inline-grid; place-items: center; text-decoration: none; }
 /* Sidebar footer: GitHub + theme as a right-aligned pair of icon buttons. */
 .side-foot-acts { margin-left: auto; display: inline-flex; gap: var(--s-2); align-items: center; }
 
+
+/* ---- Guide (in-app manual) ---- */
+.guide { max-width: 980px; }
+.gd-search { margin: var(--s-3) 0 var(--s-5); max-width: 420px; }
+.gd-layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: var(--s-6); align-items: start; }
+.gd-toc { position: sticky; top: 16px; display: grid; gap: 2px; }
+.gd-toc-item {
+  display: flex; align-items: center; gap: 9px; padding: 8px 10px;
+  border: none; background: none; color: var(--text-2); cursor: pointer;
+  border-radius: var(--r-sm); font-size: var(--fs-sm); font-weight: 600; text-align: left;
+}
+.gd-toc-item .ic { width: 16px; height: 16px; color: var(--text-3); }
+.gd-toc-item:hover { background: var(--surface-2); color: var(--text); }
+.gd-content { min-width: 0; display: grid; gap: var(--s-6); }
+.gd-section { display: grid; gap: var(--s-4); scroll-margin-top: 16px; }
+.gd-sec-title {
+  display: flex; align-items: center; gap: 10px; margin: 0;
+  font-size: 1.15rem; letter-spacing: -.01em;
+  padding-bottom: var(--s-2); border-bottom: 1px solid var(--border-soft);
+}
+.gd-sec-title .ic { width: 19px; height: 19px; color: var(--accent); }
+.gd-item {
+  border: 1px solid var(--border-soft); border-radius: var(--r-md);
+  background: var(--surface-1); padding: var(--s-4); display: grid; gap: var(--s-2);
+}
+.gd-img {
+  width: 100%; border-radius: var(--r-sm); border: 1px solid var(--border-soft);
+  background: var(--surface-inset); display: block;
+}
+.gd-item-title { margin: 0; font-size: 1rem; }
+.gd-item-body { margin: 0; color: var(--text-2); font-size: var(--fs-sm); line-height: 1.55; }
+.gd-result { display: grid; gap: 6px; }
+.gd-crumb {
+  justify-self: start; display: inline-flex; align-items: center; gap: 6px;
+  border: none; background: none; color: var(--text-3); cursor: pointer;
+  font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+}
+.gd-crumb:hover { color: var(--accent); }
+.qmark { font-weight: 800; font-size: 15px; }
+@media (max-width: 900px) {
+  .gd-layout { grid-template-columns: 1fr; }
+  .gd-toc { position: static; display: flex; overflow-x: auto; gap: 4px; padding-bottom: 4px; }
+  .gd-toc-item { flex: none; }
+}
+
+/* ---- What's new dialog ---- */
+.whatsnew { max-width: 560px; }
+.wn-list { display: grid; gap: var(--s-4); }
+.wn-ver-tag {
+  display: inline-block; font-size: 10px; font-weight: 700; color: var(--accent);
+  border: 1px solid color-mix(in oklab, var(--accent) 45%, transparent);
+  border-radius: 999px; padding: 2px 8px; margin-bottom: 6px;
+}
+.wn-items { margin: 0; padding: 0 0 0 18px; display: grid; gap: 7px; }
+.wn-item { color: var(--text-2); font-size: var(--fs-sm); line-height: 1.45; }
+.wn-link {
+  margin-left: 8px; border: none; background: none; color: var(--accent);
+  font-size: var(--fs-xs); font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 2px;
+}
+.wn-foot { display: flex; justify-content: flex-end; gap: var(--s-2); margin-top: var(--s-4); }

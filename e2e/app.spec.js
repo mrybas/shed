@@ -599,3 +599,32 @@ test('GitHub link is present in the sidebar', async ({ page }) => {
   await expect(link).toBeVisible()
   await expect(link).toHaveAttribute('target', '_blank')
 })
+
+test('guide: opens from the sidebar, search finds items, images render', async ({ page }) => {
+  await page.locator('.side-link', { hasText: 'Guide' }).click()
+  await expect(page.locator('.gd-section')).toHaveCount(10)
+  // search narrows to matching items with section crumbs
+  await page.locator('.gd-search input').fill('polyrhythm')
+  await expect(page.locator('.gd-result').first()).toBeVisible()
+  await expect(page.locator('.gd-crumb').first()).toContainText('Metronome')
+  await page.locator('.gd-search input').fill('')
+  // an illustrated item actually loads its picture
+  const img = page.locator('.gd-img').first()
+  await img.scrollIntoViewIfNeeded()
+  await expect(img).toBeVisible()
+  const ok = await img.evaluate((el) => el.complete && el.naturalWidth > 0)
+  expect(ok).toBe(true)
+})
+
+test("what's new shows once after an update and links into the guide", async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem('drums2_seenver', 'v5.20'))
+  await page.reload()
+  await expect(page.locator('.whatsnew')).toBeVisible()
+  await expect(page.locator('.wn-ver-tag').first()).toBeVisible()
+  // a Learn more link lands in the right guide section
+  await page.locator('.wn-link').first().click()
+  await expect(page.locator('.guide')).toBeVisible()
+  // dialog does not reappear
+  await page.reload()
+  await expect(page.locator('.whatsnew')).toHaveCount(0)
+})
