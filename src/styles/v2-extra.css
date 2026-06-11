@@ -631,8 +631,5 @@
 /* GitHub link uses the iconbtn look; anchors need the inline-grid reset. */
 a.iconbtn { display: inline-grid; place-items: center; text-decoration: none; }
 .topbar-acts { display: inline-flex; gap: var(--s-2); align-items: center; }
-/* Sidebar footer: a quiet inline GitHub mark next to the version. */
-.side-foot-meta { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
-.gh-link { display: inline-grid; place-items: center; color: var(--text-3); }
-.gh-link:hover { color: var(--text); }
-.gh-link .ic-xs { width: 15px; height: 15px; }
+/* Sidebar footer: GitHub + theme as a right-aligned pair of icon buttons. */
+.side-foot-acts { margin-left: auto; display: inline-flex; gap: var(--s-2); align-items: center; }

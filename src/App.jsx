@@ -29,7 +29,7 @@ import { initClickSamples } from './audio/clickSamples.js'
 import { loadSetlist, toggleInSetlist, removeFromSetlist, moveInSetlist, clearSetlist } from './model/setlist.js'
 import { decodeShare, shareFromHash } from './model/share.js'
 
-const APP_VERSION = 'v5.29' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v5.30' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -614,7 +614,7 @@ export default function App() {
 
       <aside className="sidebar">
         <button className="side-brand brand-btn" onClick={() => navTo('metronome')} aria-label={t('tabMetronome')}>
-          <BrandMark /><span className="brand-name">{t('appName')}</span>
+          <BrandMark /><span className="brand-name">{t('appName')}</span><span className="app-version num">{APP_VERSION}</span>
         </button>
         <nav className="side-nav">
           <button className={'side-link' + (nav === 'metronome' ? ' is-active' : '')} onClick={() => navTo('metronome')}>
@@ -653,12 +653,11 @@ export default function App() {
         <div className="side-foot">
           {accentPicker}
           <div className="side-foot-row">
-            <span className="side-foot-meta">
-              <span className="app-version num">{APP_VERSION}</span>
-              <a className="gh-link" href="https://github.com/mrybas/shed" target="_blank" rel="noopener noreferrer"
-                aria-label="GitHub" title="GitHub"><Icon name="github" className="ic-xs" /></a>
+            <span className="side-foot-acts">
+              <a className="iconbtn" href="https://github.com/mrybas/shed" target="_blank" rel="noopener noreferrer"
+                aria-label="GitHub" title="GitHub"><Icon name="github" /></a>
+              <IconButton icon={themeIcon} label={t('theme')} onClick={toggleTheme} />
             </span>
-            <IconButton icon={themeIcon} label={t('theme')} onClick={toggleTheme} />
           </div>
         </div>
       </aside>
