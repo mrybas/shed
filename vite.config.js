@@ -11,6 +11,8 @@ export default defineConfig(() => ({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['apple-touch-icon.png'],
+      // Guide screenshots are .webp — include them so the manual works offline.
+      workbox: { globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'] },
       manifest: {
         name: 'shed.',
         short_name: 'shed.',
