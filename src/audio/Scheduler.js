@@ -41,7 +41,7 @@ export class Scheduler {
     this.swing = 0
     // Subdivision switcher (metronome trainer): rotate through `subs` every
     // `everyBars` bars — forces the inner clock to re-subdivide on the fly.
-    this.subSwitcher = { enabled: false, everyBars: 2, subs: ['eighth', 'sixteenth', 'triplet'] }
+    this.subSwitcher = { enabled: false, everyBars: 2, subs: ['eighth', 'triplet', 'sixteenth'] }
     // Polyrhythm (metronome trainer): a second click voice playing `against`
     // even strokes per bar (X:Y where X = beats of the meter).
     this.poly = { enabled: false, against: 3 }
@@ -67,7 +67,8 @@ export class Scheduler {
     this.timerId = null
     this.lookaheadMs = 25
     this.scheduleAheadSec = 0.1
-    this.notesInQueue = [] // {step, time} for visualization
+    this.notesInQueue = [] // {step, time, sub} for visualization
+    this._visualSub = null // subdivision of the step currently being heard
 
     // In a hidden tab even worker messages can be delivered late — widen the
     // scheduling horizon so the audio stream survives until we're visible again.
@@ -86,8 +87,11 @@ export class Scheduler {
   currentSubdivision() {
     const sw = this.subSwitcher
     if (!this.pattern && sw?.enabled && sw.subs?.length) {
-      const idx = Math.floor(this._bars / Math.max(1, sw.everyBars || 1)) % sw.subs.length
-      return sw.subs[idx]
+      // Cycle in order of density (8th → triplet → 16th …) regardless of the
+      // order the chips were toggled in, so what's heard matches the picker.
+      const order = [...sw.subs].sort((a, b) => spbOf(a) - spbOf(b))
+      const idx = Math.floor(this._bars / Math.max(1, sw.everyBars || 1)) % order.length
+      return order[idx]
     }
     return this.subdivision
   }
@@ -227,6 +231,7 @@ export class Scheduler {
     this.nextNoteTime = ctx.currentTime + 0.12
     this._nextPolyTime = this.nextNoteTime // poly voice locks to the downbeat
     this.notesInQueue = []
+    this._visualSub = null
     this._startTicker()
   }
 
@@ -234,6 +239,7 @@ export class Scheduler {
     this.isPlaying = false
     this._stopTicker()
     this.notesInQueue = []
+    this._visualSub = null
     this.currentStep = 0
     this._bars = 0
     this.bpm = this.baseBpm
@@ -415,7 +421,10 @@ export class Scheduler {
       })
     }
 
-    this.notesInQueue.push({ step, time })
+    // Tag each visual note with the subdivision it belongs to, so the playhead
+    // and the beat-dot layout flip together at the *heard* boundary (not ~one
+    // lookahead window early, which read as jitter on the switch).
+    this.notesInQueue.push({ step, time, sub: this.currentSubdivision() })
   }
 
   // Zero-based beat number within the bar that contains `step`.
@@ -466,8 +475,17 @@ export class Scheduler {
     const now = ctx.currentTime - latency
     let current = -1
     while (this.notesInQueue.length && this.notesInQueue[0].time <= now) {
-      current = this.notesInQueue.shift().step
+      const n = this.notesInQueue.shift()
+      current = n.step
+      if (n.step >= 0 && n.sub) this._visualSub = n.sub
     }
     return current
+  }
+
+  // The subdivision of the step being heard right now (latency-compensated, in
+  // sync with visualStep()). Used to lay out the beat dots so they switch with
+  // the playhead rather than ~one lookahead window ahead of it.
+  visualSub() {
+    return this._visualSub || this.subdivision
   }
 }

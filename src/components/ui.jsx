@@ -52,7 +52,9 @@ export function NoteGlyph({ kind }) {
     case 'triplet':
       return <svg viewBox="0 0 24 30"><g>{head(4.5, 23, ink)}{head(11, 23, ink)}{head(17.5, 23, ink)}<rect x="6.9" y="8" width="1.4" height="15" fill={ink} /><rect x="13.4" y="8" width="1.4" height="15" fill={ink} /><rect x="19.9" y="8" width="1.4" height="15" fill={ink} /><rect x="6.9" y="8" width="14.4" height="2.1" fill={ink} /><text x="12" y="6" fontSize="7" fontWeight="700" textAnchor="middle" fill={ink} fontFamily="monospace">3</text></g></svg>
     case 'sixteenth':
-      return <svg viewBox="0 0 24 30"><g>{head(6, 23, ink)}{head(15, 23, ink)}<rect x="8.4" y="6" width="1.6" height="17" fill={ink} /><rect x="17.4" y="6" width="1.6" height="17" fill={ink} /><rect x="8.4" y="6" width="10.6" height="2.2" fill={ink} /><rect x="8.4" y="10" width="10.6" height="2.2" fill={ink} /></g></svg>
+      // Four noteheads with a double beam — reads as denser than the triplet's
+      // three, so the picker shows subdivision density at a glance.
+      return <svg viewBox="0 0 24 30"><g>{head(2.6, 23, ink)}{head(8.4, 23, ink)}{head(14.2, 23, ink)}{head(20, 23, ink)}<rect x="4.6" y="7" width="1.3" height="16" fill={ink} /><rect x="10.4" y="7" width="1.3" height="16" fill={ink} /><rect x="16.2" y="7" width="1.3" height="16" fill={ink} /><rect x="22" y="7" width="1.3" height="16" fill={ink} /><rect x="4.6" y="7" width="18.7" height="2" fill={ink} /><rect x="4.6" y="10.6" width="18.7" height="2" fill={ink} /></g></svg>
     default:
       return null
   }

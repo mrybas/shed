@@ -319,7 +319,7 @@ describe('Scheduler step scheduling', () => {
     expect(click).toHaveBeenCalledWith(expect.anything(), 1.0, expect.anything(), 'accent', 1)
     expect(DRUM_VOICES.snare).toHaveBeenCalledWith(fakeCtx, 1.0, expect.anything(), { gain: 1.0 })
     expect(DRUM_VOICES.kick).toHaveBeenCalledWith(fakeCtx, 1.0, expect.anything(), { gain: 0.55 })
-    expect(s.notesInQueue).toEqual([{ step: 0, time: 1.0 }])
+    expect(s.notesInQueue).toEqual([{ step: 0, time: 1.0, sub: 'sixteenth' }])
   })
 
   it('plays a snare roll spanning until the next onset', () => {
@@ -492,17 +492,18 @@ describe('Scheduler visualStep', () => {
 })
 
 describe('metronome trainers', () => {
-  it('subdivision switcher rotates the grid every N bars', () => {
+  it('subdivision switcher rotates the grid every N bars, ordered by density', () => {
     const s = new Scheduler()
     s.timeSignature = { beats: 2, unit: 4 }
     s.subdivision = 'quarter'
+    // Toggled in a scrambled order — the cycle must still play by density.
     s.subSwitcher = { enabled: true, everyBars: 2, subs: ['quarter', 'sixteenth', 'triplet'] }
     s._bars = 0
-    expect(s.currentSubdivision()).toBe('quarter')
+    expect(s.currentSubdivision()).toBe('quarter') // 1 step/beat
     s._bars = 2
-    expect(s.currentSubdivision()).toBe('sixteenth')
+    expect(s.currentSubdivision()).toBe('triplet') // 3 — comes before 16th
     s._bars = 4
-    expect(s.currentSubdivision()).toBe('triplet')
+    expect(s.currentSubdivision()).toBe('sixteenth') // 4
     s._bars = 6
     expect(s.currentSubdivision()).toBe('quarter') // wraps
     s._recompute()
@@ -510,6 +511,31 @@ describe('metronome trainers', () => {
     // exercises never switch
     s.pattern = createEmptyExercise({ subdivision: 'eighth' })
     expect(s.currentSubdivision()).toBe('quarter') // falls back to this.subdivision
+  })
+
+  it('cycle order is independent of the order chips were toggled', () => {
+    const s = new Scheduler()
+    s.timeSignature = { beats: 4, unit: 4 }
+    s.subSwitcher = { enabled: true, everyBars: 1, subs: ['sixteenth', 'eighth', 'triplet'] }
+    const seq = [0, 1, 2, 3].map((b) => { s._bars = b; return s.currentSubdivision() })
+    expect(seq).toEqual(['eighth', 'triplet', 'sixteenth', 'eighth'])
+  })
+
+  it('visualSub tracks the heard step in sync with visualStep (no early flip)', () => {
+    const s = new Scheduler()
+    // Tail of an eighth bar then the start of a sixteenth bar, as scheduled.
+    s.notesInQueue = [
+      { step: 6, time: 1.0, sub: 'eighth' },
+      { step: 7, time: 1.3, sub: 'eighth' },
+      { step: 0, time: 1.6, sub: 'sixteenth' },
+      { step: 1, time: 1.75, sub: 'sixteenth' },
+    ]
+    fakeCtx.currentTime = 1.35 // step 7 heard; still the eighth bar
+    expect(s.visualStep()).toBe(7)
+    expect(s.visualSub()).toBe('eighth') // layout has NOT flipped yet
+    fakeCtx.currentTime = 1.6 // step 0 of the new bar heard
+    expect(s.visualStep()).toBe(0)
+    expect(s.visualSub()).toBe('sixteenth') // flips exactly with the playhead
   })
 
   it('switcher rebuilds the layout exactly at the bar boundary', () => {

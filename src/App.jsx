@@ -33,7 +33,7 @@ import { initClickSamples } from './audio/clickSamples.js'
 import { loadSetlist, toggleInSetlist, removeFromSetlist, moveInSetlist, clearSetlist } from './model/setlist.js'
 import { decodeShare, shareFromHash } from './model/share.js'
 
-const APP_VERSION = 'v5.38' // bump on each change so a stale cache is obvious on device
+const APP_VERSION = 'v5.39' // bump on each change so a stale cache is obvious on device
 const TW_KEY = 'drums2_tw'
 const PROG_KEY = 'drums2_progress'
 const OPTS_KEY = 'drums2_opts'
@@ -43,7 +43,7 @@ const TW_DEFAULT = { theme: 'dark', accent: 'coral', density: 'regular' }
 const METRO_DEFAULT = {
   bpm: 100, sig: '4/4', sub: 'quarter', accentOne: true, soundSubs: true, vol: 120, swing: 0,
   clickSound: 'synth', // 'synth' | 'sample' (user samples live in IndexedDB)
-  switcher: { enabled: false, everyBars: 2, subs: ['eighth', 'sixteenth', 'triplet'] },
+  switcher: { enabled: false, everyBars: 2, subs: ['eighth', 'triplet', 'sixteenth'] },
   poly: { enabled: false, against: 3 },
 }
 const OPTIONS_DEFAULT = {

@@ -51,7 +51,7 @@ export const GUIDE = [
         title: 'Subdivision switcher',
         img: 'metro-trainers',
         tags: ['trainer', 'switcher', 'subdivisions'],
-        body: 'A trainer that rotates the click grid every N bars (eighths → sixteenths → triplets …). Your inner clock has to re-subdivide on the fly. The live subdivision shows in the player bar while it runs.',
+        body: 'A trainer that rotates the click grid every N bars, in order of density (eighths → triplets → sixteenths …). Your inner clock has to re-subdivide on the fly. The live subdivision shows in the player bar while it runs.',
       },
       {
         title: 'Polyrhythm',

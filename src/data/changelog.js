@@ -7,6 +7,12 @@
 
 export const CHANGELOG = [
   {
+    version: 'v5.39',
+    items: [
+      { text: 'Subdivision switcher now cycles in order of density (8ths → triplets → 16ths) and the beat dots switch in sync with the click — no more jitter', guide: 'metronome' },
+    ],
+  },
+  {
     version: 'v5.38',
     items: [
       { text: 'Feedback button — tell us what to improve via a prefilled GitHub issue', guide: 'start' },

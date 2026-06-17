@@ -35,7 +35,7 @@ export function useScheduler(initial = {}) {
     const m = s.metronomeMuted()
     setGapMuted((prev) => (prev !== m ? m : prev))
     setCountingIn((prev) => (prev !== ci ? ci : prev))
-    const sub = s.currentSubdivision()
+    const sub = s.visualSub()
     setLiveSub((prev) => (prev !== sub ? sub : prev))
     rafRef.current = requestAnimationFrame(loop)
   }, [])
