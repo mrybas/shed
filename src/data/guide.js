@@ -116,7 +116,7 @@ export const GUIDE = [
         title: 'Looping bars and sections',
         img: 'notes-loop',
         tags: ['loop', 'bars', 'sections'],
-        body: 'Click a bar in the notation (or its number in the grid) to loop it; click another to extend the range, click inside to clear. Section labels — both in the bar strip and above the notation — loop the whole section in one tap.',
+        body: 'Click a bar in the notation to loop it; click another to extend the range, click inside to clear. In the grid, select bars by their numbers and press Loop. Section labels — in the grid\'s bar header and above the notation — loop the whole section in one tap.',
       },
       {
         title: 'Tempo goals',
@@ -168,14 +168,19 @@ export const GUIDE = [
       {
         title: 'Working with bars',
         img: 'bar-strip',
-        tags: ['bars', 'copy', 'paste', 'repeat', 'time signature'],
-        body: 'The bar strip adds, inserts, duplicates and deletes bars, and gives each bar its own time signature. Copy a bar (💾) and paste buttons appear at every insertion slot; ×N repeats a bar 2, 4 or 8 times — built for laying out whole songs.',
+        tags: ['bars', 'select', 'copy', 'paste', 'duplicate', 'repeat', 'delete', 'time signature', 'shortcuts'],
+        body: 'Bar numbers sit right above the grid. Click one to select that bar, Shift+click another to select a whole phrase. The selection bar then copies, pastes after, duplicates, repeats it ×2/×4/×8 (that many times in a row), sets the time signature, loops, labels, inserts an empty bar before it or deletes it. Shortcuts: Ctrl/⌘+C, Ctrl/⌘+V, Ctrl/⌘+D, Delete, Esc. After a repeat, duplicate or paste the grid scrolls to where the phrase now ends. Built for laying out whole songs — a two-bar riff ×4 is two clicks.',
+      },
+      {
+        title: 'Zoom and empty rows',
+        tags: ['zoom', 'cells', 'rows', 'width', 'scroll'],
+        body: 'The grid uses the full screen width. − / + change the cell size; Hide empty rows shows only instruments that have notes. Instrument names stay pinned on the left and the tools stay pinned on top while you scroll, and the grid follows the playhead while playing. The row under the mouse lights up, so you always see which instrument a click lands on. While you edit in the grid, the Options card folds into one line — tap it to open.',
       },
       {
         title: 'Section markers',
         img: 'sections',
         tags: ['sections', 'verse', 'chorus', 'labels'],
-        body: 'Label a bar (🔖 in its header) — Intro, Verse, anything up to 24 characters. Labels show in the grid and above the notation, survive export and share links, shift correctly when you insert or delete bars, and clicking one loops the section.',
+        body: 'Select a bar and press Label section — Intro, Verse, anything up to 24 characters. Labels show in the grid and above the notation, survive export and share links, shift correctly when you insert or delete bars, and clicking one loops the section.',
       },
       {
         title: 'Tied rolls',

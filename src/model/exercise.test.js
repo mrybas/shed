@@ -23,6 +23,11 @@ import {
   insertBar,
   barSnapshot,
   repeatBar,
+  barsSnapshot,
+  insertBars,
+  duplicateBars,
+  repeatBars,
+  removeBars,
   getSections,
   setSectionLabel,
   sectionRange,
@@ -425,6 +430,49 @@ describe('bar clipboard + repeat', () => {
     lay.bars.forEach((b) => {
       expect(out.rows.snare[b.startStep + 2].on).toBe(true)
     })
+  })
+})
+
+describe('bar ranges (multi-bar selection)', () => {
+  // Four 4/4 eighth bars; bar i has a kick on its step i so bars are distinguishable.
+  const fourBars = () => {
+    let ex = createEmptyExercise({ timeSignature: { beats: 4, unit: 4 }, subdivision: 'eighth' })
+    ex = repeatBar(ex, 0, 3)
+    barLayout(ex).bars.forEach((b) => { ex.rows.kick[b.startStep + b.bar] = { on: true, accent: false, roll: 0 } })
+    return ex
+  }
+  const kickBarIds = (ex) => barLayout(ex).bars.map((b) => {
+    const row = ex.rows.kick.slice(b.startStep, b.startStep + b.stepCount)
+    return row.findIndex((c) => c.on)
+  })
+
+  it('barsSnapshot + insertBars paste a two-bar phrase in order', () => {
+    const ex = fourBars()
+    const snaps = barsSnapshot(ex, 1, 2)
+    expect(snaps).toHaveLength(2)
+    expect(kickBarIds(insertBars(ex, 4, snaps))).toEqual([0, 1, 2, 3, 1, 2])
+    expect(kickBarIds(insertBars(ex, 0, snaps))).toEqual([1, 2, 0, 1, 2, 3])
+  })
+
+  it('duplicateBars / repeatBars put copies right after the range', () => {
+    const ex = fourBars()
+    expect(kickBarIds(duplicateBars(ex, 1, 2))).toEqual([0, 1, 2, 1, 2, 3])
+    expect(kickBarIds(repeatBars(ex, 2, 1, 3))).toEqual([0, 1, 2, 1, 2, 1, 2, 1, 2, 3])
+  })
+
+  it('removeBars drops the range, shifts sections, and never empties the exercise', () => {
+    let ex = setSectionLabel(fourBars(), 3, 'Out')
+    const out = removeBars(ex, 1, 2)
+    expect(kickBarIds(out)).toEqual([0, 3])
+    expect(getSections(out)).toEqual([{ bar: 1, label: 'Out' }])
+    expect(removeBars(ex, 0, 3)).toBe(ex)
+  })
+
+  it('ranges are clamped to existing bars', () => {
+    const ex = fourBars()
+    expect(barsSnapshot(ex, 2, 99)).toHaveLength(2)
+    expect(barsSnapshot(ex, 7, 9)).toEqual([])
+    expect(repeatBars(ex, 7, 9, 2)).toBe(ex)
   })
 })
 

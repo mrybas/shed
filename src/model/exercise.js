@@ -235,6 +235,54 @@ export function repeatBar(ex, index, times = 1) {
   return cur
 }
 
+// ---- Bar ranges (the editor's multi-bar selection; inclusive, clamped) ----
+function clampRange(ex, from, to) {
+  const n = getBars(ex).length
+  const a = Math.max(0, Math.min(from, to))
+  const b = Math.min(n - 1, Math.max(from, to))
+  return a <= b ? [a, b] : null
+}
+
+// Snapshots of bars from..to — the clipboard format for a multi-bar copy.
+export function barsSnapshot(ex, from, to) {
+  const r = clampRange(ex, from, to)
+  if (!r) return []
+  const out = []
+  for (let i = r[0]; i <= r[1]; i++) out.push(barSnapshot(ex, i))
+  return out
+}
+
+// Insert a list of bar snapshots, in order, starting at bar `index`.
+export function insertBars(ex, index, snaps) {
+  let cur = ex
+  ;(snaps || []).forEach((snap, k) => { cur = insertBar(cur, index + k, snap) })
+  return cur
+}
+
+// Copy of bars from..to inserted right after the range.
+export function duplicateBars(ex, from, to) {
+  return repeatBars(ex, from, to, 1)
+}
+
+// `times` extra copies of bars from..to right after the range (repeat ×N).
+export function repeatBars(ex, from, to, times = 1) {
+  const r = clampRange(ex, from, to)
+  if (!r) return ex
+  const snaps = barsSnapshot(ex, r[0], r[1])
+  let cur = ex
+  for (let k = 0; k < times; k++) cur = insertBars(cur, r[1] + 1, snaps)
+  return cur
+}
+
+// Remove bars from..to; refuses to remove every bar.
+export function removeBars(ex, from, to) {
+  const r = clampRange(ex, from, to)
+  if (!r || r[1] - r[0] + 1 >= getBars(ex).length) return ex
+  let cur = ex
+  for (let i = r[1]; i >= r[0]; i--) cur = removeBar(cur, i)
+  return cur
+}
+
 // ---- Section markers ----
 // `ex.sections = [{ bar, label }]` — sparse labels on bar starts (Intro/Verse/…).
 export function getSections(ex) {

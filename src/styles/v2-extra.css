@@ -92,15 +92,8 @@
 }
 
 /* ---- Multi-bar editor ---- */
-.bar-strip { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--s-3); margin-bottom: var(--s-3); }
-.bar-block {
-  border: 1px solid var(--border-soft); border-radius: var(--r-md);
-  padding: 8px; background: var(--surface-1);
-}
-.bar-block-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .bar-tag { font-size: 0.72rem; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: .03em; }
 .bar-ts { height: 30px; padding: 0 6px; font-size: 0.85rem; }
-.bar-acts { margin-left: auto; display: inline-flex; gap: 4px; }
 .bar-act {
   display: grid; place-items: center; width: 28px; height: 28px;
   border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface-2);
@@ -108,24 +101,9 @@
 }
 .bar-act:hover { color: var(--text); border-color: var(--border-strong); }
 .bar-act.bar-del:hover { color: var(--danger, oklch(0.65 0.2 25)); }
-.bar-block .beat-feel { margin: 0; }
-.bar-add {
-  align-self: center; display: inline-flex; align-items: center; gap: 6px;
-  height: 36px; padding: 0 14px; border-radius: var(--r-md);
-  border: 1px dashed var(--border-strong); background: transparent; color: var(--text-2);
-  font-weight: 600; font-size: var(--fs-sm); cursor: pointer;
-}
-.bar-add:hover { color: var(--text); border-color: var(--accent); }
-.bar-add .ic { width: 16px; height: 16px; }
 
 /* Heavier divider at the start of each bar in the grid + ruler. */
 .seq .cell.bar-start { border-left: 2px solid var(--accent); }
-.seq-ruler .tick.bar-start { position: relative; }
-.seq-ruler .tick .tick-bar {
-  position: absolute; bottom: 100%; left: 0; white-space: nowrap;
-  font-size: 0.62rem; font-weight: 700; color: var(--accent);
-  text-transform: uppercase; letter-spacing: .03em; padding-bottom: 2px;
-}
 
 /* ---- Editor symbol legend ---- */
 .cell-legend {
@@ -186,7 +164,6 @@
 .bar-tag { border: none; background: none; cursor: pointer; padding: 2px 6px; border-radius: var(--r-sm); }
 .bar-tag:hover { color: var(--text); background: var(--surface-2); }
 .bar-tag.is-loop { color: var(--on-accent); background: var(--accent); }
-.bar-block.is-loop { border-color: var(--accent); }
 
 /* Clickable bar zones in the notation (loop selection). */
 .note-barzone {
@@ -211,14 +188,6 @@
 .seq-ruler .tick .tick-glyph svg { width: 13px; height: 17px; }
 .seq-ruler .tick.tick-btn:hover .tick-glyph { color: var(--accent); }
 
-/* Bar insertion points: a slim "+" before each bar; the new bar lands there. */
-.bar-slot { display: flex; align-items: stretch; gap: var(--s-2); }
-.bar-insert {
-  align-self: stretch; width: 22px; display: grid; place-items: center;
-  border: 1px dashed var(--border); border-radius: var(--r-sm);
-  background: transparent; color: var(--text-3); cursor: pointer; padding: 0;
-}
-.bar-insert:hover { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
 
 /* Difficulty level dot (library rows + level filter chips). */
 .level-dot {
@@ -487,17 +456,6 @@
 .beat-btn:hover { border-color: var(--accent); }
 .accent-presets { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: var(--s-3); }
 
-/* ---- Bar clipboard / repeat ---- */
-.bar-act.is-armed { color: var(--accent); border-color: var(--accent); }
-.bar-insert.bar-paste { color: var(--accent); border-color: var(--accent); }
-.bar-rep { position: relative; display: inline-flex; }
-.bar-rep .bar-act { font-size: 10px; width: auto; padding: 0 5px; }
-.bar-rep-menu {
-  position: absolute; top: calc(100% + 4px); left: 0; z-index: 30;
-  display: flex; gap: 4px; padding: 4px;
-  background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm);
-  box-shadow: var(--shadow-md);
-}
 
 /* ---- Section markers ---- */
 .bar-sec {
@@ -730,3 +688,98 @@ a.iconbtn { display: inline-grid; place-items: center; text-decoration: none; }
 /* Feedback: external links styled as nav/buttons. */
 a.side-link-ext { text-decoration: none; }
 .gd-feedback { text-decoration: none; display: inline-flex; align-items: center; gap: 7px; }
+
+/* ---- Grid editor layout ---- */
+/* The grid gets the whole content width (other screens keep the 1180px column). */
+.main:has(.practice.is-grid) { max-width: none; }
+/* Options card folds to a single header row while editing. */
+.opts-toggle {
+  display: flex; align-items: center; justify-content: space-between; width: 100%;
+  border: none; background: none; padding: 0; cursor: pointer; color: var(--text-3);
+}
+.opts-toggle:hover { color: var(--text); }
+.opts-card:not(.is-folded) .opts-toggle { margin-bottom: 0; }
+.opts-card.is-folded { padding-block: var(--s-3); }
+
+/* Toolbar (palette + bar selection) stays pinned while the page scrolls. */
+.seq-tools {
+  position: sticky; top: 0; z-index: 20;
+  margin: calc(-1 * var(--s-4)) calc(-1 * var(--s-4)) var(--s-3);
+  padding: var(--s-4) var(--s-4) 0;
+  background: var(--surface-1); border-radius: var(--r-lg) var(--r-lg) 0 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+@media (max-width: 900px) { .seq-tools { top: 57px; } }
+.grid-view-ctl { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+.zoom-ctl { display: inline-flex; gap: 4px; }
+.zoom-ctl .bar-act { flex: 1; width: auto; font-weight: 700; font-size: 15px; }
+.zoom-ctl .bar-act:disabled { opacity: .4; cursor: default; }
+.rows-toggle { justify-content: center; white-space: nowrap; }
+
+.sel-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  min-height: 44px; margin-bottom: var(--s-3); padding: 5px 8px;
+  border: 1px dashed var(--border); border-radius: var(--r-md);
+}
+.sel-bar.is-active { border-style: solid; border-color: var(--accent); background: color-mix(in oklab, var(--accent) 7%, transparent); }
+.sel-what { font-weight: 700; color: var(--accent); margin-right: 4px; white-space: nowrap; }
+.sel-hint { color: var(--text-3); font-size: var(--fs-sm); margin-right: auto; }
+.sel-rep { display: inline-flex; align-items: center; gap: 4px; }
+.sel-rep .bar-act { width: auto; padding: 0 7px; font-size: 12px; font-weight: 700; }
+.sel-cap { font-size: var(--fs-xs); color: var(--text-3); font-weight: 600; margin-right: 2px; }
+.sel-clear {
+  margin-left: auto; width: 30px; height: 30px; border-radius: var(--r-sm);
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--text-3); cursor: pointer;
+}
+.sel-clear:hover { color: var(--text); }
+
+/* Horizontal scroller: fixed-width cells (zoomable), labels pinned left. */
+.seq { overflow: visible; }
+.seq-scroll { overflow-x: auto; padding-bottom: 4px; }
+.seq-scroll .seq-row, .seq-scroll .seq-ruler { gap: 0; }
+.seq-scroll .seq-ruler { min-width: max-content; }
+.seq-scroll .seq-cells,
+.seq-scroll .seq-ruler .ticks { grid-auto-columns: var(--cell-w, 26px); }
+.seq-scroll .seq-rowlabel {
+  position: sticky; left: 0; z-index: 3; align-self: stretch;
+  padding-right: var(--s-3); background: var(--surface-1);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.seq-scroll .seq-ruler .tick { white-space: nowrap; }
+.seq-scroll .seq-ruler .tick.tick-btn { overflow: visible; padding: 1px 0; }
+
+/* Bar header row: one block per bar spanning its columns — click to select. */
+.seq-barhead-row { margin-bottom: 4px; }
+.seq-barheads { display: grid; grid-auto-flow: column; grid-auto-columns: var(--cell-w, 26px); gap: 4px; }
+.seq-barhead {
+  display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; height: 28px;
+  border-left: 2px solid var(--accent); border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  padding-left: 2px; background: var(--surface-2);
+}
+.seq-barhead .bar-tag { font-size: 0.78rem; color: var(--text-2); padding: 2px 8px; flex: none; }
+.seq-barhead.is-sel { background: color-mix(in oklab, var(--accent) 22%, var(--surface-2)); }
+.seq-barhead.is-sel .bar-tag { color: var(--on-accent); background: var(--accent); }
+.seq-barhead.is-loop { box-shadow: inset 0 -2px 0 var(--play-green, var(--accent)); }
+.seq-barhead-ts { font-size: 11px; color: var(--text-3); font-weight: 700; flex: none; padding-right: 6px; }
+.seq-barhead .bar-sec, .seq-barhead .bar-sec-input { height: 22px; flex: 0 1 auto; min-width: 0; }
+
+/* Cells of selected bars get a tint so the range is visible in the grid. */
+.seq .cell.in-sel:not(.on):not(.accent):not(.ghost):not(.flam):not(.roll):not(.art) {
+  background: color-mix(in oklab, var(--accent) 13%, var(--surface-inset));
+}
+
+/* Row under the pointer: a light band + highlighted label, so it's clear which
+   instrument a click lands on. Hover-capable pointers only (no sticky hover on touch). */
+@media (hover: hover) {
+  .seq-grid .seq-row:hover .seq-cells {
+    background: color-mix(in oklab, var(--text) 6%, transparent);
+    border-radius: var(--r-sm); box-shadow: 0 0 0 2px color-mix(in oklab, var(--text) 6%, transparent);
+  }
+  .seq-grid .seq-row:hover .seq-rowlabel { color: var(--text); }
+  .seq-scroll .seq-grid .seq-row:hover .seq-rowlabel {
+    background: color-mix(in oklab, var(--text) 6%, var(--surface-1));
+  }
+  .seq-grid .seq-row:hover .cell:not(.on):not(.accent):not(.ghost):not(.flam):not(.roll):not(.art):not(.stick) {
+    background: color-mix(in oklab, var(--text) 9%, var(--surface-inset));
+  }
+}

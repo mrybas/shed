@@ -124,6 +124,7 @@ test('triplets and rolls catalog exercises render notation', async ({ page }) =>
 test('practice has exercise + metronome volume sliders', async ({ page }) => {
   await page.locator('.side-parent-main').click()
   await page.getByRole('button', { name: /New exercise/ }).click()
+  await page.locator('.opts-toggle').click() // folded while the grid is open
   await expect(page.getByLabel('Exercise volume')).toBeVisible()
   await expect(page.getByLabel('Metronome volume')).toBeVisible()
 })
@@ -444,32 +445,70 @@ test('metronome accent pattern: preset chips and tap-to-accent persist', async (
   await expect(page.locator('.metro-bigbeats .beat-btn.is-down')).toHaveCount(1)
 })
 
-test('bar clipboard: copy, paste and repeat ×N', async ({ page }) => {
+test('bar selection: copy/paste, repeat and delete a phrase', async ({ page }) => {
   await page.locator('.side-parent-main').click()
   await page.getByRole('button', { name: /New exercise/ }).click()
-  // put a kick on step 1 of bar 1, then copy the bar
-  await page.locator('.seq-row').filter({ has: page.locator('.seq-rowlabel', { hasText: /^Kick$/ }) }).locator('.cell').first().click()
-  await page.getByRole('button', { name: 'Copy bar' }).click()
-  // paste at the trailing slot -> 2 bars, both with the kick
-  await page.locator('button[aria-label="Paste copied bar here"]').last().click()
-  await expect(page.locator('.bar-block')).toHaveCount(2)
+  const heads = page.locator('.seq-barhead')
+  const tags = page.locator('.seq-barhead .bar-tag')
+  const selBar = page.locator('.sel-bar')
   const kicks = page.locator('.seq-row').filter({ has: page.locator('.seq-rowlabel', { hasText: /^Kick$/ }) }).locator('.cell.on')
+  // kick on step 1 of bar 1; select bar 1, copy, paste after it -> 2 bars
+  await page.locator('.seq-row').filter({ has: page.locator('.seq-rowlabel', { hasText: /^Kick$/ }) }).locator('.cell').first().click()
+  await tags.first().click()
+  await expect(selBar.locator('.sel-what')).toHaveText('bar 1')
+  await selBar.getByRole('button', { name: 'Copy', exact: true }).click()
+  await selBar.getByRole('button', { name: 'Paste after' }).click()
+  await expect(heads).toHaveCount(2)
   await expect(kicks).toHaveCount(2)
-  // repeat bar 1 ×4 -> 6 bars total
-  await page.locator('button[aria-label="Repeat bar ×N"]').first().click()
-  await page.locator('.bar-rep-menu button', { hasText: '×4' }).click()
-  await expect(page.locator('.bar-block')).toHaveCount(6)
-  await expect(kicks).toHaveCount(6)
+  // shift+click selects the two-bar phrase; ×4 plays it four times -> 8 bars
+  await tags.first().click()
+  await tags.nth(1).click({ modifiers: ['Shift'] })
+  await expect(selBar.locator('.sel-what')).toHaveText('Bars 1–2')
+  for (let k = 0; k < 2; k++) await page.getByRole('button', { name: 'Bigger cells' }).click() // max zoom: make it overflow
+  await selBar.locator('.sel-rep button', { hasText: '×4' }).click()
+  await expect(heads).toHaveCount(8)
+  await expect(kicks).toHaveCount(8)
+  // the grid scrolls to where the repeated phrase now ends
+  await expect.poll(() => page.evaluate(() => document.querySelector('.seq-scroll').scrollLeft)).toBeGreaterThan(0)
+  // keyboard: Ctrl+D duplicates the selection, Delete removes it, Ctrl+Z undoes
+  await page.keyboard.press('Control+d')
+  await expect(heads).toHaveCount(10)
+  await page.keyboard.press('Delete')
+  await expect(heads).toHaveCount(8)
+  await page.keyboard.press('Control+z')
+  await expect(heads).toHaveCount(10)
+})
+
+test('grid editor: zoom, hide empty rows, options fold away', async ({ page }) => {
+  await page.locator('.side-parent-main').click()
+  await page.getByRole('button', { name: /New exercise/ }).click()
+  await expect(page.locator('.opts-card')).toHaveClass(/is-folded/)
+  const cell = page.locator('.seq-row').filter({ has: page.locator('.seq-rowlabel', { hasText: /^Snare$/ }) }).locator('.cell').first()
+  await cell.click()
+  const w0 = (await cell.boundingBox()).width
+  await page.getByRole('button', { name: 'Bigger cells' }).click()
+  expect((await cell.boundingBox()).width).toBeGreaterThan(w0)
+  await page.locator('.rows-toggle').click()
+  await expect(page.locator('.seq-grid .seq-rowlabel')).toHaveText(['Snare', 'Sticking'])
+  await page.locator('.rows-toggle').click()
+  await expect(page.locator('.seq-rowlabel', { hasText: /^Kick$/ })).toBeVisible()
+  // the Options card opens on demand
+  await page.locator('.opts-toggle').click()
+  await expect(page.locator('.opts-card')).not.toHaveClass(/is-folded/)
 })
 
 test('sections: label a bar, click loops the section, label shows in notes', async ({ page }) => {
   await page.locator('.side-parent-main').click()
   await page.getByRole('button', { name: /New exercise/ }).click()
-  // 4 bars, label bar 3 as Chorus
-  await page.locator('button[aria-label="Repeat bar ×N"]').first().click()
-  await page.locator('.bar-rep-menu button', { hasText: '×4' }).click()
-  await expect(page.locator('.bar-block')).toHaveCount(5)
-  await page.locator('button[aria-label="Label section"]').nth(2).click()
+  const tags = page.locator('.seq-barhead .bar-tag')
+  // 5 bars: bar 1 ×4, then deselect and add one more; label bar 3 as Chorus
+  await tags.first().click()
+  await page.locator('.sel-rep button', { hasText: '×4' }).click()
+  await tags.first().click() // clicking the only selected bar clears the selection
+  await page.getByRole('button', { name: 'Add bar' }).click()
+  await expect(page.locator('.seq-barhead')).toHaveCount(5)
+  await tags.nth(2).click()
+  await page.locator('.sel-bar').getByRole('button', { name: 'Label section' }).click()
   await page.locator('.bar-sec-input').fill('Chorus')
   await page.locator('.bar-sec-input').press('Enter')
   await expect(page.locator('.bar-sec', { hasText: 'Chorus' })).toBeVisible()

@@ -26,7 +26,7 @@ function Sparkline({ history }) {
     </svg>
   )
 }
-import { INSTRUMENTS, resizeExercise, setBeatSub, setAllBeatSubs, barLayout, addBar, insertBar, duplicateBar, repeatBar, barSnapshot, removeBar, setBarTimeSignature, getSections, setSectionLabel, sectionRange } from '../../model/exercise.js'
+import { INSTRUMENTS, resizeExercise, setBeatSub, setAllBeatSubs, barLayout, addBar, insertBar, insertBars, barsSnapshot, duplicateBars, repeatBars, removeBars, setBarTimeSignature, getSections, setSectionLabel, sectionRange } from '../../model/exercise.js'
 import { sigToTimeSignature } from './util.js'
 
 const INSTR_COLORS = {
@@ -185,16 +185,112 @@ export default function PracticeView({
     return { from: Math.min(lr.from, i), to: Math.max(lr.to, i) }
   })
 
-  const addBarBtn = () => mutate((p) => addBar(p))
-  const insertBefore = (i) => mutate((p) => insertBar(p, i))
-  const dupBar = (i) => mutate((p) => duplicateBar(p, i))
-  const delBar = (i) => mutate((p) => removeBar(p, i))
-  // Bar clipboard: copy a bar, paste it at any insertion slot; repeat ×N.
+  // ---- Bar selection (click a bar number; shift+click extends) ----
+  // Every structural bar edit acts on this range; the clipboard holds a list
+  // of bar snapshots so multi-bar phrases copy/paste in one go.
+  const [sel, setSel] = useState(null) // { from, to } inclusive
+  const selAnchorRef = useRef(null)
   const [barClip, setBarClip] = useState(null)
-  const [repeatMenuFor, setRepeatMenuFor] = useState(null)
-  const copyBar = (i) => setBarClip(barSnapshot(itemRef.current, i))
-  const pasteBar = (i) => barClip && mutate((p) => insertBar(p, i, barClip))
-  const repBar = (i, n) => { setRepeatMenuFor(null); mutate((p) => repeatBar(p, i, n)) }
+  useEffect(() => { setSel(null); setBarClip(null) }, [item.id])
+  const nBars = layout.bars.length
+  // Drop a selection that a structural edit pushed past the last bar.
+  useEffect(() => { if (sel && sel.from >= nBars) setSel(null) }, [sel, nBars])
+  const inSel = (i) => sel && i >= sel.from && i <= sel.to
+  const selectBar = (i, extend) => {
+    if (extend && selAnchorRef.current != null) {
+      const a = selAnchorRef.current
+      setSel({ from: Math.min(a, i), to: Math.max(a, i) })
+      return
+    }
+    if (sel && sel.from === i && sel.to === i) { setSel(null); selAnchorRef.current = null; return }
+    selAnchorRef.current = i
+    setSel({ from: i, to: i })
+  }
+  const selLen = sel ? sel.to - sel.from + 1 : 0
+  const addBarBtn = () => mutate((p) => addBar(p))
+  const insertEmptyBefore = () => sel && mutate((p) => insertBar(p, sel.from))
+  // After an insert, scroll the grid to the last new bar so you see where the
+  // phrase now ends (applied once the new layout has rendered).
+  const revealBarRef = useRef(-1)
+  const copySel = () => sel && setBarClip(barsSnapshot(itemRef.current, sel.from, sel.to))
+  // Paste right after the selection (or at the end), then select the pasted bars.
+  const pasteClip = () => {
+    if (!barClip?.length) return
+    const at = sel ? sel.to + 1 : nBars
+    mutate((p) => insertBars(p, at, barClip))
+    revealBarRef.current = at + barClip.length - 1
+    selAnchorRef.current = at
+    setSel({ from: at, to: at + barClip.length - 1 })
+  }
+  const dupSel = () => {
+    if (!sel) return
+    revealBarRef.current = sel.to + selLen
+    mutate((p) => duplicateBars(p, sel.from, sel.to))
+  }
+  const repSel = (n) => {
+    if (!sel) return
+    revealBarRef.current = sel.to + selLen * n
+    mutate((p) => repeatBars(p, sel.from, sel.to, n))
+  }
+  const delSel = () => {
+    if (!sel || selLen >= nBars) return
+    mutate((p) => removeBars(p, sel.from, sel.to))
+    setSel(null)
+  }
+  const selIsLoop = sel && loopRange && loopRange.from === sel.from && loopRange.to === sel.to
+  const loopSel = () => sel && onLoopRange?.(selIsLoop ? null : { from: sel.from, to: sel.to })
+  // Meter of the selection: shown when every selected bar shares it.
+  const selSig = (() => {
+    if (!sel) return ''
+    const sigs = new Set(layout.bars.slice(sel.from, sel.to + 1).map((b) => `${b.ts.beats}/${b.ts.unit}`))
+    return sigs.size === 1 ? [...sigs][0] : ''
+  })()
+  const setSelTS = (s) => sel && mutate((p) => {
+    let cur = p
+    for (let i = sel.from; i <= sel.to; i++) cur = setBarTimeSignature(cur, i, sigToTimeSignature(s))
+    return cur
+  })
+
+  // ---- Grid display prefs (per device) ----
+  const ZOOMS = [14, 18, 22, 26, 32, 40]
+  const [cellW, setCellW] = useState(() => {
+    try { const v = Number(localStorage.getItem('drums2_gridzoom')); return ZOOMS.includes(v) ? v : 26 } catch { return 26 }
+  })
+  const [usedOnly, setUsedOnly] = useState(() => {
+    try { return localStorage.getItem('drums2_gridused') === '1' } catch { return false }
+  })
+  useEffect(() => { try { localStorage.setItem('drums2_gridzoom', String(cellW)) } catch { /* ignore */ } }, [cellW])
+  useEffect(() => { try { localStorage.setItem('drums2_gridused', usedOnly ? '1' : '0') } catch { /* ignore */ } }, [usedOnly])
+  const zoomBy = (d) => setCellW((w) => ZOOMS[Math.max(0, Math.min(ZOOMS.length - 1, ZOOMS.indexOf(w) + d))])
+  const usedRows = INSTRUMENTS.filter((k) => item.rows[k].some((c) => c.on))
+  const shownRows = usedOnly && usedRows.length ? usedRows : INSTRUMENTS
+  const hiddenCount = INSTRUMENTS.length - shownRows.length
+
+  // Bar shortcuts in the grid: Ctrl/⌘ C·V·D, Delete, Esc. A ref keeps the
+  // single listener pointed at the current selection/clipboard.
+  const barKeysRef = useRef(null)
+  barKeysRef.current = (e) => {
+    if (view !== 'grid' || !editable) return
+    const el = document.activeElement
+    if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable)) return
+    const mod = e.ctrlKey || e.metaKey
+    const key = e.key.toLowerCase()
+    if (mod && key === 'c' && sel && !String(window.getSelection?.() || '')) { e.preventDefault(); copySel() }
+    else if (mod && key === 'v' && barClip?.length) { e.preventDefault(); pasteClip() }
+    else if (mod && key === 'd' && sel) { e.preventDefault(); dupSel() }
+    else if (!mod && (e.key === 'Delete' || e.key === 'Backspace') && sel) { e.preventDefault(); delSel() }
+    else if (e.key === 'Escape' && sel) setSel(null)
+  }
+  useEffect(() => {
+    const onKey = (e) => barKeysRef.current?.(e)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  // Options card folds away while editing the grid (the editor is the focus);
+  // the user can still open it.
+  const [optsOpen, setOptsOpen] = useState(view !== 'grid')
+  useEffect(() => { setOptsOpen(view !== 'grid') }, [view])
   // Section markers: label a bar, click the label to loop the whole section.
   const [secEditFor, setSecEditFor] = useState(null)
   const sectionLabelOf = (i) => getSections(item).find((sec) => sec.bar === i)?.label || ''
@@ -357,6 +453,40 @@ export default function PracticeView({
   }
 
   const localPlay = playing ? step : -1
+  const barOfStep = []
+  layout.bars.forEach((b) => { for (let s = 0; s < b.stepCount; s++) barOfStep.push(b.bar) })
+
+  // Grid follows the playhead: when the playing bar leaves the visible part of
+  // the horizontal scroller, bring it to the left edge (next to the labels).
+  const seqScrollRef = useRef(null)
+  const playBar = localPlay >= 0 ? barOfStep[localPlay] : -1
+  useEffect(() => {
+    if (view !== 'grid' || playBar < 0) return
+    const sc = seqScrollRef.current
+    const head = sc?.querySelector(`[data-barhead="${playBar}"]`)
+    const label = sc?.querySelector('.seq-corner')
+    if (!sc || !head) return
+    const scr = sc.getBoundingClientRect()
+    const hr = head.getBoundingClientRect()
+    const labelW = label ? label.getBoundingClientRect().width : 0
+    if (hr.left < scr.left + labelW || hr.right > scr.right) {
+      sc.scrollTo({ left: sc.scrollLeft + hr.left - scr.left - labelW - 8, behavior: 'smooth' })
+    }
+  }, [view, playBar])
+
+  useEffect(() => {
+    const i = revealBarRef.current
+    if (i < 0) return
+    revealBarRef.current = -1
+    const sc = seqScrollRef.current
+    const head = sc?.querySelector(`[data-barhead="${i}"]`)
+    if (!sc || !head) return
+    const scr = sc.getBoundingClientRect()
+    const hr = head.getBoundingClientRect()
+    if (hr.right > scr.right || hr.left < scr.left) {
+      sc.scrollTo({ left: sc.scrollLeft + hr.right - scr.right + 24, behavior: 'smooth' })
+    }
+  }, [nBars])
 
   // Bring the notation/grid into view when playback starts, so the playhead is
   // visible without scrolling past the controls.
@@ -366,7 +496,7 @@ export default function PracticeView({
   }, [playing])
 
   return (
-    <div className="practice" data-screen-label="Practice">
+    <div className={'practice' + (view === 'grid' ? ' is-grid' : '')} data-screen-label="Practice">
       <div className="prac-top">
         <button className="prac-back" onClick={onBack}><Icon name="back" className="ic" /><span>{t('backToLibrary')}</span></button>
       </div>
@@ -430,7 +560,7 @@ export default function PracticeView({
                   selector here would silently overwrite every bar's meter. */}
               {editable && layout.bars.length === 1
                 ? <select className="select" value={sig} onChange={(e) => setSig(e.target.value)}>{TIME_SIGS.map((s) => <option key={s} value={s}>{s}</option>)}</select>
-                : <div className="static-field num">{layout.bars.length > 1 ? `${layout.bars.length} ${t('barsUnit')}` : sig}</div>}
+                : <div className="static-field num">{layout.bars.length > 1 ? `${sig} · ${layout.bars.length} ${t('barsUnit')}` : sig}</div>}
             </div>
             <div className="blk">
               <span className="field-label">{t('subdivision')}</span>
@@ -442,8 +572,12 @@ export default function PracticeView({
         </div>
       </div>
 
-      <div className="card">
-        <span className="field-label">{t('options')}</span>
+      <div className={'card opts-card' + (optsOpen ? '' : ' is-folded')}>
+        <button type="button" className="opts-toggle" onClick={() => setOptsOpen((v) => !v)} aria-expanded={optsOpen}>
+          <span className="field-label">{t('options')}</span>
+          <Icon name={optsOpen ? 'chevup' : 'chevdown'} className="ic-xs" />
+        </button>
+        {optsOpen && (<>
         <div className="toggles" style={{ marginTop: 'var(--s-2)' }}>
           <Switch checked={options.metroWith} onChange={(v) => setOptions((o) => ({ ...o, metroWith: v }))} label={t('playMetronomeWithExercise')} icon="metro" />
           <Switch checked={options.accentOne} onChange={(v) => setOptions((o) => ({ ...o, accentOne: v }))} label={t('accentFirst')} icon="accent" />
@@ -568,6 +702,7 @@ export default function PracticeView({
         <div style={{ marginTop: 'var(--s-3)' }}>
           <Button size="sm" icon="vol" onClick={() => setSoundOpen(true)}>{t('soundBtn')}</Button>
         </div>
+        </>)}
       </div>
 
       <div className="view-bar">
@@ -620,86 +755,7 @@ export default function PracticeView({
       ) : (
         <div className="seq" ref={playAreaRef}>
           {editable && (
-            <div className="bar-strip">
-              {layout.bars.map((bar) => (
-                <div className="bar-slot" key={bar.bar}>
-                  {/* Insertion point: the new bar appears exactly where you click. */}
-                  <button className="bar-insert" onClick={() => insertBefore(bar.bar)}
-                    aria-label={t('insertBarHere')} title={t('insertBarHere')}>
-                    <Icon name="plus" className="ic-xs" />
-                  </button>
-                  {barClip && (
-                    <button className="bar-insert bar-paste" onClick={() => pasteBar(bar.bar)}
-                      aria-label={t('pasteBar')} title={t('pasteBar')}>
-                      <Icon name="upload" className="ic-xs" />
-                    </button>
-                  )}
-                <div className={'bar-block' + (inLoop(bar.bar) ? ' is-loop' : '')}>
-                  <div className="bar-block-head">
-                    <button className={'bar-tag num' + (inLoop(bar.bar) ? ' is-loop' : '')}
-                      onClick={() => toggleLoopBar(bar.bar)} title={t('loopBarTitle')}>
-                      {t('bar')} {bar.bar + 1}
-                    </button>
-                    {secEditFor === bar.bar ? (
-                      <input className="bar-sec-input" autoFocus defaultValue={sectionLabelOf(bar.bar)}
-                        placeholder={t('sectionPlaceholder')} maxLength={24}
-                        onBlur={(e) => saveSection(bar.bar, e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') setSecEditFor(null) }} />
-                    ) : sectionLabelOf(bar.bar) ? (
-                      <button className="bar-sec" onClick={() => loopSection(bar.bar)}
-                        onDoubleClick={() => setSecEditFor(bar.bar)} title={t('sectionLoopTitle')}>
-                        {sectionLabelOf(bar.bar)}
-                      </button>
-                    ) : null}
-                    <select className="select bar-ts" value={`${bar.ts.beats}/${bar.ts.unit}`} onChange={(e) => setBarTS(bar.bar, e.target.value)}>
-                      {TIME_SIGS.map((s) => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                    <span className="bar-acts">
-                      <button className={'bar-act' + (barClip ? ' is-armed' : '')} onClick={() => copyBar(bar.bar)} aria-label={t('copyBar')} title={t('copyBar')}>
-                        <Icon name="save" className="ic-xs" />
-                      </button>
-                      <button className="bar-act" onClick={() => dupBar(bar.bar)} aria-label={t('duplicateBar')} title={t('duplicateBar')}>
-                        <Icon name="copy" className="ic-xs" />
-                      </button>
-                      <button className="bar-act" onClick={() => setSecEditFor(secEditFor === bar.bar ? null : bar.bar)}
-                        aria-label={t('sectionEdit')} title={t('sectionEdit')}>
-                        <Icon name="bookmark" className="ic-xs" />
-                      </button>
-                      <span className="bar-rep">
-                        <button className="bar-act num" onClick={() => setRepeatMenuFor(repeatMenuFor === bar.bar ? null : bar.bar)}
-                          aria-label={t('repeatBar')} title={t('repeatBar')}>×N</button>
-                        {repeatMenuFor === bar.bar && (
-                          <span className="bar-rep-menu">
-                            {[2, 4, 8].map((n) => (
-                              <button key={n} className="bar-act num" onClick={() => repBar(bar.bar, n)}>×{n}</button>
-                            ))}
-                          </span>
-                        )}
-                      </span>
-                      {layout.bars.length > 1 && (
-                        <button className="bar-act bar-del" onClick={() => delBar(bar.bar)} aria-label={t('removeBar')} title={t('removeBar')}>
-                          <Icon name="trash" className="ic-xs" />
-                        </button>
-                      )}
-                    </span>
-                  </div>
-                </div>
-                </div>
-              ))}
-              {/* Trailing insertion point — same affordance as the ones between bars. */}
-              <button className="bar-insert" onClick={addBarBtn} aria-label={t('addBar')} title={t('addBar')}>
-                <Icon name="plus" className="ic-xs" />
-              </button>
-              {barClip && (
-                <button className="bar-insert bar-paste" onClick={() => pasteBar(layout.bars.length)}
-                  aria-label={t('pasteBar')} title={t('pasteBar')}>
-                  <Icon name="upload" className="ic-xs" />
-                </button>
-              )}
-            </div>
-          )}
-          {editable && (
-            <>
+            <div className="seq-tools">
               <div className="stamp-bar" role="toolbar" aria-label={t('tools')}>
                 <div className="stamp-rows">
                   {[['hit', 'accent', 'ghost', 'flam', 'drag', 'roll'], ['cross', 'rim', 'bell', 'erase']].map((row, ri) => (
@@ -715,57 +771,134 @@ export default function PracticeView({
                     </div>
                   ))}
                 </div>
+                <div className="grid-view-ctl">
+                  <span className="zoom-ctl" role="group" aria-label={t('gridZoom')}>
+                    <button className="bar-act" onClick={() => zoomBy(-1)} disabled={cellW === ZOOMS[0]} aria-label={t('zoomOut')} title={t('zoomOut')}>−</button>
+                    <button className="bar-act" onClick={() => zoomBy(1)} disabled={cellW === ZOOMS[ZOOMS.length - 1]} aria-label={t('zoomIn')} title={t('zoomIn')}>+</button>
+                  </span>
+                  <button className={'stamp rows-toggle' + (usedOnly ? ' is-active' : '')} aria-pressed={usedOnly}
+                    onClick={() => setUsedOnly((v) => !v)} title={t('hideEmptyRowsTitle')}>
+                    {t('hideEmptyRows')}{usedOnly && hiddenCount > 0 ? ` (${hiddenCount})` : ''}
+                  </button>
+                </div>
                 {/* Undo spans both stamp rows on the right. */}
                 <Button size="sm" icon="back" className="stamp-undo" onClick={undo} disabled={!histRef.current.undo.length}>{t('undo')}</Button>
               </div>
+              <div className={'sel-bar' + (sel ? ' is-active' : '')}>
+                {sel ? (
+                  <>
+                    <span className="sel-what num">
+                      {selLen === 1 ? `${t('bar')} ${sel.from + 1}` : `${t('barsSel')} ${sel.from + 1}–${sel.to + 1}`}
+                    </span>
+                    <Button size="sm" icon="copy" onClick={copySel} title="Ctrl+C">{t('copyBars')}</Button>
+                    {barClip?.length > 0 && <Button size="sm" icon="upload" onClick={pasteClip} title="Ctrl+V">{t('pasteAfter')}</Button>}
+                    <Button size="sm" icon="plus" onClick={dupSel} title="Ctrl+D">{t('dupBars')}</Button>
+                    <span className="sel-rep" role="group" aria-label={t('repeatBars')}>
+                      <span className="sel-cap">{t('repeatBars')}</span>
+                      {[2, 4, 8].map((n) => (
+                        <button key={n} className="bar-act num" onClick={() => repSel(n - 1)} title={t('repeatBarsTitle').replace('{n}', n)}>×{n}</button>
+                      ))}
+                    </span>
+                    <select className="select bar-ts" value={selSig} onChange={(e) => setSelTS(e.target.value)} aria-label={t('timeSig')} title={t('timeSig')}>
+                      {!selSig && <option value="">—</option>}
+                      {TIME_SIGS.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                    <Button size="sm" variant={selIsLoop ? 'accent' : 'default'} onClick={loopSel}>{t('loopSel')}</Button>
+                    <Button size="sm" icon="bookmark" onClick={() => setSecEditFor(secEditFor === sel.from ? null : sel.from)}>{t('sectionEdit')}</Button>
+                    <Button size="sm" icon="plus" onClick={insertEmptyBefore}>{t('insertBefore')}</Button>
+                    {selLen < nBars && <Button size="sm" icon="trash" onClick={delSel} title="Delete">{t('delete')}</Button>}
+                    <button className="sel-clear" onClick={() => setSel(null)} aria-label={t('clearSel')} title={`${t('clearSel')} (Esc)`}>✕</button>
+                  </>
+                ) : (
+                  <>
+                    <span className="sel-hint">{t('selectBarsHint')}</span>
+                    {barClip?.length > 0 && <Button size="sm" icon="upload" onClick={pasteClip}>{t('pasteAtEnd')}</Button>}
+                    <Button size="sm" icon="plus" onClick={addBarBtn}>{t('addBar')}</Button>
+                  </>
+                )}
+              </div>
               <div className="stamp-hint-line">{tool ? t('paintHint') : t('cycleHint')}</div>
-            </>
+            </div>
           )}
-          <div className="seq-ruler"><div />
-            <div className="ticks">{Array.from({ length: per }).map((_, i) => {
-              const cls = 'tick' + (beatStartSet.has(i) ? ' beat' : '') + (barStartSet.has(i) ? ' bar-start' : '') + (localPlay === i ? ' play' : '')
-              const barTag = barStartSet.has(i) ? <span className="tick-bar num">{t('bar')} {barNumOfStart.get(i)}</span> : null
-              const bt = beatOfStart.get(i)
-              if (bt && editable) {
-                return (
-                  <button key={i} type="button" className={cls + ' tick-btn'} title={t('tickTitle')}
-                    onClick={() => cycleTick(bt)}>
-                    {barTag}{bt.beatInBar + 1}
-                    <span className="tick-glyph"><NoteGlyph kind={bt.sub} /></span>
-                  </button>
-                )
-              }
-              return <div key={i} className={cls}>{barTag}{bt ? beatNumOfStart.get(i) : '·'}</div>
-            })}</div>
-          </div>
-          <div className="seq-grid" onPointerDown={onGridPointerDown} onPointerMove={onGridPointerMove}
-            style={{ touchAction: tool ? 'none' : undefined }}>
-            {INSTRUMENTS.map((k) => (
-              <div className="seq-row" key={k}>
-                <div className="seq-rowlabel"><span className="dot" style={{ background: INSTR_COLORS[k] }} />{t(k)}</div>
+          <div className="seq-scroll" ref={seqScrollRef} style={{ '--cell-w': `${cellW}px` }}>
+            <div className="seq-ruler seq-barhead-row">
+              <div className="seq-rowlabel seq-corner" />
+              <div className="seq-barheads">
+                {layout.bars.map((bar) => (
+                  <div key={bar.bar} data-barhead={bar.bar}
+                    className={'seq-barhead' + (inSel(bar.bar) ? ' is-sel' : '') + (inLoop(bar.bar) ? ' is-loop' : '')}
+                    style={{ gridColumn: `${bar.startStep + 1} / span ${bar.stepCount}` }}>
+                    {editable ? (
+                      <button className="bar-tag num" onClick={(e) => selectBar(bar.bar, e.shiftKey)}
+                        title={t('selectBarTitle')} aria-pressed={!!inSel(bar.bar)}>
+                        {bar.bar + 1}
+                      </button>
+                    ) : (
+                      <button className="bar-tag num" onClick={() => toggleLoopBar(bar.bar)} title={t('loopBarTitle')}>{bar.bar + 1}</button>
+                    )}
+                    {secEditFor === bar.bar ? (
+                      <input className="bar-sec-input" autoFocus defaultValue={sectionLabelOf(bar.bar)}
+                        placeholder={t('sectionPlaceholder')} maxLength={24}
+                        onBlur={(e) => saveSection(bar.bar, e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') setSecEditFor(null) }} />
+                    ) : sectionLabelOf(bar.bar) ? (
+                      <button className="bar-sec" onClick={() => loopSection(bar.bar)}
+                        onDoubleClick={() => editable && setSecEditFor(bar.bar)} title={t('sectionLoopTitle')}>
+                        {sectionLabelOf(bar.bar)}
+                      </button>
+                    ) : null}
+                    {(bar.ts.beats !== layout.bars[0].ts.beats || bar.ts.unit !== layout.bars[0].ts.unit || bar.bar === 0) && (
+                      <span className="seq-barhead-ts num">{bar.ts.beats}/{bar.ts.unit}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="seq-ruler"><div className="seq-rowlabel seq-corner" />
+              <div className="ticks">{Array.from({ length: per }).map((_, i) => {
+                const cls = 'tick' + (beatStartSet.has(i) ? ' beat' : '') + (barStartSet.has(i) ? ' bar-start' : '') + (localPlay === i ? ' play' : '')
+                const bt = beatOfStart.get(i)
+                if (bt && editable) {
+                  return (
+                    <button key={i} type="button" className={cls + ' tick-btn'} title={t('tickTitle')}
+                      onClick={() => cycleTick(bt)}>
+                      {bt.beatInBar + 1}
+                      <span className="tick-glyph"><NoteGlyph kind={bt.sub} /></span>
+                    </button>
+                  )
+                }
+                return <div key={i} className={cls}>{bt ? beatNumOfStart.get(i) : '·'}</div>
+              })}</div>
+            </div>
+            <div className="seq-grid" onPointerDown={onGridPointerDown} onPointerMove={onGridPointerMove}
+              style={{ touchAction: tool ? 'none' : undefined }}>
+              {shownRows.map((k) => (
+                <div className="seq-row" key={k}>
+                  <div className="seq-rowlabel"><span className="dot" style={{ background: INSTR_COLORS[k] }} />{t(k)}</div>
+                  <div className="seq-cells">
+                    {item.rows[k].map((cell, i) => (
+                      <button key={i} disabled={!editable} aria-label={t(k) + ' ' + (i + 1)}
+                        data-cellk={k} data-celli={i}
+                        className={['cell', cell.roll ? 'roll' : cell.flam ? 'flam' : cell.art ? 'art' : cell.ghost ? 'ghost' : cell.accent ? 'accent' : cell.on ? 'on' : '', beatStartSet.has(i) ? 'beat-start' : '', barStartSet.has(i) ? 'bar-start' : '', localPlay === i ? 'play-col' : '', inSel(barOfStep[i]) ? 'in-sel' : '', !editable ? 'ro' : ''].join(' ')}
+                        onClick={() => editable && !tool && cycleCell(k, i)}>{(() => {
+                          const mark = cell.roll ? 'z' : cell.flam === 'drag' ? 'd' : cell.flam ? 'f' : cell.art === 'cross' ? '×' : cell.art === 'rim' ? 'rs' : cell.art === 'bell' ? '▲' : cell.ghost ? '()' : ''
+                          // Absolutely positioned so the text can never widen the
+                          // cell's grid track (the row is sized max-content).
+                          return mark ? <span className="cell-mark">{mark}</span> : null
+                        })()}</button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <div className="seq-row">
+                <div className="seq-rowlabel" style={{ fontWeight: 700, color: 'var(--text)' }}>{t('sticking')}</div>
                 <div className="seq-cells">
-                  {item.rows[k].map((cell, i) => (
-                    <button key={i} disabled={!editable} aria-label={t(k) + ' ' + (i + 1)}
-                      data-cellk={k} data-celli={i}
-                      className={['cell', cell.roll ? 'roll' : cell.flam ? 'flam' : cell.art ? 'art' : cell.ghost ? 'ghost' : cell.accent ? 'accent' : cell.on ? 'on' : '', beatStartSet.has(i) ? 'beat-start' : '', barStartSet.has(i) ? 'bar-start' : '', localPlay === i ? 'play-col' : '', !editable ? 'ro' : ''].join(' ')}
-                      onClick={() => editable && !tool && cycleCell(k, i)}>{(() => {
-                        const mark = cell.roll ? 'z' : cell.flam === 'drag' ? 'd' : cell.flam ? 'f' : cell.art === 'cross' ? '×' : cell.art === 'rim' ? 'rs' : cell.art === 'bell' ? '▲' : cell.ghost ? '()' : ''
-                        // Absolutely positioned so the text can never widen the
-                        // cell's grid track (the row is sized max-content).
-                        return mark ? <span className="cell-mark">{mark}</span> : null
-                      })()}</button>
+                  {item.sticking.map((s, i) => (
+                    <button key={i} disabled={!editable}
+                      className={['cell', 'stick', s, beatStartSet.has(i) ? 'beat-start' : '', barStartSet.has(i) ? 'bar-start' : '', localPlay === i ? 'play-col' : '', inSel(barOfStep[i]) ? 'in-sel' : '', !editable ? 'ro' : ''].join(' ')}
+                      onClick={() => editable && cycleStick(i)}>{s}</button>
                   ))}
                 </div>
-              </div>
-            ))}
-            <div className="seq-row">
-              <div className="seq-rowlabel" style={{ fontWeight: 700, color: 'var(--text)' }}>{t('sticking')}</div>
-              <div className="seq-cells">
-                {item.sticking.map((s, i) => (
-                  <button key={i} disabled={!editable}
-                    className={['cell', 'stick', s, beatStartSet.has(i) ? 'beat-start' : '', barStartSet.has(i) ? 'bar-start' : '', localPlay === i ? 'play-col' : '', !editable ? 'ro' : ''].join(' ')}
-                    onClick={() => editable && cycleStick(i)}>{s}</button>
-                ))}
               </div>
             </div>
           </div>

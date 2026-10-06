@@ -7,6 +7,14 @@
 
 export const CHANGELOG = [
   {
+    version: 'v5.40',
+    items: [
+      { text: 'Grid editor uses the full screen width, with zoom and a Hide empty rows switch; instrument names and tools stay pinned while you scroll', guide: 'editor' },
+      { text: 'Select several bars at once (click a bar number, Shift+click another) to copy, paste, duplicate, repeat ×N or delete a whole phrase — with Ctrl/⌘+C·V·D shortcuts', guide: 'editor' },
+      { text: 'The row under the mouse lights up, the grid follows the playhead and jumps to the end of a repeated phrase, and the Options card folds away while you edit', guide: 'editor' },
+    ],
+  },
+  {
     version: 'v5.39',
     items: [
       { text: 'Subdivision switcher now cycles in order of density (8ths → triplets → 16ths) and the beat dots switch in sync with the click — no more jitter', guide: 'metronome' },

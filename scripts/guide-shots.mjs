@@ -190,12 +190,23 @@ await page.keyboard.press('Escape')
 
 // grid editor with the palette
 await page.locator('.view-bar .seg-item', { hasText: 'Grid' }).click()
+await page.mouse.move(0, 0) // no row hover highlight in the shot
 const seq = await page.locator('.seq').boundingBox()
 await shot('grid-editor', page.locator('.seq'), { clip: { x: seq.x, y: seq.y, width: seq.width, height: Math.min(470, seq.height) } })
-await page.getByRole('button', { name: 'Copy bar' }).first().click() // arm the clipboard
-await shot('bar-strip', page.locator('.bar-strip'), { pad: 12 })
-const bs = await page.locator('.bar-strip').boundingBox()
-await page.screenshot({ path: `${TMP}/sections.png`, clip: { x: bs.x - 8, y: bs.y - 8, width: bs.width + 16, height: Math.min(170, bs.height) } })
+// select a two-bar phrase and copy it: selection bar + bar headers
+const tags = page.locator('.seq-barhead .bar-tag')
+await tags.first().click()
+if (await tags.count() > 1) await tags.nth(1).click({ modifiers: ['Shift'] })
+await page.locator('.sel-bar').getByRole('button', { name: 'Copy', exact: true }).click() // arm the clipboard
+const sb = await page.locator('.sel-bar').boundingBox()
+const bh = await page.locator('.seq-barhead-row').boundingBox()
+await page.screenshot({ path: `${TMP}/bar-strip.png`, clip: { x: sb.x - 8, y: sb.y - 8, width: sb.width + 16, height: bh.y + bh.height - sb.y + 16 } })
+shots.push('bar-strip'); console.log('  • bar-strip')
+await page.keyboard.press('Escape')
+await page.mouse.move(0, 0)
+await page.waitForTimeout(120)
+const bh2 = await page.locator('.seq-barhead-row').boundingBox() // the toolbar got shorter
+await page.screenshot({ path: `${TMP}/sections.png`, clip: { x: bh2.x - 8, y: bh2.y - 8, width: Math.min(900, bh2.width + 16), height: bh2.height + 16 } })
 shots.push('sections'); console.log('  • sections')
 
 // goal chip (catalog exercise with seeded best+goal)
