@@ -11,6 +11,7 @@ export const CHANGELOG = [
     items: [
       { text: 'Grid editor uses the full screen width, with zoom and a Hide empty rows switch; instrument names and tools stay pinned while you scroll', guide: 'editor' },
       { text: 'Select several bars at once (click a bar number, Shift+click another) to copy, paste, duplicate, repeat ×N or delete a whole phrase — with Ctrl/⌘+C·V·D shortcuts', guide: 'editor' },
+      { text: 'Share links are about 3× shorter and carry a checksum: a link damaged in transit now says so instead of silently opening the metronome', guide: 'practice' },
       { text: 'The row under the mouse lights up, the grid follows the playhead and jumps to the end of a repeated phrase, and the Options card folds away while you edit', guide: 'editor' },
     ],
   },

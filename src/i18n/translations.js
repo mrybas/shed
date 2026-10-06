@@ -265,6 +265,7 @@ export const translations = {
     wkeNotePh: 'Focus note for this block (optional)',
     share: 'Share link',
     shared_ok: 'Link copied ✓',
+    shareBroken: 'This share link is damaged — part of it got lost when it was copied. Ask the sender to share it again.',
     print: 'Print',
     shareCopyManually: 'Copy this link:',
     subSwitcher: 'Subdivision switcher',

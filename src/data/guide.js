@@ -134,7 +134,7 @@ export const GUIDE = [
         title: 'Print and share',
         img: 'share-print',
         tags: ['print', 'pdf', 'share link', 'url'],
-        body: 'Print lays the notation out for A4 — two bars per line, page breaks between staff lines (on iOS use Share → Print → pinch to save a PDF). Share link packs the whole exercise into a URL: whoever opens it sees and plays the exercise, no account needed.',
+        body: 'Print lays the notation out for A4 — two bars per line, page breaks between staff lines (on iOS use Share → Print → pinch to save a PDF). Share link packs the whole exercise into a short URL: whoever opens it sees and plays the exercise, no account needed. Links carry a checksum — if one gets cut or mangled on the way (messengers sometimes do), the app says it is damaged instead of opening something wrong.',
       },
       {
         title: 'Setlist',

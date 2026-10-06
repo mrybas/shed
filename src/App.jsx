@@ -225,6 +225,7 @@ export default function App() {
   }, [sched.isPlaying, sched.liveBpm])
 
   // Open an exercise shared via URL (#x=...): decode, normalize, show.
+  const [shareBroken, setShareBroken] = useState(false)
   useEffect(() => {
     const payload = shareFromHash()
     if (!payload) return
@@ -233,7 +234,7 @@ export default function App() {
         const ex = parseImported(JSON.stringify(obj))
         if (ex && ex.rows) { ex.source = 'user'; setPracticeView('notes'); setItem(ex); setNav('practice') }
       })
-      .catch(() => { /* malformed link — ignore */ })
+      .catch(() => setShareBroken(true)) // damaged link: say so instead of silently opening the metronome
     history.replaceState(null, '', location.pathname)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -722,6 +723,12 @@ export default function App() {
       </aside>
 
       <main className="main">
+        {shareBroken && (
+          <div className="link-error" role="alert">
+            <span>{t('shareBroken')}</span>
+            <button className="link-error-x" onClick={() => setShareBroken(false)} aria-label={t('close')}>✕</button>
+          </div>
+        )}
         {nav === 'metronome' && <MetronomeView t={t} metro={metro} setMetro={setMetro} playing={playing && mode === 'metronome'} step={step} liveSub={sched.liveSub} />}
         {nav === 'guide' && <GuideView t={t} target={guideTarget} onActiveChange={setGuideActive} feedbackUrl={feedbackUrl()} />}
         {nav === 'workouts' && (wkEdit ? (

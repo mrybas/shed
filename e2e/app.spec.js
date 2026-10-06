@@ -178,10 +178,19 @@ test('share link copies via fallback (no clipboard API) and the URL opens the ex
   await expect(page.locator('button:visible', { hasText: 'Link copied' })).toBeVisible()
   const url = await page.evaluate(() => window.__copied)
   expect(url).toContain('#x=')
+  expect(url).toMatch(/#x=z:[A-Za-z0-9_-]+\.[0-9a-f]{8}$/) // compact + checksum
   // The copied link round-trips: opening it lands on the exercise.
   await page.goto(url)
   await expect(page.locator('.practice')).toBeVisible()
   await expect(page.locator('.notation-wrap svg').first()).toBeVisible()
+  // A link that lost characters in transit is reported, not silently ignored.
+  const [base, payload] = url.split('#x=')
+  const broken = payload.slice(0, 40) + payload.slice(56)
+  await page.goto('about:blank')
+  await page.goto(`${base}#x=${broken}`)
+  await expect(page.locator('.link-error')).toContainText('damaged')
+  await page.locator('.link-error-x').click()
+  await expect(page.locator('.link-error')).toHaveCount(0)
 })
 
 test('print renders a hidden A4-width copy without reflowing the screen', async ({ page }) => {
